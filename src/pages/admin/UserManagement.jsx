@@ -22,7 +22,7 @@ import {
   FaUserCheck,
 } from 'react-icons/fa';
 import AdminLeftbar from '../../components/AdminLeftbar';
-import api from '../../lib/utils';
+import adminAxios from '../../lib/adminAxios';
 
 const UserManagement = () => {
   const navigate = useNavigate();
@@ -36,12 +36,13 @@ const UserManagement = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const usersPerPage = 5;
+  const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'blocked', 'all'
 
-  const fetchUsers = async (page = 1, search = '') => {
+  const fetchUsers = async (page = 1, search = '', status = statusFilter) => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get(`/admin/users?page=${page}&limit=${usersPerPage}&search=${encodeURIComponent(search)}`);
+      const res = await adminAxios.get(`/users?page=${page}&limit=${usersPerPage}&search=${encodeURIComponent(search)}&status=${status}`);
       setUsers(res.data.users);
       setTotalPages(res.data.totalPages);
       setTotal(res.data.total);
@@ -54,12 +55,17 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    fetchUsers(currentPage, searchTerm);
+    fetchUsers(currentPage, searchTerm, statusFilter);
     // eslint-disable-next-line
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, statusFilter]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilter = (e) => {
+    setStatusFilter(e.target.value);
     setCurrentPage(1);
   };
 
@@ -72,8 +78,8 @@ const UserManagement = () => {
     if (!selectedUser) return;
     setLoading(true);
     try {
-      await api.patch(`/admin/users/${selectedUser._id}/block`);
-      fetchUsers(currentPage, searchTerm);
+      await adminAxios.patch(`/users/${selectedUser._id}/block`);
+      fetchUsers(currentPage, searchTerm, statusFilter);
       setShowStatusModal(false);
       setSelectedUser(null);
     } catch (err) {
@@ -106,7 +112,7 @@ const UserManagement = () => {
               </Col>
             </Row>
             <Row className="mb-3">
-              <Col md={6}>
+              <Col md={4}>
                 <InputGroup>
                   <InputGroup.Text>
                     <FaSearch />
@@ -118,6 +124,13 @@ const UserManagement = () => {
                     onChange={handleSearch}
                   />
                 </InputGroup>
+              </Col>
+              <Col md={3}>
+                <Form.Select value={statusFilter} onChange={handleStatusFilter}>
+                  <option value="active">Active Users</option>
+                  <option value="blocked">Blocked Users</option>
+                  <option value="all">All Users</option>
+                </Form.Select>
               </Col>
             </Row>
             {error && <Alert variant="danger">{error}</Alert>}
@@ -223,3 +236,4 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+

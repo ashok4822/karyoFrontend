@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "@/lib/utils";
+import { useDispatch } from "react-redux";
+import { setAdminAccessToken, logoutAdmin } from "../../redux/reducers/authSlice";
+import adminAxios from "../../lib/adminAxios";
 import {
   Container,
   Row,
@@ -22,6 +24,7 @@ import {
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -53,11 +56,8 @@ const AdminLogin = () => {
     setError("");
 
     try {
-      // Use axios instance for API call
-      const { data } = await api.post("/admin/login", formData);
-      localStorage.setItem("adminToken", data.token);
-      // Optionally, store admin user info if needed
-      // localStorage.setItem("adminUser", JSON.stringify(data.user));
+      const { data } = await adminAxios.post("/login", formData);
+      dispatch(setAdminAccessToken(data.token));
       navigate("/admin");
     } catch (error) {
       setError(error.response?.data?.message || error.message || "Login failed");

@@ -13,6 +13,9 @@ import {
   FaChartBar,
 } from "react-icons/fa";
 import "./AdminLeftbar.css";
+import { useDispatch } from 'react-redux';
+import { logoutAdmin } from '../redux/reducers/authSlice';
+import adminAxios from '../lib/adminAxios';
 
 const admin = {
   name: "Admin Name",
@@ -34,10 +37,15 @@ const links = [
 const AdminLeftbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
 
-  const handleLogout = () => {
-    // Add logout logic here
-    navigate("/admin/login");
+  const handleLogout = async () => {
+    try {
+      await adminAxios.post('/logout');
+    } catch (e) {}
+    dispatch(logoutAdmin());
+    localStorage.removeItem('adminAccessToken');
+    navigate('/admin/login');
   };
 
   const isActiveLink = (to) => {

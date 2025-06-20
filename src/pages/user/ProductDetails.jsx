@@ -30,7 +30,7 @@ import {
   FaArrowLeft,
   FaTag,
 } from 'react-icons/fa';
-import { fetchDummyProducts } from '../../redux/reducers/productSlice';
+import { fetchProductsFromBackend } from '../../redux/reducers/productSlice';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -45,10 +45,10 @@ const ProductDetails = () => {
   const [couponError, setCouponError] = useState('');
 
   useEffect(() => {
-    dispatch(fetchDummyProducts());
+    dispatch(fetchProductsFromBackend());
   }, [dispatch]);
 
-  const product = products.find((p) => p.id === Number(id));
+  const product = products.find((p) => p._id === id);
 
   // Redirect if blocked or unavailable
   useEffect(() => {

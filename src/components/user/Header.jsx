@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../../store/slices/authSlice';
+import { logoutUser } from '../../redux/reducers/authSlice';
 import { toggleCart } from '../../store/slices/cartSlice';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, ShoppingCart, User, Menu, X } from 'lucide-react';
+import userAxios from '../../lib/userAxios';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,9 +25,13 @@ const Header = () => {
     }
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await userAxios.post('auth/logout');
+    } catch (e) {}
+    dispatch(logoutUser());
+    localStorage.removeItem('userAccessToken');
+    navigate('/login');
   };
 
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);

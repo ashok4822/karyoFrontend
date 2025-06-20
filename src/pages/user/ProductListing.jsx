@@ -30,7 +30,7 @@ import {
   FaSortAmountUp,
 } from "react-icons/fa";
 import ProductSidebar from "../../components/ProductSidebar";
-import { fetchDummyProducts } from "../../redux/reducers/productSlice";
+import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 
 const ProductListing = () => {
   const dispatch = useDispatch();
@@ -48,21 +48,41 @@ const ProductListing = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    dispatch(fetchDummyProducts(pagination.currentPage));
-  }, [dispatch, pagination.currentPage]);
+    dispatch(fetchProductsFromBackend({
+      page: pagination.currentPage,
+      search: searchQuery,
+      category: filters.category,
+      // Add other filters as needed
+    }));
+  }, [dispatch, pagination.currentPage, searchQuery, filters.category]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    dispatch(fetchDummyProducts(1)); // Reset to first page when filters change
+    dispatch(fetchProductsFromBackend({
+      page: 1,
+      search: searchQuery,
+      category: key === 'category' ? value : filters.category,
+      // Add other filters as needed
+    }));
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    dispatch(fetchDummyProducts(1)); // Reset to first page when searching
+    dispatch(fetchProductsFromBackend({
+      page: 1,
+      search: searchQuery,
+      category: filters.category,
+      // Add other filters as needed
+    }));
   };
 
   const handlePageChange = (page) => {
-    dispatch(fetchDummyProducts(page));
+    dispatch(fetchProductsFromBackend({
+      page,
+      search: searchQuery,
+      category: filters.category,
+      // Add other filters as needed
+    }));
   };
 
   const handleAddToCart = (product) => {

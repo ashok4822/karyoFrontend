@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { loginSuccess } from "../../redux/reducers/authSlice";
-import api from "../../lib/utils";
+import { setUserAccessToken, logoutUser, loginSuccess } from "../../redux/reducers/authSlice";
+import userAxios from "../../lib/userAxios";
 import {
   Container,
   Row,
@@ -38,8 +38,8 @@ const UserLogin = () => {
     }
     setLoading(true);
     try {
-      const res = await api.post("auth/login", { email, password });
-      dispatch(loginSuccess({ user: res.data.user, token: res.data.token }));
+      const res = await userAxios.post("auth/login", { email, password });
+      dispatch(loginSuccess({ user: res.data.user, token: res.data.token, userAccessToken: res.data.token }));
       setSuccessMsg("Login successful! Redirecting...");
       setTimeout(() => navigate("/"), 1500);
     } catch (error) {
