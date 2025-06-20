@@ -1,0 +1,30 @@
+.product-sidebar {
+  min-width: 220px;
+  max-width: 300px;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+.product-sidebar h5 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #222;
+}
+.product-sidebar .form-check {
+  margin-bottom: 0.5rem;
+}
+.product-sidebar .form-check-label {
+  font-size: 0.97rem;
+}
+.product-sidebar .form-range {
+  width: 100%;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.product-sidebar .btn-primary {
+  font-weight: 500;
+}
+.product-sidebar select.form-select {
+  font-size: 0.97rem;
+} 
