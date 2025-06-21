@@ -204,6 +204,7 @@ const AdminCategoryForm = () => {
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                    <option value="deleted">Deleted</option>
                   </Form.Select>
                 </Form.Group>
 

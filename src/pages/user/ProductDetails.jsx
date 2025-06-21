@@ -218,19 +218,46 @@ const ProductDetails = () => {
 
           {/* Price, discount, coupon */}
           <div className="mb-3">
-            <h3 className="h4 mb-2">Price</h3>
-            <div className="d-flex align-items-center gap-2">
-              <span className="h3 mb-0 text-primary">${finalPrice}</span>
-              {product.comparePrice && (
-                <span className="text-muted text-decoration-line-through">${product.comparePrice}</span>
-              )}
-              {product.discount > 0 && (
-                <Badge bg="danger">-{product.discount}% OFF</Badge>
-              )}
-              {activeCoupon && (
-                <Badge bg="success"><FaTag className="me-1" />{activeCoupon.code} Applied</Badge>
-              )}
-            </div>
+            <h3 className="h4 mb-2">Pricing</h3>
+            {(product.variantDetails && product.variantDetails.length > 0) || (product.variants && product.variants.length > 0) ? (
+              <div>
+                <p className="text-muted mb-2">Prices vary by variant:</p>
+                <div className="table-responsive">
+                  <Table size="sm" borderless className="mb-2">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Variant</th>
+                        <th>Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(product.variantDetails && product.variantDetails.length > 0
+                        ? product.variantDetails
+                        : product.variants || []).map((variant, index) => (
+                        <tr key={index}>
+                          <td>
+                            <Badge bg="light" text="dark" className="me-1">
+                              {variant.colour || "N/A"}
+                            </Badge>
+                            <Badge bg="light" text="dark">
+                              {variant.capacity || "N/A"}
+                            </Badge>
+                          </td>
+                          <td>
+                            <span className="text-primary fw-bold">
+                              ${variant.price}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted">No pricing information available</p>
+            )}
+            
             <div className="mt-2">
               <Form className="d-flex gap-2" onSubmit={e => { e.preventDefault(); handleApplyCoupon(); }}>
                 <Form.Control
@@ -265,6 +292,53 @@ const ProductDetails = () => {
               {product.stock === 0 ? 'Sold Out' : `In Stock: ${product.stock}`}
             </span>
           </div>
+
+          {/* Variants */}
+          {(product.variantDetails && product.variantDetails.length > 0) || (product.variants && product.variants.length > 0) ? (
+            <div className="mb-3">
+              <h4 className="h6 mb-2">Available Variants</h4>
+              <div className="table-responsive">
+                <Table size="sm" borderless className="mb-0">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Colour</th>
+                      <th>Capacity</th>
+                      <th>Price</th>
+                      <th>Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(product.variantDetails && product.variantDetails.length > 0
+                      ? product.variantDetails
+                      : product.variants || []).map((variant, index) => (
+                      <tr key={index}>
+                        <td>
+                          <Badge bg="light" text="dark">
+                            {variant.colour || "N/A"}
+                          </Badge>
+                        </td>
+                        <td>
+                          <Badge bg="light" text="dark">
+                            {variant.capacity || "N/A"}
+                          </Badge>
+                        </td>
+                        <td>
+                          <span className="text-primary fw-bold">
+                            ${variant.price}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${variant.stock > 0 ? 'bg-success' : 'bg-danger'}`}>
+                            {variant.stock || 0}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            </div>
+          ) : null}
 
           {/* Specs / Highlights */}
           {product.specs && product.specs.length > 0 && (

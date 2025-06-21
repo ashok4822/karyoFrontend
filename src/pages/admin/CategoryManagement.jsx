@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Container,
   Row,
@@ -10,11 +10,11 @@ import {
   InputGroup,
   Badge,
   Spinner,
-  Alert,
   Modal,
   OverlayTrigger,
   Tooltip,
   Pagination,
+  ButtonGroup,
 } from 'react-bootstrap';
 import {
   FaSearch,
@@ -30,172 +30,67 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
+  FaUndo,
+  FaList,
+  FaTrashAlt,
 } from 'react-icons/fa';
 import AdminLeftbar from '../../components/AdminLeftbar';
 import adminAxios from '../../lib/adminAxios';
+import Swal from 'sweetalert2';
 
-const CategoryManagement = () => {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [formData, setFormData] = useState({ name: '', status: 'active' });
-  const [errors, setErrors] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const categoriesPerPage = 5;
-  const searchInputRef = useRef(null);
-
-  const fetchCategories = async (page = 1, search = '', status = statusFilter, sort = sortOrder) => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await adminAxios.get(`/categories?page=${page}&limit=${categoriesPerPage}&search=${encodeURIComponent(search)}&status=${status}&sort=${sort}`);
-      setCategories(res.data.categories);
-      setTotalPages(res.data.totalPages);
-      setTotal(res.data.total);
-      setCurrentPage(res.data.page);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch categories');
-    } finally {
-      setLoading(false);
+// Memoized components to prevent unnecessary re-renders
+const StatusBadge = React.memo(({ status }) => {
+  const variants = {
+    active: 'success',
+    inactive: 'secondary',
+    deleted: 'danger',
+  };
+  
+  const getIcon = () => {
+    switch (status) {
+      case 'active': return <FaCheckCircle className="me-1 text-success" />;
+      case 'inactive': return <FaMinusCircle className="me-1 text-secondary" />;
+      default: return <FaTimesCircle className="me-1 text-danger" />;
     }
   };
 
-  useEffect(() => {
-    fetchCategories(currentPage, searchTerm, statusFilter, sortOrder);
-    // eslint-disable-next-line
-  }, [currentPage, searchTerm, statusFilter, sortOrder]);
-
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
-  };
-
-  const handleClearSearch = () => {
-    setSearchTerm('');
-    setCurrentPage(1);
-  };
-
-  const handleShowModal = (category = null) => {
-    setSelectedCategory(category);
-    setFormData(category ? { name: category.name, status: category.status } : { name: '', status: 'active' });
-    setShowModal(true);
-    setErrors({});
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setSelectedCategory(null);
-    setFormData({ name: '', status: 'active' });
-    setErrors({});
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name) newErrors.name = 'Name is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-    setModalLoading(true);
-    try {
-      if (selectedCategory) {
-        await adminAxios.put(`/categories/${selectedCategory._id}`, formData);
-      } else {
-        await adminAxios.post('/categories', formData);
-      }
-      handleCloseModal();
-      fetchCategories(currentPage, searchTerm, statusFilter, sortOrder);
-    } catch (error) {
-      setError(error.response?.data?.message || 'Error saving category');
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleteLoading(true);
-    try {
-      await adminAxios.delete(`/categories/${selectedCategory._id}`);
-      setShowDeleteModal(false);
-      fetchCategories(currentPage, searchTerm, statusFilter, sortOrder);
-    } catch (error) {
-      setError(error.response?.data?.message || 'Error deleting category');
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const variants = {
-      active: 'success',
-      inactive: 'secondary',
-    };
-    return (
-      <Badge pill bg={variants[status] || 'secondary'} className="d-flex align-items-center justify-content-center gap-1">
-        {status === 'active' ? <FaCheckCircle className="me-1 text-success" /> : <FaMinusCircle className="me-1 text-secondary" />}
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
-  };
-
-  const renderActionButton = (icon, tooltip, onClick, variant, disabled = false) => (
-    <OverlayTrigger placement="top" overlay={<Tooltip>{tooltip}</Tooltip>}>
-      <span>
-        <Button
-          variant={variant}
-          size="sm"
-          className="me-2"
-          onClick={onClick}
-          disabled={disabled}
-          style={{ minWidth: 36 }}
-        >
-          {icon}
-        </Button>
-      </span>
-    </OverlayTrigger>
+  return (
+    <Badge pill bg={variants[status] || 'secondary'} className="d-flex align-items-center justify-content-center gap-1">
+      {getIcon()}
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </Badge>
   );
+});
 
-  const renderPagination = () => (
-    <Pagination className="mb-0">
-      <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
-      <Pagination.Prev onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} />
-      {[...Array(totalPages)].map((_, idx) => (
-        <Pagination.Item
-          key={idx + 1}
-          active={currentPage === idx + 1}
-          onClick={() => setCurrentPage(idx + 1)}
-        >
-          {idx + 1}
-        </Pagination.Item>
-      ))}
-      <Pagination.Next onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} />
-      <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} />
-    </Pagination>
-  );
+const ActionButton = React.memo(({ icon, tooltip, onClick, variant, disabled }) => (
+  <OverlayTrigger placement="top" overlay={<Tooltip>{tooltip}</Tooltip>}>
+    <span>
+      <Button
+        variant={variant}
+        size="sm"
+        className="me-2"
+        onClick={onClick}
+        disabled={disabled}
+        style={{ minWidth: 36 }}
+      >
+        {icon}
+      </Button>
+    </span>
+  </OverlayTrigger>
+));
 
-  const handleStatusFilter = (e) => {
-    setStatusFilter(e.target.value);
-    setCurrentPage(1);
-  };
-
-  const handleSortToggle = () => {
-    setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
-  };
-
-  function formatDateTime(dateString) {
+const CategoryRow = React.memo(({ 
+  category, 
+  index, 
+  currentPage, 
+  categoriesPerPage, 
+  isDeleted, 
+  onEdit, 
+  onDelete, 
+  onRestore, 
+  modalLoading 
+}) => {
+  const formatDateTime = useCallback((dateString) => {
     const d = new Date(dateString);
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -204,7 +99,450 @@ const CategoryManagement = () => {
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
     return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
-  }
+  }, []);
+
+  return (
+    <tr className={isDeleted ? "table-danger" : "category-row"}>
+      <td>{(currentPage - 1) * categoriesPerPage + index + 1}</td>
+      <td>{category.name}</td>
+      <td className="text-center">
+        <StatusBadge status={category.status} />
+      </td>
+      <td className="text-center">{formatDateTime(category.createdAt)}</td>
+      <td className="text-center">
+        {!isDeleted ? (
+          <>
+            <ActionButton 
+              icon={<FaEdit />} 
+              tooltip="Edit" 
+              onClick={() => onEdit(category)} 
+              variant="outline-primary" 
+              disabled={modalLoading} 
+            />
+            <ActionButton 
+              icon={<FaTrash />} 
+              tooltip="Delete" 
+              onClick={() => onDelete(category)} 
+              variant="outline-danger" 
+              disabled={modalLoading} 
+            />
+          </>
+        ) : (
+          <ActionButton 
+            icon={<FaUndo />} 
+            tooltip="Restore" 
+            onClick={() => onRestore(category._id, category.name)} 
+            variant="outline-success" 
+            disabled={modalLoading} 
+          />
+        )}
+      </td>
+    </tr>
+  );
+});
+
+const CategoryTable = React.memo(({ 
+  categories, 
+  title, 
+  isDeleted, 
+  total, 
+  currentPage, 
+  onEdit, 
+  onDelete, 
+  onRestore, 
+  modalLoading,
+  onAddCategory 
+}) => {
+  const sortIcon = useMemo(() => (
+    <span className="d-flex align-items-center justify-content-center gap-1">
+      Created At
+      <Button
+        variant="link"
+        size="sm"
+        className="p-0 ms-1"
+        style={{ lineHeight: 1 }}
+        tabIndex={-1}
+      >
+        <FaSortDown />
+      </Button>
+    </span>
+  ), []);
+
+  return (
+    <Card className="border-0 shadow-sm mb-4">
+      <Card.Header className={isDeleted ? "bg-danger text-white" : "bg-light"}>
+        <h5 className="mb-0">{title} ({total})</h5>
+      </Card.Header>
+      <Card.Body className="p-0">
+        <Table responsive hover striped className="mb-0 align-middle">
+          <thead className="table-light">
+            <tr>
+              <th style={{ width: 60 }}>#</th>
+              <th>Name</th>
+              <th className="text-center">Status</th>
+              <th className="text-center">{sortIcon}</th>
+              <th className="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center text-muted py-5">
+                  <div className="mb-2">
+                    <FaExclamationTriangle size={32} className="text-warning mb-2" />
+                  </div>
+                  <div>No {title.toLowerCase()} found.</div>
+                  {!isDeleted && (
+                    <Button variant="primary" className="mt-3" onClick={onAddCategory}>
+                      <FaPlus className="me-1" /> Add Category
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ) : (
+              categories.map((category, idx) => (
+                <CategoryRow
+                  key={category._id}
+                  category={category}
+                  index={idx}
+                  currentPage={currentPage}
+                  categoriesPerPage={5}
+                  isDeleted={isDeleted}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onRestore={onRestore}
+                  modalLoading={modalLoading}
+                />
+              ))
+            )}
+          </tbody>
+        </Table>
+      </Card.Body>
+    </Card>
+  );
+});
+
+const CategoryManagement = () => {
+  const [activeCategories, setActiveCategories] = useState([]);
+  const [deletedCategories, setDeletedCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [formData, setFormData] = useState({ name: '', status: 'active' });
+  const [errors, setErrors] = useState({});
+  const [activeCurrentPage, setActiveCurrentPage] = useState(1);
+  const [deletedCurrentPage, setDeletedCurrentPage] = useState(1);
+  const [activeTotalPages, setActiveTotalPages] = useState(1);
+  const [deletedTotalPages, setDeletedTotalPages] = useState(1);
+  const [activeTotal, setActiveTotal] = useState(0);
+  const [deletedTotal, setDeletedTotal] = useState(0);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [activeView, setActiveView] = useState(true);
+  const categoriesPerPage = 5;
+  const searchInputRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+
+  const fetchActiveCategories = useCallback(async (page = 1, search = '', sort = sortOrder) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await adminAxios.get(`/categories?page=${page}&limit=${categoriesPerPage}&search=${encodeURIComponent(search)}&status=active&sort=${sort}`);
+      setActiveCategories(res.data.categories);
+      setActiveTotalPages(res.data.totalPages);
+      setActiveTotal(res.data.total);
+      setActiveCurrentPage(res.data.page);
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to fetch active categories';
+      setError(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#d33',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [sortOrder]);
+
+  const fetchDeletedCategories = useCallback(async (page = 1, search = '', sort = sortOrder) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await adminAxios.get(`/categories?page=${page}&limit=${categoriesPerPage}&search=${encodeURIComponent(search)}&status=deleted&sort=${sort}`);
+      setDeletedCategories(res.data.categories);
+      setDeletedTotalPages(res.data.totalPages);
+      setDeletedTotal(res.data.total);
+      setDeletedCurrentPage(res.data.page);
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to fetch deleted categories';
+      setError(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#d33',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [sortOrder]);
+
+  // Initial load
+  useEffect(() => {
+    if (activeView) {
+      fetchActiveCategories(1, '', sortOrder);
+    } else {
+      fetchDeletedCategories(1, '', sortOrder);
+    }
+  }, [activeView, fetchActiveCategories, fetchDeletedCategories]);
+
+  // Handle pagination changes
+  useEffect(() => {
+    if (activeView) {
+      fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
+    } else {
+      fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+    }
+  }, [activeCurrentPage, deletedCurrentPage, fetchActiveCategories, fetchDeletedCategories]);
+
+  // Handle sort changes
+  useEffect(() => {
+    if (activeView) {
+      fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
+    } else {
+      fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+    }
+  }, [sortOrder, fetchActiveCategories, fetchDeletedCategories]);
+
+  const handleSearch = useCallback((e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      if (activeView) {
+        setActiveCurrentPage(1);
+        fetchActiveCategories(1, value, sortOrder);
+      } else {
+        setDeletedCurrentPage(1);
+        fetchDeletedCategories(1, value, sortOrder);
+      }
+    }, 500);
+  }, [activeView, fetchActiveCategories, fetchDeletedCategories, sortOrder]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm('');
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    if (activeView) {
+      setActiveCurrentPage(1);
+      fetchActiveCategories(1, '', sortOrder);
+    } else {
+      setDeletedCurrentPage(1);
+      fetchDeletedCategories(1, '', sortOrder);
+    }
+  }, [activeView, fetchActiveCategories, fetchDeletedCategories, sortOrder]);
+
+  const handleShowModal = useCallback((category = null) => {
+    setSelectedCategory(category);
+    setFormData(category ? { name: category.name, status: category.status } : { name: '', status: 'active' });
+    setShowModal(true);
+    setErrors({});
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setShowModal(false);
+    setSelectedCategory(null);
+    setFormData({ name: '', status: 'active' });
+    setErrors({});
+  }, []);
+
+  const validateForm = useCallback(() => {
+    const newErrors = {};
+    if (!formData.name) newErrors.name = 'Name is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData.name]);
+
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setModalLoading(true);
+    try {
+      if (selectedCategory) {
+        await adminAxios.put(`/categories/${selectedCategory._id}`, formData);
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Category updated successfully',
+          confirmButtonColor: '#28a745',
+        });
+      } else {
+        await adminAxios.post('/categories', formData);
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Category created successfully',
+          confirmButtonColor: '#28a745',
+        });
+      }
+      handleCloseModal();
+      if (activeView) {
+        fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
+      } else {
+        fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Error saving category';
+      setError(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#d33',
+      });
+    } finally {
+      setModalLoading(false);
+    }
+  }, [selectedCategory, formData, validateForm, handleCloseModal, activeView, activeCurrentPage, deletedCurrentPage, searchTerm, sortOrder, fetchActiveCategories, fetchDeletedCategories]);
+
+  const handleDelete = useCallback(async (category) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `You won't be able to revert this! Category "${category.name}" will be deleted.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await adminAxios.delete(`/categories/${category._id}`);
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Category has been deleted successfully.',
+          confirmButtonColor: '#28a745',
+        });
+        if (activeView) {
+          fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
+        } else {
+          fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+        }
+      } catch (error) {
+        const errorMessage = error.response?.data?.message || 'Error deleting category';
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: errorMessage,
+          confirmButtonColor: '#d33',
+        });
+      }
+    }
+  }, [activeView, activeCurrentPage, deletedCurrentPage, searchTerm, sortOrder, fetchActiveCategories, fetchDeletedCategories]);
+
+  const handleRestore = useCallback(async (categoryId, categoryName) => {
+    const result = await Swal.fire({
+      title: 'Restore Category?',
+      text: `Are you sure you want to restore category "${categoryName}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, restore it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await adminAxios.patch(`/categories/${categoryId}/restore`);
+        Swal.fire({
+          icon: 'success',
+          title: 'Restored!',
+          text: 'Category has been restored successfully.',
+          confirmButtonColor: '#28a745',
+        });
+        fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+      } catch (error) {
+        const errorMessage = error.response?.data?.message || 'Error restoring category';
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: errorMessage,
+          confirmButtonColor: '#d33',
+        });
+      }
+    }
+  }, [deletedCurrentPage, searchTerm, sortOrder, fetchDeletedCategories]);
+
+  const handleSortToggle = useCallback(() => {
+    setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+  }, []);
+
+  const handleViewToggle = useCallback((isActive) => {
+    setActiveView(isActive);
+    setSearchTerm('');
+    if (isActive) {
+      setActiveCurrentPage(1);
+    } else {
+      setDeletedCurrentPage(1);
+    }
+  }, []);
+
+  const renderPagination = useCallback((currentPage, totalPages, onPageChange) => (
+    <Pagination className="mb-0">
+      <Pagination.First onClick={() => onPageChange(1)} disabled={currentPage === 1} />
+      <Pagination.Prev onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1} />
+      {[...Array(totalPages)].map((_, idx) => (
+        <Pagination.Item
+          key={idx + 1}
+          active={currentPage === idx + 1}
+          onClick={() => onPageChange(idx + 1)}
+        >
+          {idx + 1}
+        </Pagination.Item>
+      ))}
+      <Pagination.Next onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} />
+      <Pagination.Last onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages} />
+    </Pagination>
+  ), []);
+
+  // Memoized values
+  const currentCategories = useMemo(() => 
+    activeView ? activeCategories : deletedCategories, 
+    [activeView, activeCategories, deletedCategories]
+  );
+
+  const currentTotal = useMemo(() => 
+    activeView ? activeTotal : deletedTotal, 
+    [activeView, activeTotal, deletedTotal]
+  );
+
+  const currentPage = useMemo(() => 
+    activeView ? activeCurrentPage : deletedCurrentPage, 
+    [activeView, activeCurrentPage, deletedCurrentPage]
+  );
+
+  const currentTotalPages = useMemo(() => 
+    activeView ? activeTotalPages : deletedTotalPages, 
+    [activeView, activeTotalPages, deletedTotalPages]
+  );
+
+  const setCurrentPage = useMemo(() => 
+    activeView ? setActiveCurrentPage : setDeletedCurrentPage, 
+    [activeView]
+  );
 
   if (loading) {
     return (
@@ -242,17 +580,35 @@ const CategoryManagement = () => {
                   variant="primary"
                   onClick={() => handleShowModal()}
                   className="d-flex align-items-center gap-2"
+                  disabled={!activeView}
                 >
                   <FaPlus /> Add Category
                 </Button>
               </Col>
             </Row>
-            {error && (
-              <Alert variant="danger" className="mb-4">
-                <FaExclamationTriangle className="me-2" />
-                {error}
-              </Alert>
-            )}
+
+            {/* Toggle Buttons */}
+            <Row className="mb-4">
+              <Col>
+                <ButtonGroup>
+                  <Button
+                    variant={activeView ? "primary" : "outline-primary"}
+                    onClick={() => handleViewToggle(true)}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <FaList /> Active Categories ({activeTotal})
+                  </Button>
+                  <Button
+                    variant={!activeView ? "danger" : "outline-danger"}
+                    onClick={() => handleViewToggle(false)}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <FaTrashAlt /> Deleted Categories ({deletedTotal})
+                  </Button>
+                </ButtonGroup>
+              </Col>
+            </Row>
+
             <Row className="mb-3">
               <Col md={6}>
                 <InputGroup>
@@ -262,7 +618,7 @@ const CategoryManagement = () => {
                   <Form.Control
                     ref={searchInputRef}
                     type="text"
-                    placeholder="Search by category name"
+                    placeholder={`Search ${activeView ? 'active' : 'deleted'} categories...`}
                     value={searchTerm}
                     onChange={handleSearch}
                     disabled={loading}
@@ -275,75 +631,30 @@ const CategoryManagement = () => {
                   )}
                 </InputGroup>
               </Col>
-              <Col md={3}>
-                <Form.Select value={statusFilter} onChange={handleStatusFilter}>
-                  <option value="all">All</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </Form.Select>
-              </Col>
             </Row>
-            <Card className="border-0 shadow-sm mb-4">
-              <Card.Body className="p-0">
-                <Table responsive hover striped className="mb-0 align-middle">
-                  <thead className="table-light">
-                    <tr>
-                      <th style={{ width: 60 }}>#</th>
-                      <th>Name</th>
-                      <th className="text-center">Status</th>
-                      <th className="text-center">
-                        <span className="d-flex align-items-center justify-content-center gap-1">
-                          Created At
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="p-0 ms-1"
-                            style={{ lineHeight: 1 }}
-                            onClick={handleSortToggle}
-                            tabIndex={-1}
-                          >
-                            {sortOrder === 'desc' ? <FaSortDown /> : <FaSortUp />}
-                          </Button>
-                        </span>
-                      </th>
-                      <th className="text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categories.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="text-center text-muted py-5">
-                          <div className="mb-2">
-                            <FaExclamationTriangle size={32} className="text-warning mb-2" />
-                          </div>
-                          <div>No categories found.</div>
-                          <Button variant="primary" className="mt-3" onClick={() => handleShowModal()}>
-                            <FaPlus className="me-1" /> Add Category
-                          </Button>
-                        </td>
-                      </tr>
-                    ) : (
-                      categories.map((category, idx) => (
-                        <tr key={category._id} className="category-row">
-                          <td>{(currentPage - 1) * categoriesPerPage + idx + 1}</td>
-                          <td>{category.name}</td>
-                          <td className="text-center">{getStatusBadge(category.status)}</td>
-                          <td className="text-center">{formatDateTime(category.createdAt)}</td>
-                          <td className="text-center">
-                            {renderActionButton(<FaEdit />, 'Edit', () => handleShowModal(category), 'outline-primary', modalLoading || deleteLoading)}
-                            {renderActionButton(<FaTrash />, 'Delete', () => { setSelectedCategory(category); setShowDeleteModal(true); }, 'outline-danger', modalLoading || deleteLoading)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
-              </Card.Body>
-            </Card>
+
+            {/* Category Table */}
+            <CategoryTable
+              categories={currentCategories}
+              title={activeView ? 'Active Categories' : 'Deleted Categories'}
+              isDeleted={!activeView}
+              total={currentTotal}
+              currentPage={currentPage}
+              onEdit={handleShowModal}
+              onDelete={handleDelete}
+              onRestore={handleRestore}
+              modalLoading={modalLoading}
+              onAddCategory={() => handleShowModal()}
+            />
+
+            {/* Pagination */}
             <div className="d-flex justify-content-between align-items-center mt-3">
-              <div>Total Categories: {total}</div>
-              {renderPagination()}
+              <div>
+                Total {activeView ? 'Active' : 'Deleted'} Categories: {currentTotal}
+              </div>
+              {renderPagination(currentPage, currentTotalPages, setCurrentPage)}
             </div>
+
             {/* Add/Edit Modal */}
             <Modal show={showModal} onHide={handleCloseModal} centered>
               <Modal.Header closeButton>
@@ -387,25 +698,6 @@ const CategoryManagement = () => {
                   </div>
                 </Form>
               </Modal.Body>
-            </Modal>
-            {/* Delete Confirmation Modal */}
-            <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
-              <Modal.Header closeButton>
-                <Modal.Title>Delete Category</Modal.Title>
-              </Modal.Header>
-              <Modal.Body className="text-center">
-                <FaTimesCircle size={40} className="text-danger mb-3" />
-                <div className="mb-2 text-danger fw-bold">Are you sure you want to delete category <b>{selectedCategory?.name}</b>?</div>
-                <div className="text-muted small">This action can be undone by re-adding the category.</div>
-              </Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={deleteLoading}>
-                  Cancel
-                </Button>
-                <Button variant="danger" onClick={handleDelete} disabled={deleteLoading}>
-                  {deleteLoading ? <Spinner size="sm" animation="border" className="me-1" /> : <FaTrash className="me-1" />} Delete
-                </Button>
-              </Modal.Footer>
             </Modal>
           </Container>
         </Col>

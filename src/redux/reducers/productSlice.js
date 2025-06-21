@@ -15,7 +15,7 @@ const initialState = {
     currentPage: 1,
     totalPages: 1,
     totalProducts: 0,
-    productsPerPage: 9
+    productsPerPage: 5
   }
 };
 
@@ -24,7 +24,8 @@ export const fetchProductsFromBackend = createAsyncThunk(
   'products/fetchProductsFromBackend',
   async (params = {}, { rejectWithValue }) => {
     try {
-      const { page = 1, limit = 9, search = '', status = '', category = '' } = params;
+      const { page = 1, limit = 5, search = '', status, category, brand, variantColour, variantCapacity } = params;
+      
       const response = await adminAxios.get('/products', {
         params: {
           page,
@@ -32,8 +33,12 @@ export const fetchProductsFromBackend = createAsyncThunk(
           search,
           status,
           category,
+          brand,
+          variantColour,
+          variantCapacity,
         },
       });
+      
       return {
         products: response.data.products,
         pagination: {

@@ -227,24 +227,6 @@ const AdminProductDetails = () => {
                     </Col>
                     <Col md={6}>
                       <Form.Group>
-                        <Form.Label>Price</Form.Label>
-                        <InputGroup>
-                          <InputGroup.Text>$</InputGroup.Text>
-                          <Form.Control
-                            type="number"
-                            value={product.price}
-                            onChange={(e) =>
-                              setProduct({
-                                ...product,
-                                price: parseFloat(e.target.value),
-                              })
-                            }
-                          />
-                        </InputGroup>
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
                         <Form.Label>Compare Price</Form.Label>
                         <InputGroup>
                           <InputGroup.Text>$</InputGroup.Text>
@@ -352,49 +334,67 @@ const AdminProductDetails = () => {
                     <Card key={index} className="mb-3">
                       <Card.Body>
                         <Row className="g-3">
-                          <Col md={4}>
+                          <Col md={2}>
                             <Form.Group>
-                              <Form.Label>Variant Name</Form.Label>
+                              <Form.Label>Colour</Form.Label>
                               <Form.Control
                                 type="text"
-                                value={variant.name}
+                                value={variant.colour || ''}
                                 onChange={(e) => {
                                   const newVariants = [...product.variants];
-                                  newVariants[index].name = e.target.value;
+                                  newVariants[index].colour = e.target.value;
                                   setProduct({ ...product, variants: newVariants });
                                 }}
+                                placeholder="e.g., Black, White, Red"
                               />
                             </Form.Group>
                           </Col>
-                          <Col md={3}>
+                          <Col md={2}>
+                            <Form.Group>
+                              <Form.Label>Capacity</Form.Label>
+                              <Form.Control
+                                type="text"
+                                value={variant.capacity || ''}
+                                onChange={(e) => {
+                                  const newVariants = [...product.variants];
+                                  newVariants[index].capacity = e.target.value;
+                                  setProduct({ ...product, variants: newVariants });
+                                }}
+                                placeholder="e.g., 128GB, 256GB"
+                              />
+                            </Form.Group>
+                          </Col>
+                          <Col md={2}>
                             <Form.Group>
                               <Form.Label>Price</Form.Label>
-                              <Form.Control
-                                type="number"
-                                value={variant.price}
-                                onChange={(e) => {
-                                  const newVariants = [...product.variants];
-                                  newVariants[index].price = parseFloat(
-                                    e.target.value
-                                  );
-                                  setProduct({ ...product, variants: newVariants });
-                                }}
-                              />
+                              <InputGroup>
+                                <InputGroup.Text>$</InputGroup.Text>
+                                <Form.Control
+                                  type="number"
+                                  value={variant.price || 0}
+                                  onChange={(e) => {
+                                    const newVariants = [...product.variants];
+                                    newVariants[index].price = parseFloat(e.target.value) || 0;
+                                    setProduct({ ...product, variants: newVariants });
+                                  }}
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </InputGroup>
                             </Form.Group>
                           </Col>
-                          <Col md={3}>
+                          <Col md={2}>
                             <Form.Group>
                               <Form.Label>Stock</Form.Label>
                               <Form.Control
                                 type="number"
-                                value={variant.stock}
+                                value={variant.stock || 0}
                                 onChange={(e) => {
                                   const newVariants = [...product.variants];
-                                  newVariants[index].stock = parseInt(
-                                    e.target.value
-                                  );
+                                  newVariants[index].stock = parseInt(e.target.value) || 0;
                                   setProduct({ ...product, variants: newVariants });
                                 }}
+                                min="0"
                               />
                             </Form.Group>
                           </Col>
