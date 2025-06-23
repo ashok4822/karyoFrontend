@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { setAdminAccessToken, logoutAdmin } from "../../redux/reducers/authSlice";
+import {
+  setAdminAccessToken,
+  logoutAdmin,
+  loginSuccess,
+} from "../../redux/reducers/authSlice";
 import adminAxios from "../../lib/adminAxios";
 import {
   Container,
@@ -43,8 +47,11 @@ const AdminLogin = () => {
   };
 
   const handleSubmit = async (e) => {
+    console.log("inside handle sbmit1");
     e.preventDefault();
     const form = e.currentTarget;
+
+    console.log("inside handle sbmit2");
 
     if (form.checkValidity() === false) {
       e.stopPropagation();
@@ -52,15 +59,46 @@ const AdminLogin = () => {
       return;
     }
 
+    console.log("inside handle sbmit3");
+
     setLoading(true);
     setError("");
 
+    console.log("inside handle sbmit4");
+
     try {
+      console.log("Form Data Submitted:", formData);
       const { data } = await adminAxios.post("/login", formData);
-      dispatch(setAdminAccessToken(data.token));
+      console.log("after adminAxios; data: ", data);
+      localStorage.setItem("adminAccessToken", data.token);
+
+      // Dispatch admin login
+      dispatch(
+        loginSuccess({
+          // user: { id: data.user.id, role: data.user.role },
+          user: data.user, // includes id, email, name, etc.
+          // token: data.token,
+          adminAccessToken: data.token,
+        })
+      );
+      // Debug logging
+      // setTimeout(() => {
+      //   console.log("After admin login:", {
+      //     redux: window.__REDUX_DEVTOOLS_EXTENSION__
+      //       ? window.__REDUX_DEVTOOLS_EXTENSION__()
+      //       : "No Redux DevTools",
+      //     localStorage: {
+      //       admin: localStorage.getItem("admin"),
+      //       token: localStorage.getItem("token"),
+      //       adminAccessToken: localStorage.getItem("adminAccessToken"),
+      //     },
+      //   });
+      // }, 1000);
       navigate("/admin");
     } catch (error) {
-      setError(error.response?.data?.message || error.message || "Login failed");
+      setError(
+        error.response?.data?.message || error.message || "Login failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -72,7 +110,7 @@ const AdminLogin = () => {
         <Row className="justify-content-center">
           <Col md={8} lg={6} xl={5}>
             <div className="text-center mb-4">
-              <h1 className="h2">Pack Palace Admin</h1>
+              <h1 className="h2">KARYO Admin</h1>
               <p className="text-muted">Sign in to access the admin panel</p>
             </div>
 

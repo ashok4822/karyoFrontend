@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import adminAxios from '../../lib/adminAxios';
+import userAxios from '../../lib/userAxios';
 
 const initialState = {
   products: [],
@@ -24,20 +24,63 @@ export const fetchProductsFromBackend = createAsyncThunk(
   'products/fetchProductsFromBackend',
   async (params = {}, { rejectWithValue }) => {
     try {
-      const { page = 1, limit = 5, search = '', status, category, brand, variantColour, variantCapacity } = params;
+      console.log('fetchProductsFromBackend called with params:', params);
+      const { page = 1, limit = 5, search = '', status, category, brand, variantColour, variantCapacity, minPrice, maxPrice, sort } = params;
       
-      const response = await adminAxios.get('/products', {
-        params: {
-          page,
-          limit,
-          search,
-          status,
-          category,
-          brand,
-          variantColour,
-          variantCapacity,
-        },
+      // Build query parameters, handling arrays properly
+      const queryParams = {
+        page,
+        limit,
+        search,
+        status,
+        brand,
+        minPrice,
+        maxPrice,
+        sort,
+      };
+      
+      // Handle category - convert arrays to comma-separated strings
+      if (category) {
+        if (Array.isArray(category)) {
+          queryParams.category = category.join(',');
+        } else {
+          queryParams.category = category;
+        }
+      }
+      
+      // Handle brand - convert arrays to comma-separated strings
+      if (brand) {
+        if (Array.isArray(brand)) {
+          queryParams.brand = brand.join(',');
+        } else {
+          queryParams.brand = brand;
+        }
+      }
+      
+      // Handle variant filters - convert arrays to comma-separated strings
+      if (variantColour) {
+        if (Array.isArray(variantColour)) {
+          queryParams.variantColour = variantColour.join(',');
+        } else {
+          queryParams.variantColour = variantColour;
+        }
+      }
+      
+      if (variantCapacity) {
+        if (Array.isArray(variantCapacity)) {
+          queryParams.variantCapacity = variantCapacity.join(',');
+        } else {
+          queryParams.variantCapacity = variantCapacity;
+        }
+      }
+      
+      console.log('fetchProductsFromBackend - final query params:', queryParams);
+      
+      const response = await userAxios.get('/products', {
+        params: queryParams,
       });
+      
+      console.log('fetchProductsFromBackend response:', response.data);
       
       return {
         products: response.data.products,
@@ -49,6 +92,7 @@ export const fetchProductsFromBackend = createAsyncThunk(
         },
       };
     } catch (err) {
+      console.error('fetchProductsFromBackend error:', err);
       return rejectWithValue(err.response?.data?.message || 'Failed to fetch products');
     }
   }

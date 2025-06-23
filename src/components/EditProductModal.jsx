@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
 import adminAxios from "../lib/adminAxios";
 
-const EditProductModal = ({ show, onHide, onProductUpdated, categories, product }) => {
+const EditProductModal = ({ show, onHide, onProductUpdated, categories, product, variants = [] }) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -14,6 +14,9 @@ const EditProductModal = ({ show, onHide, onProductUpdated, categories, product 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [variantList, setVariantList] = useState(variants);
+  const [nameError, setNameError] = useState("");
+  const [brandError, setBrandError] = useState("");
 
   // Populate form when product changes
   useEffect(() => {
@@ -56,19 +59,30 @@ const EditProductModal = ({ show, onHide, onProductUpdated, categories, product 
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
       setError("Product name is required");
       return false;
     }
+    if (!/^[\w\s.,'"!?-]{0,100}$/.test(trimmedName)) {
+      setNameError("Invalid product name. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters).");
+      return false;
+    }
+    setNameError("");
+    const trimmedBrand = formData.brand.trim();
+    if (!trimmedBrand) {
+      setError("Brand is required");
+      return false;
+    }
+    if (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmedBrand)) {
+      setBrandError("Invalid brand name. Only letters, spaces, and basic punctuation are allowed (max 100 characters).");
+      return false;
+    }
+    setBrandError("");
     if (!formData.category) {
       setError("Category is required");
       return false;
     }
-    if (!formData.brand.trim()) {
-      setError("Brand is required");
-      return false;
-    }
-    
     return true;
   };
 
@@ -131,10 +145,14 @@ const EditProductModal = ({ show, onHide, onProductUpdated, categories, product 
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
+                  onChange={e => {
+                    handleInputChange(e);
+                    setNameError("");
+                  }}
                   placeholder="Enter product name"
                   required
                 />
+                { nameError && <div className="text-danger small mt-1">{nameError}</div> }
               </Form.Group>
             </Col>
             
@@ -166,10 +184,14 @@ const EditProductModal = ({ show, onHide, onProductUpdated, categories, product 
                   type="text"
                   name="brand"
                   value={formData.brand}
-                  onChange={handleInputChange}
+                  onChange={e => {
+                    handleInputChange(e);
+                    setBrandError("");
+                  }}
                   placeholder="Enter brand name"
                   required
                 />
+                { brandError && <div className="text-danger small mt-1">{brandError}</div> }
               </Form.Group>
             </Col>
             

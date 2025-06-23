@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { setUserAccessToken, logoutUser, loginSuccess } from "../../redux/reducers/authSlice";
+import { loginSuccess } from "../../redux/reducers/authSlice";
 import userAxios from "../../lib/userAxios";
 import {
   Container,
@@ -39,7 +39,9 @@ const UserLogin = () => {
     setLoading(true);
     try {
       const res = await userAxios.post("auth/login", { email, password });
-      dispatch(loginSuccess({ user: res.data.user, token: res.data.token, userAccessToken: res.data.token }));
+      dispatch(
+        loginSuccess({ user: res.data.user, userAccessToken: res.data.token })
+      );
       setSuccessMsg("Login successful! Redirecting...");
       setTimeout(() => navigate("/"), 1500);
     } catch (error) {
@@ -62,7 +64,9 @@ const UserLogin = () => {
               <Button
                 variant="outline-danger"
                 className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                onClick={() => window.location.href = "http://localhost:5000/auth/google"}
+                onClick={() =>
+                  (window.location.href = "http://localhost:5000/auth/google")
+                }
               >
                 <FaGoogle /> Sign in with Google
               </Button>
@@ -100,15 +104,22 @@ const UserLogin = () => {
                   </InputGroup>
                 </Form.Group>
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                  <Link to="/forgot-password" className="small">Forgot Password?</Link>
+                  <Link to="/forgot-password" className="small">
+                    Forgot Password?
+                  </Link>
                 </div>
-                <Button type="submit" variant="primary" className="w-100" disabled={loading}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-100"
+                  disabled={loading}
+                >
                   {loading ? "Logging in..." : "Sign In"}
                 </Button>
               </Form>
               <div className="text-center mt-4">
                 <p className="mb-0">
-                  Don't have an account?{' '}
+                  Don't have an account?{" "}
                   <Link to="/register" className="text-decoration-none">
                     Sign up
                   </Link>

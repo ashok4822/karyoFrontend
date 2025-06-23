@@ -22,6 +22,10 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showVariants, setShowVariants] = useState(false);
+  const [colourErrors, setColourErrors] = useState([]);
+  const [capacityErrors, setCapacityErrors] = useState([]);
+  const [nameError, setNameError] = useState("");
+  const [brandError, setBrandError] = useState("");
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -44,6 +48,10 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
     setError("");
     setSuccess("");
     setShowVariants(false);
+    setColourErrors([]);
+    setCapacityErrors([]);
+    setNameError("");
+    setBrandError("");
   };
 
   const handleInputChange = (e) => {
@@ -253,6 +261,48 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Product name validation
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      setNameError("Product name is required.");
+      return;
+    }
+    if (!/^[\w\s.,'"!?-]{0,100}$/.test(trimmedName)) {
+      setNameError("Invalid product name. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters).");
+      return;
+    }
+    setNameError("");
+
+    // Brand name validation
+    const trimmedBrand = formData.brand.trim();
+    if (!trimmedBrand) {
+      setBrandError("Brand is required.");
+      return;
+    }
+    if (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmedBrand)) {
+      setBrandError("Invalid brand name. Only letters, spaces, and basic punctuation are allowed (max 100 characters).");
+      return;
+    }
+    setBrandError("");
+
+    // Validate all variant colours
+    const newColourErrors = variants.map((variant, index) => {
+      const trimmed = (variant.colour || '').trim();
+      if (!trimmed) return 'Colour is required.';
+      if (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmed)) return 'Invalid colour. Only letters, spaces, and basic punctuation are allowed (max 100 characters).';
+      return '';
+    });
+    setColourErrors(newColourErrors);
+    // Validate all variant capacities
+    const newCapacityErrors = variants.map((variant, index) => {
+      const trimmed = (variant.capacity || '').trim();
+      if (!trimmed) return 'Capacity is required.';
+      if (!/^\d+(\.\d+)*L$/.test(trimmed)) return 'Invalid capacity. Must start with a number, can have dots (not at the beginning or end), and end with a capital L.';
+      return '';
+    });
+    setCapacityErrors(newCapacityErrors);
+    if (newColourErrors.some(err => err) || newCapacityErrors.some(err => err)) return;
+
     if (!validateForm()) {
       return;
     }
@@ -381,10 +431,14 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
+                  onChange={e => {
+                    handleInputChange(e);
+                    setNameError("");
+                  }}
                   placeholder="Enter product name"
                   required
                 />
+                { nameError && <div className="text-danger small mt-1">{nameError}</div> }
               </Form.Group>
             </Col>
             
@@ -416,10 +470,14 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                   type="text"
                   name="brand"
                   value={formData.brand}
-                  onChange={handleInputChange}
+                  onChange={e => {
+                    handleInputChange(e);
+                    setBrandError("");
+                  }}
                   placeholder="Enter brand name"
                   required
                 />
+                { brandError && <div className="text-danger small mt-1">{brandError}</div> }
               </Form.Group>
             </Col>
           </Row>
@@ -532,11 +590,15 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                             <Form.Control
                               type="text"
                               value={variant.colour}
-                              onChange={(e) => handleVariantChange(index, "colour", e.target.value)}
+                              onChange={(e) => {
+                                handleVariantChange(index, "colour", e.target.value);
+                                setColourErrors((prev) => prev.map((err, i) => i === index ? '' : err));
+                              }}
                               placeholder="e.g., Red, Blue"
                               required
                             />
                           </Form.Group>
+                          {colourErrors[index] && <div className="text-danger small mt-1">{colourErrors[index]}</div>}
                         </Col>
                         
                         <Col md={6}>
@@ -545,11 +607,15 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                             <Form.Control
                               type="text"
                               value={variant.capacity}
-                              onChange={(e) => handleVariantChange(index, "capacity", e.target.value)}
-                              placeholder="e.g., 128GB, 256GB"
+                              onChange={(e) => {
+                                handleVariantChange(index, "capacity", e.target.value);
+                                setCapacityErrors((prev) => prev.map((err, i) => i === index ? '' : err));
+                              }}
+                              placeholder="e.g., 1L, 1.5L"
                               required
                             />
                           </Form.Group>
+                          {capacityErrors[index] && <div className="text-danger small mt-1">{capacityErrors[index]}</div>}
                         </Col>
                       </Row>
                     </div>

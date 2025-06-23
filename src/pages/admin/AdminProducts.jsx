@@ -40,6 +40,7 @@ const AdminProducts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [capacityFilter, setCapacityFilter] = useState('');
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,6 +65,11 @@ const AdminProducts = () => {
 
   const handleStatusFilter = (e) => {
     setStatusFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleCapacityFilter = (e) => {
+    setCapacityFilter(e.target.value);
     setCurrentPage(1);
   };
 
@@ -97,8 +103,12 @@ const AdminProducts = () => {
       const matchesStatus = statusFilter
         ? product.status === statusFilter
         : true;
+      const matchesCapacity = capacityFilter
+        ? (product.variants && product.variants.some(variant => variant.capacity === capacityFilter)) ||
+          (product.variantDetails && product.variantDetails.some(variant => variant.capacity === capacityFilter))
+        : true;
 
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesCategory && matchesStatus && matchesCapacity;
     })
     .sort((a, b) => {
       const direction = sortDirection === 'asc' ? 1 : -1;
@@ -167,7 +177,7 @@ const AdminProducts = () => {
       <Card className="border-0 shadow-sm mb-4">
         <Card.Body>
           <Row className="g-3">
-            <Col md={4}>
+            <Col md={3}>
               <InputGroup>
                 <InputGroup.Text>
                   <FaSearch />
@@ -180,7 +190,7 @@ const AdminProducts = () => {
                 />
               </InputGroup>
             </Col>
-            <Col md={3}>
+            <Col md={2}>
               <Form.Select
                 value={categoryFilter}
                 onChange={handleCategoryFilter}
@@ -190,7 +200,7 @@ const AdminProducts = () => {
                 {/* Add category options */}
               </Form.Select>
             </Col>
-            <Col md={3}>
+            <Col md={2}>
               <Form.Select
                 value={statusFilter}
                 onChange={handleStatusFilter}
@@ -202,6 +212,21 @@ const AdminProducts = () => {
                 <option value="archived">Archived</option>
               </Form.Select>
             </Col>
+            <Col md={3}>
+              <Form.Select
+                value={capacityFilter}
+                onChange={handleCapacityFilter}
+                className="d-flex align-items-center gap-2"
+              >
+                <option value="">All Capacities</option>
+                <option value="64GB">64GB</option>
+                <option value="128GB">128GB</option>
+                <option value="256GB">256GB</option>
+                <option value="512GB">512GB</option>
+                <option value="1TB">1TB</option>
+                <option value="2TB">2TB</option>
+              </Form.Select>
+            </Col>
             <Col md={2}>
               <Button
                 variant="outline-secondary"
@@ -210,6 +235,7 @@ const AdminProducts = () => {
                   setSearchTerm('');
                   setCategoryFilter('');
                   setStatusFilter('');
+                  setCapacityFilter('');
                 }}
               >
                 <FaFilter /> Clear

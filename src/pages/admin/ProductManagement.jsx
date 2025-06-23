@@ -11,14 +11,19 @@ import ViewVariantModal from "../../components/ViewVariantModal";
 import AddVariantModal from "../../components/AddVariantModal";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 import adminAxios from "../../lib/adminAxios";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { products, loading, error, pagination } = useSelector((state) => state.products);
+  const { products, loading, error, pagination } = useSelector(
+    (state) => state.products
+  );
   const [categories, setCategories] = useState([]);
-  const [variantOptions, setVariantOptions] = useState({ colours: [], capacities: [] });
+  const [variantOptions, setVariantOptions] = useState({
+    colours: [],
+    capacities: [],
+  });
   const [brands, setBrands] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -36,7 +41,8 @@ const ProductManagement = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch categories for filter dropdown
+  // Fetch categories for filter dropdown variants.stock
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -80,11 +86,21 @@ const ProductManagement = () => {
       status: statusFilter !== "all" ? statusFilter : "",
       brand: brandFilter !== "all" ? brandFilter : "",
       variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-      variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+      variantCapacity:
+        variantCapacityFilter !== "all" ? variantCapacityFilter : "",
     };
-    
+
     dispatch(fetchProductsFromBackend(params));
-  }, [dispatch, currentPage, searchQuery, categoryFilter, statusFilter, brandFilter, variantColourFilter, variantCapacityFilter]);
+  }, [
+    dispatch,
+    currentPage,
+    searchQuery,
+    categoryFilter,
+    statusFilter,
+    brandFilter,
+    variantColourFilter,
+    variantCapacityFilter,
+  ]);
 
   const handleViewProduct = (product) => {
     setSelectedProduct(product);
@@ -102,42 +118,42 @@ const ProductManagement = () => {
       text: "You won't be able to revert this!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
     });
 
     if (result.isConfirmed) {
       try {
         await adminAxios.delete(`/products/${id}`);
-        Swal.fire(
-          'Deleted!',
-          'Product has been deleted.',
-          'success'
-        );
-        
+        Swal.fire("Deleted!", "Product has been deleted.", "success");
+
         // Refresh products after deletion
         // If we're on the last page and it's the only item, go to previous page
         if (products.length === 1 && currentPage > 1) {
           setCurrentPage(currentPage - 1);
         } else {
           // Refresh current page
-          dispatch(fetchProductsFromBackend({
-            page: currentPage,
-            limit: 5,
-            search: searchQuery,
-            category: categoryFilter !== "all" ? categoryFilter : "",
-            status: statusFilter !== "all" ? statusFilter : "",
-            brand: brandFilter !== "all" ? brandFilter : "",
-            variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-            variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-          }));
+          dispatch(
+            fetchProductsFromBackend({
+              page: currentPage,
+              limit: 5,
+              search: searchQuery,
+              category: categoryFilter !== "all" ? categoryFilter : "",
+              status: statusFilter !== "all" ? statusFilter : "",
+              brand: brandFilter !== "all" ? brandFilter : "",
+              variantColour:
+                variantColourFilter !== "all" ? variantColourFilter : "",
+              variantCapacity:
+                variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+            })
+          );
         }
       } catch (error) {
         Swal.fire(
-          'Error!',
-          error.response?.data?.message || 'Failed to delete product',
-          'error'
+          "Error!",
+          error.response?.data?.message || "Failed to delete product",
+          "error"
         );
       }
     }
@@ -146,49 +162,58 @@ const ProductManagement = () => {
   const handleProductAdded = () => {
     // Refresh products after adding new product
     setCurrentPage(1); // Reset to first page
-    dispatch(fetchProductsFromBackend({
-      page: 1,
-      limit: 5,
-      search: searchQuery,
-      category: categoryFilter !== "all" ? categoryFilter : "",
-      status: statusFilter !== "all" ? statusFilter : "",
-      brand: brandFilter !== "all" ? brandFilter : "",
-      variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-      variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-    }));
+    dispatch(
+      fetchProductsFromBackend({
+        page: 1,
+        limit: 5,
+        search: searchQuery,
+        category: categoryFilter !== "all" ? categoryFilter : "",
+        status: statusFilter !== "all" ? statusFilter : "",
+        brand: brandFilter !== "all" ? brandFilter : "",
+        variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
+        variantCapacity:
+          variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+      })
+    );
   };
 
   const handleProductUpdated = () => {
     setCurrentPage(1); // Reset to first page
-    dispatch(fetchProductsFromBackend({
-      page: 1,
-      limit: 5,
-      search: searchQuery,
-      category: categoryFilter !== "all" ? categoryFilter : "",
-      status: statusFilter !== "all" ? statusFilter : "",
-      brand: brandFilter !== "all" ? brandFilter : "",
-      variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-      variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-    }));
+    dispatch(
+      fetchProductsFromBackend({
+        page: 1,
+        limit: 5,
+        search: searchQuery,
+        category: categoryFilter !== "all" ? categoryFilter : "",
+        status: statusFilter !== "all" ? statusFilter : "",
+        brand: brandFilter !== "all" ? brandFilter : "",
+        variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
+        variantCapacity:
+          variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+      })
+    );
   };
 
   const handleVariantUpdated = () => {
     setCurrentPage(1); // Reset to first page
-    dispatch(fetchProductsFromBackend({
-      page: 1,
-      limit: 5,
-      search: searchQuery,
-      category: categoryFilter !== "all" ? categoryFilter : "",
-      status: statusFilter !== "all" ? statusFilter : "",
-      brand: brandFilter !== "all" ? brandFilter : "",
-      variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-      variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-    }));
+    dispatch(
+      fetchProductsFromBackend({
+        page: 1,
+        limit: 5,
+        search: searchQuery,
+        category: categoryFilter !== "all" ? categoryFilter : "",
+        status: statusFilter !== "all" ? statusFilter : "",
+        brand: brandFilter !== "all" ? brandFilter : "",
+        variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
+        variantCapacity:
+          variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+      })
+    );
   };
 
   const handleViewVariant = (product, variant) => {
-    console.log('Viewing variant:', variant);
-    console.log('Product:', product);
+    console.log("Viewing variant:", variant);
+    console.log("Product:", product);
     setSelectedProduct(product);
     setSelectedVariant(variant);
     setShowViewVariantModal(true);
@@ -206,61 +231,63 @@ const ProductManagement = () => {
   };
 
   const handleDeleteVariant = async (productId, variantId) => {
-    console.log('handleDeleteVariant called with:', { productId, variantId });
-    console.log('variantId type:', typeof variantId);
-    console.log('variantId value:', variantId);
-    
-    if (!variantId || variantId === 'undefined') {
-      console.error('Invalid variant ID:', variantId);
+    console.log("handleDeleteVariant called with:", { productId, variantId });
+    console.log("variantId type:", typeof variantId);
+    console.log("variantId value:", variantId);
+
+    if (!variantId || variantId === "undefined") {
+      console.error("Invalid variant ID:", variantId);
       return;
     }
-    
+
     try {
       const confirmed = await Swal.fire({
-        title: 'Are you sure?',
+        title: "Are you sure?",
         text: "You won't be able to revert this!",
-        icon: 'warning',
+        icon: "warning",
         showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, delete it!",
       });
 
       if (confirmed.isConfirmed) {
-        const response = await adminAxios.delete(`/products/${productId}/variants/${variantId}`);
-        
+        const response = await adminAxios.delete(
+          `/products/${productId}/variants/${variantId}`
+        );
+
         if (response.status === 200) {
-          Swal.fire(
-            'Deleted!',
-            'Variant has been deleted.',
-            'success'
-          );
-          
+          Swal.fire("Deleted!", "Variant has been deleted.", "success");
+
           // Refresh the product list with current pagination
-          dispatch(fetchProductsFromBackend({
-            page: currentPage,
-            limit: 5,
-            search: searchQuery,
-            category: categoryFilter !== "all" ? categoryFilter : "",
-            status: statusFilter !== "all" ? statusFilter : "",
-            brand: brandFilter !== "all" ? brandFilter : "",
-            variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-            variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-          }));
+          dispatch(
+            fetchProductsFromBackend({
+              page: currentPage,
+              limit: 5,
+              search: searchQuery,
+              category: categoryFilter !== "all" ? categoryFilter : "",
+              status: statusFilter !== "all" ? statusFilter : "",
+              brand: brandFilter !== "all" ? brandFilter : "",
+              variantColour:
+                variantColourFilter !== "all" ? variantColourFilter : "",
+              variantCapacity:
+                variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+            })
+          );
         }
       }
     } catch (error) {
-      console.error('Error deleting variant:', error);
+      console.error("Error deleting variant:", error);
       Swal.fire(
-        'Error!',
-        error.response?.data?.message || 'Failed to delete variant',
-        'error'
+        "Error!",
+        error.response?.data?.message || "Failed to delete variant",
+        "error"
       );
     }
   };
 
   const getStatusBadge = (status) => {
-    return status === 'active' ? (
+    return status === "active" ? (
       <span className="badge bg-success">Active</span>
     ) : (
       <span className="badge bg-secondary">Inactive</span>
@@ -268,9 +295,9 @@ const ProductManagement = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString();
   };
 
   const clearAllFilters = () => {
@@ -318,7 +345,7 @@ const ProductManagement = () => {
 
           {/* Search and Filters */}
           <div className="row mb-3">
-            <div className="col-md-3">
+            <div className="col-md-2">
               <div className="input-group">
                 <span className="input-group-text">
                   <Search size={16} />
@@ -385,9 +412,23 @@ const ProductManagement = () => {
                 ))}
               </select>
             </div>
+            <div className="col-md-2">
+              <select
+                className="form-select"
+                value={variantCapacityFilter}
+                onChange={(e) => setVariantCapacityFilter(e.target.value)}
+              >
+                <option value="all">All Capacities</option>
+                {variantOptions.capacities.map((capacity, idx) => (
+                  <option key={idx} value={capacity}>
+                    {capacity}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="col-md-1">
               <button
-                className="btn btn-outline-secondary"
+                className="btn btn-outline-secondary mt-2"
                 onClick={clearAllFilters}
                 title="Clear all filters"
               >
@@ -431,57 +472,99 @@ const ProductManagement = () => {
                       <td>{formatDate(product.createdAt)}</td>
                       <td>
                         {(() => {
-                          console.log('Product variants:', product.variants);
-                          console.log('Product variantDetails:', product.variantDetails);
-                          
-                          const variants = product.variantDetails && product.variantDetails.length > 0 
-                            ? product.variantDetails 
-                            : product.variants && product.variants.length > 0 
-                              ? product.variants 
+                          console.log("Product variants:", product.variants);
+                          console.log(
+                            "Product variantDetails:",
+                            product.variantDetails
+                          );
+
+                          const variants =
+                            product.variantDetails &&
+                            product.variantDetails.length > 0
+                              ? product.variantDetails
+                              : product.variants && product.variants.length > 0
+                              ? product.variants
                               : [];
-                          
-                          console.log('Final variants array to display:', variants);
-                          
+
+                          console.log(
+                            "Final variants array to display:",
+                            variants
+                          );
+
                           if (variants.length === 0) {
-                            return <span className="text-muted">No variants</span>;
+                            return (
+                              <span className="text-muted">No variants</span>
+                            );
                           }
-                          
+
                           return variants.map((variant, idx) => {
                             console.log(`Variant ${idx + 1} object:`, variant);
                             console.log(`Variant ${idx + 1} _id:`, variant._id);
                             console.log(`Variant ${idx + 1} id:`, variant.id);
-                            
+
                             return (
-                              <div key={variant._id || idx} className="mb-2 p-2 border rounded" style={{ fontSize: '0.75rem' }}>
+                              <div
+                                key={variant._id || idx}
+                                className="mb-2 p-2 border rounded"
+                                style={{ fontSize: "0.75rem" }}
+                              >
                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                  <span className="fw-bold text-primary">Variant {idx + 1}</span>
-                                  <div className="btn-group btn-group-sm" role="group">
+                                  <span className="fw-bold text-primary">
+                                    Variant {idx + 1}
+                                  </span>
+                                  <div
+                                    className="btn-group btn-group-sm"
+                                    role="group"
+                                  >
                                     <button
                                       className="btn btn-outline-primary btn-sm"
-                                      onClick={() => handleViewVariant(product, variant)}
+                                      onClick={() =>
+                                        handleViewVariant(product, variant)
+                                      }
                                       title="View Variant"
-                                      style={{ fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}
+                                      style={{
+                                        fontSize: "0.6rem",
+                                        padding: "0.1rem 0.3rem",
+                                      }}
                                     >
                                       <Eye size={10} />
                                     </button>
                                     <button
                                       className="btn btn-outline-warning btn-sm"
-                                      onClick={() => handleEditVariant(product, variant)}
+                                      onClick={() =>
+                                        handleEditVariant(product, variant)
+                                      }
                                       title="Edit Variant"
-                                      style={{ fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}
+                                      style={{
+                                        fontSize: "0.6rem",
+                                        padding: "0.1rem 0.3rem",
+                                      }}
                                     >
                                       <Edit size={10} />
                                     </button>
                                     <button
                                       className="btn btn-outline-danger btn-sm"
                                       onClick={() => {
-                                        console.log('Variant object for delete:', variant);
-                                        const variantId = variant._id || variant.id;
-                                        console.log('Using variant ID for delete:', variantId);
-                                        handleDeleteVariant(product._id, variantId);
+                                        console.log(
+                                          "Variant object for delete:",
+                                          variant
+                                        );
+                                        const variantId =
+                                          variant._id || variant.id;
+                                        console.log(
+                                          "Using variant ID for delete:",
+                                          variantId
+                                        );
+                                        handleDeleteVariant(
+                                          product._id,
+                                          variantId
+                                        );
                                       }}
                                       title="Delete Variant"
-                                      style={{ fontSize: '0.6rem', padding: '0.1rem 0.3rem' }}
+                                      style={{
+                                        fontSize: "0.6rem",
+                                        padding: "0.1rem 0.3rem",
+                                      }}
                                     >
                                       <Trash2 size={10} />
                                     </button>
@@ -489,41 +572,99 @@ const ProductManagement = () => {
                                 </div>
                                 <div className="row g-1 mb-1">
                                   <div className="col-3">
-                                    <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Clr:</small>
-                                    <span className="badge bg-light text-dark" style={{ fontSize: '0.7rem' }}>
+                                    <small
+                                      className="text-muted d-block"
+                                      style={{ fontSize: "0.65rem" }}
+                                    >
+                                      Clr:
+                                    </small>
+                                    <span
+                                      className="badge bg-light text-dark"
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
                                       {variant.colour || "N/A"}
                                     </span>
                                   </div>
                                   <div className="col-3">
-                                    <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Cap:</small>
-                                    <span className="badge bg-light text-dark" style={{ fontSize: '0.7rem' }}>
+                                    <small
+                                      className="text-muted d-block"
+                                      style={{ fontSize: "0.65rem" }}
+                                    >
+                                      Cap:
+                                    </small>
+                                    <span
+                                      className="badge bg-light text-dark"
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
                                       {variant.capacity || "N/A"}
                                     </span>
                                   </div>
                                   <div className="col-3">
-                                    <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Prc:</small>
-                                    <span className="badge bg-info text-white" style={{ fontSize: '0.7rem' }}>
+                                    <small
+                                      className="text-muted d-block"
+                                      style={{ fontSize: "0.65rem" }}
+                                    >
+                                      Prc:
+                                    </small>
+                                    <span
+                                      className="badge bg-info text-white"
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
                                       ${variant.price || 0}
                                     </span>
                                   </div>
                                   <div className="col-3">
-                                    <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Stk:</small>
-                                    <span className={`badge ${(variant.stock || 0) > 0 ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '0.7rem' }}>
+                                    <small
+                                      className="text-muted d-block"
+                                      style={{ fontSize: "0.65rem" }}
+                                    >
+                                      Stk:
+                                    </small>
+                                    <span
+                                      className={`badge ${
+                                        (variant.stock || 0) >= 0
+                                          ? "bg-success"
+                                          : "bg-danger"
+                                      }`}
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
                                       {variant.stock || 0}
                                     </span>
                                   </div>
                                 </div>
                                 <div className="row g-1">
                                   <div className="col-6">
-                                    <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Status:</small>
-                                    <span className={`badge ${variant.status === 'active' ? 'bg-success' : 'bg-secondary'}`} style={{ fontSize: '0.7rem' }}>
-                                      {variant.status || 'active'}
+                                    <small
+                                      className="text-muted d-block"
+                                      style={{ fontSize: "0.65rem" }}
+                                    >
+                                      Status:
+                                    </small>
+                                    <span
+                                      className={`badge ${
+                                        variant.status === "active"
+                                          ? "bg-success"
+                                          : "bg-secondary"
+                                      }`}
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
+                                      {variant.status || "active"}
                                     </span>
                                   </div>
                                   <div className="col-6">
-                                    <small className="text-muted d-block" style={{ fontSize: '0.65rem' }}>Created:</small>
-                                    <span className="text-muted" style={{ fontSize: '0.7rem' }}>
-                                      {variant.createdAt ? formatDate(variant.createdAt) : 'N/A'}
+                                    <small
+                                      className="text-muted d-block"
+                                      style={{ fontSize: "0.65rem" }}
+                                    >
+                                      Created:
+                                    </small>
+                                    <span
+                                      className="text-muted"
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
+                                      {variant.createdAt
+                                        ? formatDate(variant.createdAt)
+                                        : "N/A"}
                                     </span>
                                   </div>
                                 </div>
@@ -568,7 +709,7 @@ const ProductManagement = () => {
                   ))}
                 </tbody>
               </table>
-              
+
               {products.length === 0 && !loading && (
                 <div className="text-center py-5">
                   <p className="text-muted">No products found</p>
@@ -581,13 +722,19 @@ const ProductManagement = () => {
           {pagination && pagination.totalPages > 1 && (
             <div className="d-flex justify-content-between align-items-center mt-4">
               <div className="text-muted">
-                Showing {((currentPage - 1) * 5) + 1} to {Math.min(currentPage * 5, pagination.totalProducts)} of {pagination.totalProducts} products
+                Showing {(currentPage - 1) * 5 + 1} to{" "}
+                {Math.min(currentPage * 5, pagination.totalProducts)} of{" "}
+                {pagination.totalProducts} products
               </div>
-              
+
               <nav aria-label="Product pagination">
                 <ul className="pagination pagination-sm mb-0">
                   {/* Previous Page Button */}
-                  <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <li
+                    className={`page-item ${
+                      currentPage === 1 ? "disabled" : ""
+                    }`}
+                  >
                     <button
                       className="page-link"
                       onClick={handlePreviousPage}
@@ -596,10 +743,18 @@ const ProductManagement = () => {
                       Previous
                     </button>
                   </li>
-                  
+
                   {/* Page Numbers */}
-                  {Array.from({ length: pagination.totalPages }, (_, index) => index + 1).map((pageNumber) => (
-                    <li key={pageNumber} className={`page-item ${currentPage === pageNumber ? 'active' : ''}`}>
+                  {Array.from(
+                    { length: pagination.totalPages },
+                    (_, index) => index + 1
+                  ).map((pageNumber) => (
+                    <li
+                      key={pageNumber}
+                      className={`page-item ${
+                        currentPage === pageNumber ? "active" : ""
+                      }`}
+                    >
                       <button
                         className="page-link"
                         onClick={() => handlePageChange(pageNumber)}
@@ -608,9 +763,13 @@ const ProductManagement = () => {
                       </button>
                     </li>
                   ))}
-                  
+
                   {/* Next Page Button */}
-                  <li className={`page-item ${currentPage === pagination.totalPages ? 'disabled' : ''}`}>
+                  <li
+                    className={`page-item ${
+                      currentPage === pagination.totalPages ? "disabled" : ""
+                    }`}
+                  >
                     <button
                       className="page-link"
                       onClick={handleNextPage}

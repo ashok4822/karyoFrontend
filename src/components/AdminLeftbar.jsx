@@ -13,13 +13,13 @@ import {
   FaChartBar,
 } from "react-icons/fa";
 import "./AdminLeftbar.css";
-import { useDispatch } from 'react-redux';
-import { logoutAdmin } from '../redux/reducers/authSlice';
-import adminAxios from '../lib/adminAxios';
+import { useDispatch } from "react-redux";
+import { logoutAdmin } from "../redux/reducers/authSlice";
+import adminAxios from "../lib/adminAxios";
 
 const admin = {
   name: "Admin Name",
-  image: "/public/favicon.ico", // Replace with actual admin image path
+  image: "/public/profilePic.jpg", // Replace with actual admin image path
 };
 
 const links = [
@@ -41,11 +41,11 @@ const AdminLeftbar = () => {
 
   const handleLogout = async () => {
     try {
-      await adminAxios.post('/logout');
+      await adminAxios.post("/logout");
     } catch (e) {}
     dispatch(logoutAdmin());
-    localStorage.removeItem('adminAccessToken');
-    navigate('/admin/login');
+    localStorage.removeItem("adminAccessToken");
+    navigate("/admin/login");
   };
 
   const isActiveLink = (to) => {

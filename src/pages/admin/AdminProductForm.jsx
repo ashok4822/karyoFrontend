@@ -35,6 +35,8 @@ const AdminProductForm = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [validated, setValidated] = useState(false);
+  const [nameError, setNameError] = useState("");
+  const [brandError, setBrandError] = useState("");
 
   const [product, setProduct] = useState({
     name: '',
@@ -75,6 +77,24 @@ const AdminProductForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
+
+    // Product name validation
+    const trimmedName = product.name.trim();
+    if (trimmedName && !/^[\w\s.,'"!?-]{0,100}$/.test(trimmedName)) {
+      setNameError("Invalid product name. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters).");
+      setValidated(true);
+      return;
+    }
+    setNameError("");
+
+    // Brand validation
+    const trimmedBrand = product.brand.trim();
+    if (trimmedBrand && !/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmedBrand)) {
+      setBrandError("Invalid brand name. Only letters, spaces, and basic punctuation are allowed (max 100 characters).");
+      setValidated(true);
+      return;
+    }
+    setBrandError("");
 
     if (form.checkValidity() === false) {
       e.stopPropagation();
@@ -235,10 +255,12 @@ const AdminProductForm = () => {
                             type="text"
                             required
                             value={product.name}
-                            onChange={(e) =>
-                              setProduct({ ...product, name: e.target.value })
-                            }
+                            onChange={(e) => {
+                              setProduct({ ...product, name: e.target.value });
+                              setNameError("");
+                            }}
                           />
+                          {nameError && <div className="text-danger small mt-1">{nameError}</div>}
                           <Form.Control.Feedback type="invalid">
                             Please enter a product name.
                           </Form.Control.Feedback>
@@ -330,13 +352,18 @@ const AdminProductForm = () => {
                           <Form.Label>Brand</Form.Label>
                           <Form.Select
                             value={product.brand}
-                            onChange={(e) =>
-                              setProduct({ ...product, brand: e.target.value })
-                            }
+                            onChange={(e) => {
+                              setProduct({ ...product, brand: e.target.value });
+                              setBrandError("");
+                            }}
                           >
                             <option value="">Select Brand</option>
                             {/* Add brand options */}
                           </Form.Select>
+                          {brandError && <div className="text-danger small mt-1">{brandError}</div>}
+                          <Form.Control.Feedback type="invalid">
+                            Please enter a valid brand name.
+                          </Form.Control.Feedback>
                         </Form.Group>
                       </Col>
                       <Col md={6}>

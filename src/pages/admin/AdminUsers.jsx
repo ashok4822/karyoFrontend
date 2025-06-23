@@ -192,6 +192,17 @@ const AdminUsers = () => {
                   value={searchTerm}
                   onChange={handleSearch}
                 />
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setCurrentPage(1);
+                    dispatch({ type: 'FETCH_USERS' }); // Fetch all users from backend
+                  }}
+                  disabled={!searchTerm}
+                >
+                  Clear
+                </Button>
               </InputGroup>
             </Col>
             <Col md={3}>

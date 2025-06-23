@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
   Container,
   Row,
@@ -17,72 +17,174 @@ import {
   ButtonGroup,
 } from "react-bootstrap";
 import {
+  FaShoppingCart,
+  FaStar,
+  FaExclamationTriangle,
   FaSearch,
   FaFilter,
   FaThLarge,
   FaList,
   FaHeart,
-  FaShoppingCart,
-  FaStar,
-  FaExclamationTriangle,
   FaSort,
   FaSortAmountDown,
   FaSortAmountUp,
 } from "react-icons/fa";
-import ProductSidebar from "../../components/ProductSidebar";
+import ProductFilters from "../../components/ProductFilters";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 
 const ProductListing = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  
   const { products, loading, error, pagination } = useSelector(
     (state) => state.products
   );
+
+  // Debug logging
+  console.log('ProductListing render:', { products, loading, error, pagination });
+
   const [view, setView] = useState("grid");
-  const [filters, setFilters] = useState({
-    category: "",
-    priceRange: "",
-    rating: "",
-    sort: "newest",
-  });
+  const [sort, setSort] = useState("newest");
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState({
+    categories: [],
+    brands: [],
+    variantColours: [],
+    variantCapacities: [],
+    priceRange: [0, 5000]
+  });
+  const [searchError, setSearchError] = useState("");
+
+  // Read URL parameters and apply as initial filters
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      console.log('ProductListing: Found category in URL:', categoryParam);
+      const initialFilters = {
+        categories: [categoryParam],
+        brands: [],
+        variantColours: [],
+        variantCapacities: [],
+        priceRange: [0, 5000]
+      };
+      setFilters(initialFilters);
+      
+      // Fetch products with the category filter
+      const params = buildFilterParams(1, "", initialFilters, sort);
+      console.log('ProductListing: Initial load with category filter:', params);
+      dispatch(fetchProductsFromBackend(params));
+    }
+  }, [searchParams, dispatch, sort]);
+
+  // Fallback image for products without a main image
+  const FALLBACK_IMAGE = "https://via.placeholder.com/300x300?text=No+Image";
+  const getImageUrl = (img, product) => {
+    // Try to get the first image from the first variant
+    const variantImg = product.variantDetails && product.variantDetails.length > 0 && product.variantDetails[0].imageUrls && product.variantDetails[0].imageUrls.length > 0
+      ? product.variantDetails[0].imageUrls[0]
+      : null;
+    let finalImg = variantImg || img;
+    if (!finalImg) return FALLBACK_IMAGE;
+    if (finalImg.startsWith("http")) return finalImg;
+    // If the image is a relative path (e.g., /uploads/...), prepend backend URL
+    return `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${finalImg}`;
+  };
+
+  // Helper function to build filter parameters
+  const buildFilterParams = (page = 1, search = searchQuery, currentFilters = filters, currentSort = sort) => {
+    const params = {
+      page,
+      limit: 6,
+      search,
+      sort: currentSort
+    };
+
+    // Add category filter - support multiple categories
+    if (currentFilters.categories.length > 0) {
+      params.category = currentFilters.categories.join(','); // Send as comma-separated string
+    }
+
+    // Add brand filter - support multiple brands
+    if (currentFilters.brands.length > 0) {
+      params.brand = currentFilters.brands.join(','); // Send as comma-separated string
+    }
+
+    // Add variant filters - send as comma-separated strings
+    if (currentFilters.variantColours.length > 0) {
+      params.variantColour = currentFilters.variantColours.join(',');
+    }
+    if (currentFilters.variantCapacities.length > 0) {
+      params.variantCapacity = currentFilters.variantCapacities.join(',');
+    }
+
+    // Add price range filter
+    if (currentFilters.priceRange && currentFilters.priceRange.length === 2) {
+      params.minPrice = currentFilters.priceRange[0];
+      params.maxPrice = currentFilters.priceRange[1];
+    }
+
+    console.log('buildFilterParams - final params:', params);
+    return params;
+  };
 
   useEffect(() => {
-    dispatch(fetchProductsFromBackend({
-      page: pagination.currentPage,
-      search: searchQuery,
-      category: filters.category,
-      // Add other filters as needed
-    }));
-  }, [dispatch, pagination.currentPage, searchQuery, filters.category]);
+    // Initial load - only if no category parameter in URL
+    const categoryParam = searchParams.get('category');
+    if (!categoryParam) {
+      const params = buildFilterParams(1, "", filters, sort);
+      console.log('ProductListing useEffect - dispatching fetchProductsFromBackend with params:', params);
+      dispatch(fetchProductsFromBackend(params));
+    }
+  }, [dispatch, searchParams]);
 
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    dispatch(fetchProductsFromBackend({
-      page: 1,
-      search: searchQuery,
-      category: key === 'category' ? value : filters.category,
-      // Add other filters as needed
-    }));
+  const handleFilterChange = (newFilters) => {
+    console.log('ProductListing: handleFilterChange called with:', newFilters);
+    setFilters(newFilters);
+    // Reset to page 1 when filters change
+    const params = buildFilterParams(1, searchQuery, newFilters, sort);
+    console.log('ProductListing: dispatching with params:', params);
+    dispatch(fetchProductsFromBackend(params));
+  };
+
+  const handleSortChange = (sortOption) => {
+    setSort(sortOption);
+    const params = buildFilterParams(1, searchQuery, filters, sortOption);
+    dispatch(fetchProductsFromBackend(params));
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    dispatch(fetchProductsFromBackend({
-      page: 1,
-      search: searchQuery,
-      category: filters.category,
-      // Add other filters as needed
-    }));
+    // Validation: only allow alphanumeric, space, and basic punctuation, max 100 chars
+    const trimmed = searchQuery.trim();
+    if (trimmed && !/^[\w\s.,'"!?-]{0,100}$/.test(trimmed)) {
+      setSearchError("Invalid search input. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters).");
+      return;
+    }
+    setSearchError("");
+    const params = buildFilterParams(1, searchQuery, filters, sort);
+    dispatch(fetchProductsFromBackend(params));
   };
 
   const handlePageChange = (page) => {
-    dispatch(fetchProductsFromBackend({
-      page,
-      search: searchQuery,
-      category: filters.category,
-      // Add other filters as needed
-    }));
+    const params = buildFilterParams(page, searchQuery, filters, sort);
+    dispatch(fetchProductsFromBackend(params));
+  };
+
+  const clearAllFilters = () => {
+    const clearedFilters = {
+      categories: [],
+      brands: [],
+      variantColours: [],
+      variantCapacities: [],
+      priceRange: [0, 5000]
+    };
+    setFilters(clearedFilters);
+    setSort("newest");
+    setSearchQuery("");
+    const params = buildFilterParams(1, "", clearedFilters, "newest");
+    dispatch(fetchProductsFromBackend(params));
   };
 
   const handleAddToCart = (product) => {
@@ -131,9 +233,9 @@ const ProductListing = () => {
     <Container fluid className="py-5">
       <Row>
         <Col lg={3}>
-          <ProductSidebar
-            filters={filters}
-            onFilterChange={handleFilterChange}
+          <ProductFilters
+            onApplyFilters={handleFilterChange}
+            currentFilters={filters}
           />
         </Col>
         <Col lg={9}>
@@ -145,12 +247,34 @@ const ProductListing = () => {
                     type="text"
                     placeholder="Search products..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setSearchError(""); }}
+                    ref={input => (window._searchInput = input)}
                   />
+                  {searchQuery && (
+                    <Button
+                      variant="outline-secondary"
+                      onClick={e => {
+                        e.preventDefault();
+                        setSearchQuery("");
+                        setSearchError("");
+                        const params = buildFilterParams(1, "", filters, sort);
+                        dispatch(fetchProductsFromBackend(params));
+                        setTimeout(() => window._searchInput && window._searchInput.focus(), 0);
+                      }}
+                      style={{ position: 'absolute', right: 45, top: '50%', transform: 'translateY(-50%)', zIndex: 2, padding: '0 0.5rem', border: 'none' }}
+                      tabIndex={-1}
+                      aria-label="Clear search"
+                    >
+                      &times;
+                    </Button>
+                  )}
                   <Button type="submit" variant="outline-primary">
                     <FaSearch />
                   </Button>
                 </InputGroup>
+                {searchError && (
+                  <div className="text-danger small mt-2">{searchError}</div>
+                )}
               </Form>
             </Col>
             <Col md={4} className="text-center">
@@ -169,52 +293,61 @@ const ProductListing = () => {
                 </Button>
               </ButtonGroup>
             </Col>
-            <Col md={4}>
-              <div className="d-flex gap-2">
-                {/* <Dropdown>
-                  <Dropdown.Toggle variant="outline-primary">
-                    <FaFilter className="me-2" />
-                    Filter
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Form.Group className="px-3 py-2">
-                      <Form.Label>Category</Form.Label>
-                      <Form.Select
-                        value={filters.category}
-                        onChange={(e) =>
-                          handleFilterChange("category", e.target.value)
-                        }
-                      >
-                        <option value="">All Categories</option>
-                        <option value="electronics">Electronics</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="books">Books</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Dropdown.Menu>
-                </Dropdown> */}
-                {/* <Dropdown>
+            <Col md={4} className="text-end">
+              <div className="d-flex gap-2 justify-content-end">
+                <Dropdown>
                   <Dropdown.Toggle variant="outline-primary">
                     <FaSort className="me-2" />
                     Sort
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
                     <Dropdown.Item
-                      active={filters.sort === "newest"}
-                      onClick={() => handleFilterChange("sort", "newest")}
+                      active={sort === "newest"}
+                      onClick={() => handleSortChange("newest")}
                     >
                       <FaSortAmountDown className="me-2" />
                       Newest First
                     </Dropdown.Item>
                     <Dropdown.Item
-                      active={filters.sort === "oldest"}
-                      onClick={() => handleFilterChange("sort", "oldest")}
+                      active={sort === "oldest"}
+                      onClick={() => handleSortChange("oldest")}
                     >
                       <FaSortAmountUp className="me-2" />
                       Oldest First
                     </Dropdown.Item>
+                    <Dropdown.Item
+                      active={sort === "price-asc"}
+                      onClick={() => handleSortChange("price-asc")}
+                    >
+                      Price: Low to High
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      active={sort === "price-desc"}
+                      onClick={() => handleSortChange("price-desc")}
+                    >
+                      Price: High to Low
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      active={sort === "name-asc"}
+                      onClick={() => handleSortChange("name-asc")}
+                    >
+                      Name: A-Z
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      active={sort === "name-desc"}
+                      onClick={() => handleSortChange("name-desc")}
+                    >
+                      Name: Z-A
+                    </Dropdown.Item>
                   </Dropdown.Menu>
-                </Dropdown> */}
+                </Dropdown>
+                <Button
+                  variant="outline-secondary"
+                  onClick={clearAllFilters}
+                  className="d-flex align-items-center gap-1"
+                >
+                  <FaFilter /> Clear All
+                </Button>
               </div>
             </Col>
           </Row>
@@ -222,100 +355,83 @@ const ProductListing = () => {
           <Row className={view === "grid" ? "g-4" : "g-3"}>
             {products.map((product) => (
               <Col
-                key={product.id}
+                key={product.id || product._id}
                 xs={12}
                 md={view === "grid" ? 6 : 12}
                 lg={view === "grid" ? 4 : 12}
               >
                 <Card
-                  className={`h-100 border-0 shadow-sm ${
-                    view === "list" ? "flex-row" : ""
-                  } cursor-pointer`}
-                  onClick={() => handleProductClick(product.id)}
+                  className={`h-100 border-0 shadow rounded-4 mb-4 ${view === "list" ? "flex-row" : ""} product-card`}
+                  onClick={() => handleProductClick(product.id || product._id)}
                   style={{ transition: "transform 0.2s", cursor: "pointer" }}
-                  onMouseOver={(e) =>
-                    (e.currentTarget.style.transform = "translateY(-5px)")
-                  }
-                  onMouseOut={(e) =>
-                    (e.currentTarget.style.transform = "translateY(0)")
-                  }
+                  onMouseOver={e => (e.currentTarget.style.transform = "translateY(-5px)")}
+                  onMouseOut={e => (e.currentTarget.style.transform = "translateY(0)")}
                 >
                   <div
-                    className={`position-relative ${
-                      view === "list" ? "col-md-4" : ""
-                    }`}
-                    style={{
-                      height: view === "list" ? "auto" : "200px",
-                    }}
+                    className={`position-relative ${view === "list" ? "col-md-4" : ""}`}
+                    style={{ height: view === "list" ? "auto" : "240px" }}
                   >
                     <Card.Img
-                      src={product.image}
+                      src={getImageUrl(product.mainImage, product)}
                       alt={product.name}
-                      className="h-100"
-                      style={{ objectFit: "cover" }}
+                      className="h-100 rounded-top object-fit-cover"
+                      style={{ objectFit: "cover", borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem" }}
                     />
                     {product.isNew && (
-                      <Badge
-                        bg="primary"
-                        className="position-absolute top-0 start-0 m-2"
-                      >
-                        New
-                      </Badge>
+                      <Badge bg="primary" className="position-absolute top-0 start-0 m-2">New</Badge>
                     )}
                   </div>
-                  <Card.Body className={view === "list" ? "col-md-8" : ""}>
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <Card.Title className="h5 mb-0">
-                        {product.name}
-                      </Card.Title>
-                      <Button
-                        variant="link"
-                        className="p-0 text-primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToWishlist(product);
-                        }}
-                      >
-                        <FaHeart />
-                      </Button>
+                  <Card.Body className={view === "list" ? "col-md-8" : "d-flex flex-column justify-content-between"} style={{ padding: "1.25rem" }}>
+                    <div>
+                      <Card.Title className="h5 mb-1 text-truncate" title={product.name}>{product.name}</Card.Title>
+                      {product.category && (
+                        <div className="mb-1">
+                          <span className="badge bg-secondary small">{product.category.name || product.category}</span>
+                        </div>
+                      )}
+                      <Card.Text className="text-muted small mb-2" style={{ minHeight: 40 }}>
+                        {product.description}
+                      </Card.Text>
+                      <div className="d-flex align-items-center gap-2 mb-2">
+                        {[...Array(5)].map((_, index) => (
+                          <FaStar
+                            key={index}
+                            className={index < Math.floor(product.rating) ? "text-warning" : "text-muted"}
+                            style={{ fontSize: "1rem" }}
+                          />
+                        ))}
+                        <span className="ms-1 text-muted small">({product.reviews || 0})</span>
+                      </div>
                     </div>
-                    <Card.Text className="text-muted small mb-2">
-                      {product.description}
-                    </Card.Text>
-                    <div className="mb-2">
-                      {[...Array(5)].map((_, index) => (
-                        <FaStar
-                          key={index}
-                          className={
-                            index < Math.floor(product.rating)
-                              ? "text-warning"
-                              : "text-muted"
-                          }
-                        />
-                      ))}
-                      <span className="ms-2 text-muted small">
-                        ({product.reviews} reviews)
-                      </span>
-                    </div>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <span className="h5 mb-0">${product.price}</span>
-                        {product.comparePrice && (
-                          <span className="text-muted text-decoration-line-through ms-2">
-                            ${product.comparePrice}
-                          </span>
-                        )}
+                    <div className="mt-auto">
+                      <div className="d-flex align-items-end justify-content-between mb-3">
+                        <div>
+                          {(() => {
+                            const firstVariant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
+                            const price = firstVariant && firstVariant.price ? firstVariant.price : product.price;
+                            const comparePrice = firstVariant && firstVariant.comparePrice ? firstVariant.comparePrice : product.comparePrice;
+                            return (
+                              <>
+                                <span className="h4 fw-bold text-primary mb-0">${price}</span>
+                                <span className="text-muted text-decoration-line-through ms-2">
+                                  $99.99
+                                </span>
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
                       <Button
                         variant="primary"
-                        size="sm"
-                        onClick={(e) => {
+                        size="md"
+                        className="w-100 rounded-pill fw-semibold py-2"
+                        onClick={e => {
                           e.stopPropagation();
                           handleAddToCart(product);
                         }}
+                        style={{ letterSpacing: 1 }}
                       >
-                        <FaShoppingCart className="me-1" />
-                        Add to Cart
+                        <FaShoppingCart className="me-2" />Add to Cart
                       </Button>
                     </div>
                   </Card.Body>
@@ -325,27 +441,73 @@ const ProductListing = () => {
           </Row>
 
           {pagination.totalPages > 1 && (
-            <div className="d-flex justify-content-center mt-4">
-              <Pagination>
-                <Pagination.Prev
-                  onClick={() => handlePageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1}
-                />
-                {[...Array(pagination.totalPages)].map((_, index) => (
-                  <Pagination.Item
-                    key={index + 1}
-                    active={pagination.currentPage === index + 1}
-                    onClick={() => handlePageChange(index + 1)}
-                  >
-                    {index + 1}
-                  </Pagination.Item>
-                ))}
-                <Pagination.Next
-                  onClick={() => handlePageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                />
-              </Pagination>
-            </div>
+            <>
+              <div className="d-flex justify-content-center mt-4">
+                <Pagination className="custom-pagination">
+                  <Pagination.First
+                    onClick={() => handlePageChange(1)}
+                    disabled={pagination.currentPage === 1}
+                  />
+                  <Pagination.Prev
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1}
+                  />
+                  {/* Ellipsis logic: show first, last, and window around current */}
+                  {pagination.totalPages <= 5 ? (
+                    [...Array(pagination.totalPages)].map((_, index) => (
+                      <Pagination.Item
+                        key={index + 1}
+                        active={pagination.currentPage === index + 1}
+                        onClick={() => handlePageChange(index + 1)}
+                      >
+                        {index + 1}
+                      </Pagination.Item>
+                    ))
+                  ) : (
+                    <>
+                      {pagination.currentPage > 3 && (
+                        <>
+                          <Pagination.Item onClick={() => handlePageChange(1)} active={pagination.currentPage === 1}>1</Pagination.Item>
+                          {pagination.currentPage > 4 && <Pagination.Ellipsis disabled />}
+                        </>
+                      )}
+                      {[-2, -1, 0, 1, 2].map(offset => {
+                        const page = pagination.currentPage + offset;
+                        if (page > 1 && page < pagination.totalPages) {
+                          return (
+                            <Pagination.Item
+                              key={page}
+                              active={pagination.currentPage === page}
+                              onClick={() => handlePageChange(page)}
+                            >
+                              {page}
+                            </Pagination.Item>
+                          );
+                        }
+                        return null;
+                      })}
+                      {pagination.currentPage < pagination.totalPages - 2 && (
+                        <>
+                          {pagination.currentPage < pagination.totalPages - 3 && <Pagination.Ellipsis disabled />}
+                          <Pagination.Item onClick={() => handlePageChange(pagination.totalPages)} active={pagination.currentPage === pagination.totalPages}>{pagination.totalPages}</Pagination.Item>
+                        </>
+                      )}
+                    </>
+                  )}
+                  <Pagination.Next
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                  />
+                  <Pagination.Last
+                    onClick={() => handlePageChange(pagination.totalPages)}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                  />
+                </Pagination>
+              </div>
+              <div className="d-flex justify-content-center mb-4">
+                <span className="text-muted">Page {pagination.currentPage} of {pagination.totalPages}</span>
+              </div>
+            </>
           )}
         </Col>
       </Row>

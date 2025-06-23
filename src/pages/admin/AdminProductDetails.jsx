@@ -65,6 +65,11 @@ const AdminProductDetails = () => {
     },
   });
 
+  // Add a state for colour errors if you have inline editing, e.g.:
+  // const [variantColourErrors, setVariantColourErrors] = useState([]);
+  // Add a state for capacity errors if you have inline editing, e.g.:
+  // const [variantCapacityErrors, setVariantCapacityErrors] = useState([]);
+
   useEffect(() => {
     dispatch({ type: 'FETCH_PRODUCT_DETAILS', payload: id });
   }, [dispatch, id]);
@@ -341,12 +346,17 @@ const AdminProductDetails = () => {
                                 type="text"
                                 value={variant.colour || ''}
                                 onChange={(e) => {
+                                  const value = e.target.value;
                                   const newVariants = [...product.variants];
-                                  newVariants[index].colour = e.target.value;
+                                  newVariants[index].colour = value;
                                   setProduct({ ...product, variants: newVariants });
+                                  // Validate
+                                  // setVariantColourErrors((prev) => prev.map((err, i) => i === index ? (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(value) ? 'Invalid colour. Only letters, spaces, and basic punctuation are allowed (max 100 characters).' : '') : err));
                                 }}
                                 placeholder="e.g., Black, White, Red"
                               />
+                              {/* Then, below the input, display the error: */}
+                              {/* {variantColourErrors[index] && <div className="text-danger small mt-1">{variantColourErrors[index]}</div>} */}
                             </Form.Group>
                           </Col>
                           <Col md={2}>
@@ -356,12 +366,17 @@ const AdminProductDetails = () => {
                                 type="text"
                                 value={variant.capacity || ''}
                                 onChange={(e) => {
+                                  const value = e.target.value;
                                   const newVariants = [...product.variants];
-                                  newVariants[index].capacity = e.target.value;
+                                  newVariants[index].capacity = value;
                                   setProduct({ ...product, variants: newVariants });
+                                  // Validate
+                                  // setVariantCapacityErrors((prev) => prev.map((err, i) => i === index ? (!/^\d+(\.\d+)*L$/.test(value) ? 'Invalid capacity. Must start with a number, can have dots (not at the beginning or end), and end with a capital L.' : '') : err));
                                 }}
                                 placeholder="e.g., 128GB, 256GB"
                               />
+                              {/* Then, below the input, display the error: */}
+                              {/* {variantCapacityErrors[index] && <div className="text-danger small mt-1">{variantCapacityErrors[index]}</div>} */}
                             </Form.Group>
                           </Col>
                           <Col md={2}>

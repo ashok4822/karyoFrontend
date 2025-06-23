@@ -224,6 +224,7 @@ const CategoryTable = React.memo(({
 
 const CategoryManagement = () => {
   const [activeCategories, setActiveCategories] = useState([]);
+  const [inactiveCategories, setInactiveCategories] = useState([]);
   const [deletedCategories, setDeletedCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -233,14 +234,17 @@ const CategoryManagement = () => {
   const [formData, setFormData] = useState({ name: '', status: 'active' });
   const [errors, setErrors] = useState({});
   const [activeCurrentPage, setActiveCurrentPage] = useState(1);
+  const [inactiveCurrentPage, setInactiveCurrentPage] = useState(1);
   const [deletedCurrentPage, setDeletedCurrentPage] = useState(1);
   const [activeTotalPages, setActiveTotalPages] = useState(1);
+  const [inactiveTotalPages, setInactiveTotalPages] = useState(1);
   const [deletedTotalPages, setDeletedTotalPages] = useState(1);
   const [activeTotal, setActiveTotal] = useState(0);
+  const [inactiveTotal, setInactiveTotal] = useState(0);
   const [deletedTotal, setDeletedTotal] = useState(0);
   const [modalLoading, setModalLoading] = useState(false);
   const [sortOrder, setSortOrder] = useState('desc');
-  const [activeView, setActiveView] = useState(true);
+  const [currentView, setCurrentView] = useState('active'); // 'active', 'inactive', 'deleted'
   const categoriesPerPage = 5;
   const searchInputRef = useRef(null);
   const searchTimeoutRef = useRef(null);
@@ -256,6 +260,29 @@ const CategoryManagement = () => {
       setActiveCurrentPage(res.data.page);
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Failed to fetch active categories';
+      setError(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#d33',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [sortOrder]);
+
+  const fetchInactiveCategories = useCallback(async (page = 1, search = '', sort = sortOrder) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await adminAxios.get(`/categories?page=${page}&limit=${categoriesPerPage}&search=${encodeURIComponent(search)}&status=inactive&sort=${sort}`);
+      setInactiveCategories(res.data.categories);
+      setInactiveTotalPages(res.data.totalPages);
+      setInactiveTotal(res.data.total);
+      setInactiveCurrentPage(res.data.page);
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to fetch inactive categories';
       setError(errorMessage);
       Swal.fire({
         icon: 'error',
@@ -293,30 +320,36 @@ const CategoryManagement = () => {
 
   // Initial load
   useEffect(() => {
-    if (activeView) {
+    if (currentView === 'active') {
       fetchActiveCategories(1, '', sortOrder);
-    } else {
+    } else if (currentView === 'inactive') {
+      fetchInactiveCategories(1, '', sortOrder);
+    } else if (currentView === 'deleted') {
       fetchDeletedCategories(1, '', sortOrder);
     }
-  }, [activeView, fetchActiveCategories, fetchDeletedCategories]);
+  }, [currentView, fetchActiveCategories, fetchInactiveCategories, fetchDeletedCategories]);
 
   // Handle pagination changes
   useEffect(() => {
-    if (activeView) {
+    if (currentView === 'active') {
       fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
-    } else {
+    } else if (currentView === 'inactive') {
+      fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
+    } else if (currentView === 'deleted') {
       fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
     }
-  }, [activeCurrentPage, deletedCurrentPage, fetchActiveCategories, fetchDeletedCategories]);
+  }, [activeCurrentPage, inactiveCurrentPage, deletedCurrentPage, fetchActiveCategories, fetchInactiveCategories, fetchDeletedCategories]);
 
   // Handle sort changes
   useEffect(() => {
-    if (activeView) {
+    if (currentView === 'active') {
       fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
-    } else {
+    } else if (currentView === 'inactive') {
+      fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
+    } else if (currentView === 'deleted') {
       fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
     }
-  }, [sortOrder, fetchActiveCategories, fetchDeletedCategories]);
+  }, [sortOrder, fetchActiveCategories, fetchInactiveCategories, fetchDeletedCategories]);
 
   const handleSearch = useCallback((e) => {
     const value = e.target.value;
@@ -327,29 +360,35 @@ const CategoryManagement = () => {
     }
     
     searchTimeoutRef.current = setTimeout(() => {
-      if (activeView) {
+      if (currentView === 'active') {
         setActiveCurrentPage(1);
         fetchActiveCategories(1, value, sortOrder);
-      } else {
+      } else if (currentView === 'inactive') {
+        setInactiveCurrentPage(1);
+        fetchInactiveCategories(1, value, sortOrder);
+      } else if (currentView === 'deleted') {
         setDeletedCurrentPage(1);
         fetchDeletedCategories(1, value, sortOrder);
       }
     }, 500);
-  }, [activeView, fetchActiveCategories, fetchDeletedCategories, sortOrder]);
+  }, [currentView, fetchActiveCategories, fetchInactiveCategories, fetchDeletedCategories, sortOrder]);
 
   const handleClearSearch = useCallback(() => {
     setSearchTerm('');
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-    if (activeView) {
+    if (currentView === 'active') {
       setActiveCurrentPage(1);
       fetchActiveCategories(1, '', sortOrder);
-    } else {
+    } else if (currentView === 'inactive') {
+      setInactiveCurrentPage(1);
+      fetchInactiveCategories(1, '', sortOrder);
+    } else if (currentView === 'deleted') {
       setDeletedCurrentPage(1);
       fetchDeletedCategories(1, '', sortOrder);
     }
-  }, [activeView, fetchActiveCategories, fetchDeletedCategories, sortOrder]);
+  }, [currentView, fetchActiveCategories, fetchInactiveCategories, fetchDeletedCategories, sortOrder]);
 
   const handleShowModal = useCallback((category = null) => {
     setSelectedCategory(category);
@@ -395,9 +434,11 @@ const CategoryManagement = () => {
         });
       }
       handleCloseModal();
-      if (activeView) {
+      if (currentView === 'active') {
         fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
-      } else {
+      } else if (currentView === 'inactive') {
+        fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
+      } else if (currentView === 'deleted') {
         fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
       }
     } catch (error) {
@@ -412,7 +453,7 @@ const CategoryManagement = () => {
     } finally {
       setModalLoading(false);
     }
-  }, [selectedCategory, formData, validateForm, handleCloseModal, activeView, activeCurrentPage, deletedCurrentPage, searchTerm, sortOrder, fetchActiveCategories, fetchDeletedCategories]);
+  }, [selectedCategory, formData, validateForm, handleCloseModal, currentView, activeCurrentPage, inactiveCurrentPage, deletedCurrentPage, searchTerm, sortOrder, fetchActiveCategories, fetchInactiveCategories, fetchDeletedCategories]);
 
   const handleDelete = useCallback(async (category) => {
     const result = await Swal.fire({
@@ -435,9 +476,11 @@ const CategoryManagement = () => {
           text: 'Category has been deleted successfully.',
           confirmButtonColor: '#28a745',
         });
-        if (activeView) {
+        if (currentView === 'active') {
           fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
-        } else {
+        } else if (currentView === 'inactive') {
+          fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
+        } else if (currentView === 'deleted') {
           fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
         }
       } catch (error) {
@@ -450,7 +493,7 @@ const CategoryManagement = () => {
         });
       }
     }
-  }, [activeView, activeCurrentPage, deletedCurrentPage, searchTerm, sortOrder, fetchActiveCategories, fetchDeletedCategories]);
+  }, [currentView, activeCurrentPage, inactiveCurrentPage, deletedCurrentPage, searchTerm, sortOrder, fetchActiveCategories, fetchInactiveCategories, fetchDeletedCategories]);
 
   const handleRestore = useCallback(async (categoryId, categoryName) => {
     const result = await Swal.fire({
@@ -473,7 +516,9 @@ const CategoryManagement = () => {
           text: 'Category has been restored successfully.',
           confirmButtonColor: '#28a745',
         });
-        fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+        if (currentView === 'deleted') {
+          fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+        }
       } catch (error) {
         const errorMessage = error.response?.data?.message || 'Error restoring category';
         Swal.fire({
@@ -484,21 +529,23 @@ const CategoryManagement = () => {
         });
       }
     }
-  }, [deletedCurrentPage, searchTerm, sortOrder, fetchDeletedCategories]);
+  }, [currentView, deletedCurrentPage, searchTerm, sortOrder, fetchDeletedCategories]);
 
   const handleSortToggle = useCallback(() => {
     setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
   }, []);
 
-  const handleViewToggle = useCallback((isActive) => {
-    setActiveView(isActive);
+  const handleViewToggle = useCallback((view) => {
+    setCurrentView(view);
     setSearchTerm('');
-    if (isActive) {
+    if (view === 'active') {
       setActiveCurrentPage(1);
-    } else {
+    } else if (view === 'inactive') {
+      setInactiveCurrentPage(1);
+    } else if (view === 'deleted') {
       setDeletedCurrentPage(1);
     }
-  }, []);
+  }, [setActiveCurrentPage, setInactiveCurrentPage, setDeletedCurrentPage]);
 
   const renderPagination = useCallback((currentPage, totalPages, onPageChange) => (
     <Pagination className="mb-0">
@@ -520,28 +567,28 @@ const CategoryManagement = () => {
 
   // Memoized values
   const currentCategories = useMemo(() => 
-    activeView ? activeCategories : deletedCategories, 
-    [activeView, activeCategories, deletedCategories]
+    currentView === 'active' ? activeCategories : currentView === 'inactive' ? inactiveCategories : deletedCategories, 
+    [currentView, activeCategories, inactiveCategories, deletedCategories]
   );
 
   const currentTotal = useMemo(() => 
-    activeView ? activeTotal : deletedTotal, 
-    [activeView, activeTotal, deletedTotal]
+    currentView === 'active' ? activeTotal : currentView === 'inactive' ? inactiveTotal : deletedTotal, 
+    [currentView, activeTotal, inactiveTotal, deletedTotal]
   );
 
   const currentPage = useMemo(() => 
-    activeView ? activeCurrentPage : deletedCurrentPage, 
-    [activeView, activeCurrentPage, deletedCurrentPage]
+    currentView === 'active' ? activeCurrentPage : currentView === 'inactive' ? inactiveCurrentPage : deletedCurrentPage, 
+    [currentView, activeCurrentPage, inactiveCurrentPage, deletedCurrentPage]
   );
 
   const currentTotalPages = useMemo(() => 
-    activeView ? activeTotalPages : deletedTotalPages, 
-    [activeView, activeTotalPages, deletedTotalPages]
+    currentView === 'active' ? activeTotalPages : currentView === 'inactive' ? inactiveTotalPages : deletedTotalPages, 
+    [currentView, activeTotalPages, inactiveTotalPages, deletedTotalPages]
   );
 
   const setCurrentPage = useMemo(() => 
-    activeView ? setActiveCurrentPage : setDeletedCurrentPage, 
-    [activeView]
+    currentView === 'active' ? setActiveCurrentPage : currentView === 'inactive' ? setInactiveCurrentPage : setDeletedCurrentPage, 
+    [currentView]
   );
 
   if (loading) {
@@ -580,7 +627,7 @@ const CategoryManagement = () => {
                   variant="primary"
                   onClick={() => handleShowModal()}
                   className="d-flex align-items-center gap-2"
-                  disabled={!activeView}
+                  disabled={currentView !== 'active'}
                 >
                   <FaPlus /> Add Category
                 </Button>
@@ -592,15 +639,22 @@ const CategoryManagement = () => {
               <Col>
                 <ButtonGroup>
                   <Button
-                    variant={activeView ? "primary" : "outline-primary"}
-                    onClick={() => handleViewToggle(true)}
+                    variant={currentView === 'active' ? "primary" : "outline-primary"}
+                    onClick={() => handleViewToggle('active')}
                     className="d-flex align-items-center gap-2"
                   >
                     <FaList /> Active Categories ({activeTotal})
                   </Button>
                   <Button
-                    variant={!activeView ? "danger" : "outline-danger"}
-                    onClick={() => handleViewToggle(false)}
+                    variant={currentView === 'inactive' ? "primary" : "outline-primary"}
+                    onClick={() => handleViewToggle('inactive')}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <FaList /> Inactive Categories ({inactiveTotal})
+                  </Button>
+                  <Button
+                    variant={currentView === 'deleted' ? "danger" : "outline-danger"}
+                    onClick={() => handleViewToggle('deleted')}
                     className="d-flex align-items-center gap-2"
                   >
                     <FaTrashAlt /> Deleted Categories ({deletedTotal})
@@ -618,7 +672,7 @@ const CategoryManagement = () => {
                   <Form.Control
                     ref={searchInputRef}
                     type="text"
-                    placeholder={`Search ${activeView ? 'active' : 'deleted'} categories...`}
+                    placeholder={`Search ${currentView.charAt(0).toUpperCase() + currentView.slice(1)} categories...`}
                     value={searchTerm}
                     onChange={handleSearch}
                     disabled={loading}
@@ -636,8 +690,8 @@ const CategoryManagement = () => {
             {/* Category Table */}
             <CategoryTable
               categories={currentCategories}
-              title={activeView ? 'Active Categories' : 'Deleted Categories'}
-              isDeleted={!activeView}
+              title={currentView.charAt(0).toUpperCase() + currentView.slice(1)}
+              isDeleted={currentView === 'deleted'}
               total={currentTotal}
               currentPage={currentPage}
               onEdit={handleShowModal}
@@ -650,7 +704,7 @@ const CategoryManagement = () => {
             {/* Pagination */}
             <div className="d-flex justify-content-between align-items-center mt-3">
               <div>
-                Total {activeView ? 'Active' : 'Deleted'} Categories: {currentTotal}
+                Total {currentView.charAt(0).toUpperCase() + currentView.slice(1)} Categories: {currentTotal}
               </div>
               {renderPagination(currentPage, currentTotalPages, setCurrentPage)}
             </div>

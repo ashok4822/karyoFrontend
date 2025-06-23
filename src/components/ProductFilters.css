@@ -1,0 +1,122 @@
+.product-filters {
+  position: sticky;
+  top: 20px;
+}
+
+.product-filters .card {
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.product-filters .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  font-weight: 600;
+}
+
+.product-filters .accordion-button {
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.product-filters .accordion-button:not(.collapsed) {
+  background-color: #e7f3ff;
+  color: #0d6efd;
+  box-shadow: none;
+}
+
+.product-filters .accordion-button:focus {
+  box-shadow: none;
+  border-color: #0d6efd;
+}
+
+.product-filters .accordion-body {
+  padding: 1rem;
+  background-color: #fff;
+}
+
+.product-filters .form-check {
+  margin-bottom: 0.5rem;
+}
+
+.product-filters .form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.product-filters .form-check-label {
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.product-filters .form-control {
+  font-size: 0.9rem;
+  border: 1px solid #ced4da;
+}
+
+.product-filters .form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.product-filters .btn-primary {
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+}
+
+.product-filters .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.product-filters .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.product-filters .btn-link {
+  color: #6c757d;
+  text-decoration: none;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.product-filters .btn-link:hover {
+  color: #dc3545;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+  .product-filters {
+    position: static;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Loading state */
+.product-filters .spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Price range inputs */
+.product-filters .price-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.product-filters .price-range-inputs .form-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-filters .price-range-inputs span {
+  color: #6c757d;
+  font-weight: 500;
+} 

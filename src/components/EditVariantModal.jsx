@@ -15,19 +15,21 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [colourError, setColourError] = useState("");
+  const [capacityError, setCapacityError] = useState("");
 
-  // Populate form when variant changes
+  // Populate form when modal is opened
   useEffect(() => {
     if (variant && show) {
       setFormData({
         colour: variant.colour || "",
         capacity: variant.capacity || "",
-        price: variant.price || "",
-        stock: variant.stock || 0,
+        price: variant.price !== undefined && variant.price !== null ? String(variant.price) : "",
+        stock: variant.stock !== undefined && variant.stock !== null ? String(variant.stock) : "",
         status: variant.status || "active",
       });
     }
-  }, [variant, show]);
+  }, [show]); // Only depend on show
 
   // Reset form when modal closes
   useEffect(() => {
@@ -57,14 +59,26 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
   };
 
   const validateForm = () => {
-    if (!formData.colour.trim()) {
+    const trimmedColour = formData.colour.trim();
+    if (!trimmedColour) {
       setError("Colour is required");
       return false;
     }
-    if (!formData.capacity.trim()) {
+    if (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmedColour)) {
+      setColourError("Invalid colour. Only letters, spaces, and basic punctuation are allowed (max 100 characters).");
+      return false;
+    }
+    setColourError("");
+    const trimmedCapacity = formData.capacity.trim();
+    if (!trimmedCapacity) {
       setError("Capacity is required");
       return false;
     }
+    if (!/^\d+(\.\d+)*L$/.test(trimmedCapacity)) {
+      setCapacityError("Invalid capacity. Must start with a number, can have dots (not at the beginning or end), and end with a capital L.");
+      return false;
+    }
+    setCapacityError("");
     if (!formData.price || formData.price <= 0) {
       setError("Valid price is required");
       return false;
@@ -133,10 +147,14 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
                   type="text"
                   name="colour"
                   value={formData.colour}
-                  onChange={handleInputChange}
+                  onChange={e => {
+                    handleInputChange(e);
+                    setColourError("");
+                  }}
                   placeholder="e.g., Red, Blue"
                   required
                 />
+                { colourError && <div className="text-danger small mt-1">{colourError}</div> }
               </Form.Group>
             </Col>
             
@@ -147,10 +165,14 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
                   type="text"
                   name="capacity"
                   value={formData.capacity}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 128GB, 256GB"
+                  onChange={e => {
+                    handleInputChange(e);
+                    setCapacityError("");
+                  }}
+                  placeholder="e.g., 1L, 1.5L"
                   required
                 />
+                { capacityError && <div className="text-danger small mt-1">{capacityError}</div> }
               </Form.Group>
             </Col>
           </Row>

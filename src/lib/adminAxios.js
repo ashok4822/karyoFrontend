@@ -1,15 +1,15 @@
-import axios from 'axios';
+import axios from "axios";
 
 const adminAxios = axios.create({
-  baseURL: 'http://localhost:5000/admin',
+  baseURL: "http://localhost:5000/admin",
   withCredentials: true,
 });
 
 adminAxios.interceptors.request.use(
   (config) => {
-    const adminAccessToken = localStorage.getItem('adminAccessToken');
+    const adminAccessToken = localStorage.getItem("adminAccessToken");
     if (adminAccessToken) {
-      config.headers['Authorization'] = `Bearer ${adminAccessToken}`;
+      config.headers["Authorization"] = `Bearer ${adminAccessToken}`;
     }
     return config;
   },
@@ -20,11 +20,12 @@ adminAxios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('adminAccessToken');
-      window.location.href = '/login';
+      localStorage.removeItem("adminAccessToken");
+      localStorage.removeItem("adminRole"); //#
+      window.location.href = "/admin/login"; //*!/admin
     }
     return Promise.reject(error);
   }
 );
 
-export default adminAxios; 
+export default adminAxios;

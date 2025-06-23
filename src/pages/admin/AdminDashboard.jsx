@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import api from "@/lib/utils";
+// import api from "@/lib/utils";
 import {
   Container,
   Row,
@@ -28,7 +28,8 @@ import {
   fetchDashboardSuccess,
   fetchDashboardFailure,
 } from "../../redux/reducers/dashboardSlice";
-import AdminLeftbar from '../../components/AdminLeftbar';
+import AdminLeftbar from "../../components/AdminLeftbar";
+import adminAxios from "../../lib/adminAxios";
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
@@ -39,7 +40,8 @@ const AdminDashboard = () => {
       try {
         dispatch(fetchDashboardStart());
         // Use axios instance for API call
-        const { data } = await api.get("/dashboard");
+        // const { data } = await api.get("/dashboard");
+        const { data } = await adminAxios.get("/dashboard");
         dispatch(fetchDashboardSuccess(data));
       } catch (error) {
         dispatch(fetchDashboardFailure(error.message));
@@ -81,7 +83,10 @@ const AdminDashboard = () => {
                 <h1 className="h2 mb-0">Dashboard</h1>
               </Col>
               <Col xs="auto">
-                <Button variant="primary" className="d-flex align-items-center gap-2">
+                <Button
+                  variant="primary"
+                  className="d-flex align-items-center gap-2"
+                >
                   <FaChartLine /> Generate Report
                 </Button>
               </Col>
@@ -102,7 +107,9 @@ const AdminDashboard = () => {
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <div>
                         <h6 className="text-muted mb-1">Total Sales</h6>
-                        <h3 className="mb-0">${stats.totalSales.toLocaleString()}</h3>
+                        <h3 className="mb-0">
+                          ${stats.totalSales.toLocaleString()}
+                        </h3>
                       </div>
                       <div className="bg-primary bg-opacity-10 p-3 rounded">
                         <FaDollarSign className="text-primary" size={24} />
@@ -111,10 +118,16 @@ const AdminDashboard = () => {
                     <div className="d-flex align-items-center">
                       <span
                         className={`me-2 ${
-                          stats.salesGrowth >= 0 ? "text-success" : "text-danger"
+                          stats.salesGrowth >= 0
+                            ? "text-success"
+                            : "text-danger"
                         }`}
                       >
-                        {stats.salesGrowth >= 0 ? <FaArrowUp /> : <FaArrowDown />}
+                        {stats.salesGrowth >= 0 ? (
+                          <FaArrowUp />
+                        ) : (
+                          <FaArrowDown />
+                        )}
                         {Math.abs(stats.salesGrowth)}%
                       </span>
                       <span className="text-muted">vs last month</span>
@@ -138,10 +151,16 @@ const AdminDashboard = () => {
                     <div className="d-flex align-items-center">
                       <span
                         className={`me-2 ${
-                          stats.orderGrowth >= 0 ? "text-success" : "text-danger"
+                          stats.orderGrowth >= 0
+                            ? "text-success"
+                            : "text-danger"
                         }`}
                       >
-                        {stats.orderGrowth >= 0 ? <FaArrowUp /> : <FaArrowDown />}
+                        {stats.orderGrowth >= 0 ? (
+                          <FaArrowUp />
+                        ) : (
+                          <FaArrowDown />
+                        )}
                         {Math.abs(stats.orderGrowth)}%
                       </span>
                       <span className="text-muted">vs last month</span>
