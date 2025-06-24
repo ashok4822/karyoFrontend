@@ -120,7 +120,7 @@ const UserLogin = () => {
               <div className="text-center mt-4">
                 <p className="mb-0">
                   Don't have an account?{" "}
-                  <Link to="/register" className="text-decoration-none">
+                  <Link to="/signup" className="text-decoration-none">
                     Sign up
                   </Link>
                 </p>

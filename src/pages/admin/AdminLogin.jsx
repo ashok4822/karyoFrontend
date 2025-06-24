@@ -75,25 +75,11 @@ const AdminLogin = () => {
       // Dispatch admin login
       dispatch(
         loginSuccess({
-          // user: { id: data.user.id, role: data.user.role },
           user: data.user, // includes id, email, name, etc.
-          // token: data.token,
           adminAccessToken: data.token,
         })
       );
-      // Debug logging
-      // setTimeout(() => {
-      //   console.log("After admin login:", {
-      //     redux: window.__REDUX_DEVTOOLS_EXTENSION__
-      //       ? window.__REDUX_DEVTOOLS_EXTENSION__()
-      //       : "No Redux DevTools",
-      //     localStorage: {
-      //       admin: localStorage.getItem("admin"),
-      //       token: localStorage.getItem("token"),
-      //       adminAccessToken: localStorage.getItem("adminAccessToken"),
-      //     },
-      //   });
-      // }, 1000);
+
       navigate("/admin");
     } catch (error) {
       setError(
@@ -170,7 +156,7 @@ const AdminLogin = () => {
                     </InputGroup>
                   </Form.Group>
 
-                  <div className="d-flex justify-content-between align-items-center mb-4">
+                  {/* <div className="d-flex justify-content-between align-items-center mb-4">
                     <Form.Check
                       type="checkbox"
                       id="remember"
@@ -183,7 +169,7 @@ const AdminLogin = () => {
                     >
                       Forgot password?
                     </Button>
-                  </div>
+                  </div> */}
 
                   <Button
                     variant="primary"

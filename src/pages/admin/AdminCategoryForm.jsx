@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Container,
   Row,
@@ -11,7 +11,7 @@ import {
   Alert,
   Spinner,
   InputGroup,
-} from 'react-bootstrap';
+} from "react-bootstrap";
 import {
   FaSave,
   FaTimes,
@@ -19,7 +19,7 @@ import {
   FaImage,
   FaCheck,
   FaExclamationTriangle,
-} from 'react-icons/fa';
+} from "react-icons/fa";
 
 const AdminCategoryForm = () => {
   const navigate = useNavigate();
@@ -28,11 +28,11 @@ const AdminCategoryForm = () => {
   const { loading, error } = useSelector((state) => state.categories);
 
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    status: 'active',
+    name: "",
+    description: "",
+    status: "active",
     image: null,
-    slug: '',
+    slug: "",
   });
 
   const [validated, setValidated] = useState(false);
@@ -42,7 +42,7 @@ const AdminCategoryForm = () => {
   useEffect(() => {
     if (id) {
       // Fetch category data if editing
-      dispatch({ type: 'FETCH_CATEGORY', payload: id });
+      dispatch({ type: "FETCH_CATEGORY", payload: id });
     }
   }, [dispatch, id]);
 
@@ -54,11 +54,11 @@ const AdminCategoryForm = () => {
     }));
 
     // Auto-generate slug from name
-    if (name === 'name') {
+    if (name === "name") {
       const slug = value
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
       setFormData((prev) => ({ ...prev, slug }));
     }
   };
@@ -94,18 +94,18 @@ const AdminCategoryForm = () => {
 
       if (id) {
         await dispatch({
-          type: 'UPDATE_CATEGORY',
+          type: "UPDATE_CATEGORY",
           payload: { id, data: formDataToSend },
         });
       } else {
         await dispatch({
-          type: 'CREATE_CATEGORY',
+          type: "CREATE_CATEGORY",
           payload: formDataToSend,
         });
       }
-      navigate('/admin/categories');
+      navigate("/admin/categories");
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error("Error submitting form:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -127,7 +127,7 @@ const AdminCategoryForm = () => {
         <Col>
           <Button
             variant="outline-secondary"
-            onClick={() => navigate('/admin/categories')}
+            onClick={() => navigate("/admin/categories")}
             className="d-flex align-items-center gap-2"
           >
             <FaArrowLeft /> Back to Categories
@@ -140,7 +140,7 @@ const AdminCategoryForm = () => {
           <Card className="border-0 shadow-sm">
             <Card.Body className="p-4">
               <h2 className="h3 mb-4 text-center">
-                {id ? 'Edit Category' : 'Add New Category'}
+                {id ? "Edit Category" : "Add New Category"}
               </h2>
 
               {error && (
@@ -153,14 +153,13 @@ const AdminCategoryForm = () => {
               <Form noValidate validated={validated} onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
                   <Form.Label>Category Name</Form.Label>
-                  <InputGroup hasValidation>
+                  <InputGroup >
                     <Form.Control
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="Enter category name"
-                      required
                     />
                     <Form.Control.Feedback type="invalid">
                       Please enter a category name.
@@ -176,7 +175,6 @@ const AdminCategoryForm = () => {
                     value={formData.slug}
                     onChange={handleChange}
                     placeholder="category-slug"
-                    required
                   />
                   <Form.Text className="text-muted">
                     This will be used in the URL. Auto-generated from the name.
@@ -225,13 +223,17 @@ const AdminCategoryForm = () => {
                     {imagePreview && (
                       <div
                         className="border rounded p-2"
-                        style={{ width: '100px', height: '100px' }}
+                        style={{ width: "100px", height: "100px" }}
                       >
                         <img
                           src={imagePreview}
                           alt="Preview"
                           className="img-fluid"
-                          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                          style={{
+                            objectFit: "cover",
+                            width: "100%",
+                            height: "100%",
+                          }}
                         />
                       </div>
                     )}
@@ -241,7 +243,7 @@ const AdminCategoryForm = () => {
                 <div className="d-flex gap-2 justify-content-end">
                   <Button
                     variant="outline-secondary"
-                    onClick={() => navigate('/admin/categories')}
+                    onClick={() => navigate("/admin/categories")}
                     className="d-flex align-items-center gap-2"
                   >
                     <FaTimes /> Cancel
@@ -279,4 +281,4 @@ const AdminCategoryForm = () => {
   );
 };
 
-export default AdminCategoryForm; 
+export default AdminCategoryForm;

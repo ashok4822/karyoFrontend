@@ -15,6 +15,9 @@ const Layout = () => {
   const navigate = useNavigate();
   const { user, userAccessToken } = useSelector((state) => state.auth);
 
+  // Debug logging
+  console.log("Layout - Current auth state:", { user, userAccessToken });
+
   const handleLogout = async () => {
     try {
       await userAxios.post("/auth/logout");
@@ -70,12 +73,12 @@ const Layout = () => {
                 </Button>
               ) : (
                 <div className="d-flex gap-2">
-                  <Button as={Link} to="/login" variant="outline-primary">
+                  {/* <Button as={Link} to="/login" variant="outline-primary">
                     Login
                   </Button>
                   <Button as={Link} to="/signup" variant="primary">
                     Register
-                  </Button>
+                  </Button> */}
                 </div>
               )}
             </div>
@@ -94,36 +97,84 @@ const Layout = () => {
           <Row className="mb-4">
             <Col md={4} className="mb-4 mb-md-0">
               <h4 className="fw-bold mb-3">KARYO</h4>
-              <p className="text-muted small mb-3">Your one-stop shop for high-quality backpacks and accessories.</p>
+              <p className="text-muted small mb-3">
+                Your one-stop shop for high-quality backpacks and accessories.
+              </p>
               <div className="d-flex gap-3">
-                <a href="#" className="text-white-50 fs-5"><i className="fab fa-facebook-f"></i></a>
-                <a href="#" className="text-white-50 fs-5"><i className="fab fa-twitter"></i></a>
-                <a href="#" className="text-white-50 fs-5"><i className="fab fa-instagram"></i></a>
-                <a href="#" className="text-white-50 fs-5"><i className="fab fa-linkedin-in"></i></a>
+                <a href="#" className="text-white-50 fs-5">
+                  <i className="fab fa-facebook-f"></i>
+                </a>
+                <a href="#" className="text-white-50 fs-5">
+                  <i className="fab fa-twitter"></i>
+                </a>
+                <a href="#" className="text-white-50 fs-5">
+                  <i className="fab fa-instagram"></i>
+                </a>
+                <a href="#" className="text-white-50 fs-5">
+                  <i className="fab fa-linkedin-in"></i>
+                </a>
               </div>
             </Col>
             <Col md={2} className="mb-4 mb-md-0">
               <h6 className="text-uppercase mb-3">Links</h6>
               <ul className="list-unstyled">
-                <li><Link to="/" className="text-white-50 text-decoration-none">Home</Link></li>
-                <li><Link to="/products" className="text-white-50 text-decoration-none">Products</Link></li>
-                <li><Link to="/about" className="text-white-50 text-decoration-none">About</Link></li>
-                <li><Link to="/contact" className="text-white-50 text-decoration-none">Contact</Link></li>
+                <li>
+                  <Link to="/" className="text-white-50 text-decoration-none">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/products"
+                    className="text-white-50 text-decoration-none"
+                  >
+                    Products
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/about"
+                    className="text-white-50 text-decoration-none"
+                  >
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/contact"
+                    className="text-white-50 text-decoration-none"
+                  >
+                    Contact
+                  </Link>
+                </li>
               </ul>
             </Col>
             <Col md={3} className="mb-4 mb-md-0">
               <h6 className="text-uppercase mb-3">Contact</h6>
               <ul className="list-unstyled text-white-50 small">
-                <li className="mb-2"><i className="fas fa-map-marker-alt me-2"></i>123 Backpack Street, City</li>
-                <li className="mb-2"><i className="fas fa-phone me-2"></i>(123) 456-7890</li>
-                <li><i className="fas fa-envelope me-2"></i>info@karyo.com</li>
+                <li className="mb-2">
+                  <i className="fas fa-map-marker-alt me-2"></i>123 Backpack
+                  Street, City
+                </li>
+                <li className="mb-2">
+                  <i className="fas fa-phone me-2"></i>(123) 456-7890
+                </li>
+                <li>
+                  <i className="fas fa-envelope me-2"></i>info@karyo.com
+                </li>
               </ul>
             </Col>
             <Col md={3}>
               <h6 className="text-uppercase mb-3">Newsletter</h6>
               <form className="d-flex flex-column flex-sm-row gap-2">
-                <input type="email" className="form-control" placeholder="Your email" />
-                <Button variant="primary" type="submit">Subscribe</Button>
+                <input
+                  type="email"
+                  className="form-control"
+                  placeholder="Your email"
+                />
+                <Button variant="primary" type="submit">
+                  Subscribe
+                </Button>
               </form>
             </Col>
           </Row>

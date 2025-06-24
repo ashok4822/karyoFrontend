@@ -64,98 +64,6 @@ const UserProtectedRoute = ({ children }) => {
   return <>{children}</>;
 };
 
-// function AuthSync({ onRestored }) {
-//   const dispatch = useDispatch();
-//   const location = useLocation();
-//   const { userAccessToken, adminAccessToken } = useSelector(
-//     (state) => state.auth
-//   );
-
-//   useEffect(() => {
-//     // Only run restore logic if NOT on public routes
-//     const publicPaths = [
-//       "/login",
-//       "/signup",
-//       "/forgot-password",
-//       "/admin/login",
-//     ];
-//     if (publicPaths.includes(location.pathname)) {
-//       onRestored();
-//       return;
-//     }
-
-//     let pending = 2;
-//     let done = () => {
-//       pending -= 1;
-//       if (pending === 0) onRestored();
-//     };
-
-//     if (!userAccessToken) {
-//       userAxios
-//         .post("/auth/refresh-token")
-//         .then((res) => {
-//           if (res.data.token) {
-//             localStorage.setItem("userAccessToken", res.data.token);
-//             dispatch(setUserAccessToken(res.data.token));
-//             userAxios
-//               .get("/users/profile", {
-//                 headers: { Authorization: `Bearer ${res.data.token}` },
-//               })
-//               .then((profileRes) => {
-//                 if (profileRes.data && profileRes.data.user) {
-//                   dispatch(
-//                     loginSuccess({
-//                       user: profileRes.data.user,
-//                       token: res.data.token,
-//                       userAccessToken: res.data.token,
-//                     })
-//                   );
-//                 }
-//                 done();
-//               })
-//               .catch(() => {
-//                 dispatch({ type: "auth/logout" });
-//                 done();
-//               });
-//             return;
-//           }
-//           done();
-//         })
-//         .catch(() => {
-//           dispatch({ type: "auth/logout" });
-//           done();
-//         });
-//     } else {
-//       done();
-//     }
-
-//     if (!adminAccessToken) {
-//       adminAxios
-//         .post("/refresh-token")
-//         .then((res) => {
-//           if (res.data.token) {
-//             localStorage.setItem("adminAccessToken", res.data.token);
-//             dispatch(setAdminAccessToken(res.data.token));
-//           }
-//           done();
-//         })
-//         .catch(() => {
-//           dispatch({ type: "auth/logout" });
-//           done();
-//         });
-//     } else {
-//       done();
-//     }
-//   }, [
-//     dispatch,
-//     userAccessToken,
-//     adminAccessToken,
-//     onRestored,
-//     location.pathname,
-//   ]);
-//   return null;
-// }
-
 const AuthSync = ({ onRestored = () => {} }) => {
   const dispatch = useDispatch();
   const location = useLocation();
@@ -286,31 +194,15 @@ function App() {
               </div>
             )}
 
-            {/* Render this first to allow GoogleAuthSuccess to save token */}
-            <Routes>
-              <Route
-                path="/google-auth-success"
-                element={<GoogleAuthSuccess />}
-              />
-            </Routes>
-
-            {/* AuthSync can now wait until the token is handled */}
-            {restoring && (
-              <div
-                style={{
-                  minHeight: "100vh",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <span>Restoring session...</span>
-              </div>
-            )}
-
             <AuthSync onRestored={() => setRestoring(false)} />
             {!restoring && (
               <Routes>
+                {/* Google Auth Success Route */}
+                <Route
+                  path="/google-auth-success"
+                  element={<GoogleAuthSuccess />}
+                />
+
                 {/* Admin Routes - No Layout */}
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route
@@ -362,14 +254,17 @@ function App() {
                   }
                 />
 
+                {/* User Auth Routes - No Layout */}
+                <Route
+                  path="/login"
+                  element={<RedirectRoute element={<UserLogin />} />}
+                />
+                <Route path="/signup" element={<UserSignup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+
                 {/* User Routes - With Layout */}
                 <Route element={<Layout />}>
                   <Route path="/" element={<Index />} />
-                  <Route
-                    path="/login"
-                    element={<RedirectRoute element={<UserLogin />} />}
-                  />
-                  <Route path="/signup" element={<UserSignup />} />
                   <Route
                     path="/products"
                     element={
@@ -386,8 +281,6 @@ function App() {
                       </UserProtectedRoute>
                     }
                   />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

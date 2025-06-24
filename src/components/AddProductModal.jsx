@@ -13,7 +13,14 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   });
 
   const [variants, setVariants] = useState([
-    { colour: "", capacity: "", price: "", stock: "", status: "active", images: [] }
+    {
+      colour: "",
+      capacity: "",
+      price: "",
+      stock: "",
+      status: "active",
+      images: [],
+    },
   ]);
 
   const [images, setImages] = useState([]);
@@ -42,7 +49,16 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
       brand: "",
       status: "active",
     });
-    setVariants([{ colour: "", capacity: "", price: "", stock: "", status: "active", images: [] }]);
+    setVariants([
+      {
+        colour: "",
+        capacity: "",
+        price: "",
+        stock: "",
+        status: "active",
+        images: [],
+      },
+    ]);
     setImages([]);
     setImagePreview([]);
     setError("");
@@ -56,9 +72,9 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -69,7 +85,17 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { colour: "", capacity: "", price: "", stock: "", status: "active", images: [] }]);
+    setVariants([
+      ...variants,
+      {
+        colour: "",
+        capacity: "",
+        price: "",
+        stock: "",
+        status: "active",
+        images: [],
+      },
+    ]);
   };
 
   const removeVariant = (index) => {
@@ -80,7 +106,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    
+
     if (!showVariants) {
       // Product-level images
       if (files.length < 3) {
@@ -98,13 +124,13 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
     setImages(files);
 
     // Create preview URLs
-    const previews = files.map(file => URL.createObjectURL(file));
+    const previews = files.map((file) => URL.createObjectURL(file));
     setImagePreview(previews);
   };
 
   const handleVariantImageChange = (variantIndex, e) => {
     const files = Array.from(e.target.files);
-    
+
     if (files.length < 3) {
       setError("Please select at least 3 images for this variant");
       return;
@@ -116,7 +142,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
     }
 
     setError("");
-    
+
     const newVariants = [...variants];
     newVariants[variantIndex].images = files;
     setVariants(newVariants);
@@ -125,27 +151,29 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   const removeImage = (index) => {
     const newImages = images.filter((_, i) => i !== index);
     const newPreviews = imagePreview.filter((_, i) => i !== index);
-    
+
     if (!showVariants && newImages.length < 3) {
       setError("Minimum 3 images required");
     } else {
       setError("");
     }
-    
+
     setImages(newImages);
     setImagePreview(newPreviews);
   };
 
   const removeVariantImage = (variantIndex, imageIndex) => {
     const newVariants = [...variants];
-    newVariants[variantIndex].images = newVariants[variantIndex].images.filter((_, i) => i !== imageIndex);
-    
+    newVariants[variantIndex].images = newVariants[variantIndex].images.filter(
+      (_, i) => i !== imageIndex
+    );
+
     if (newVariants[variantIndex].images.length < 3) {
       setError("Minimum 3 images required for this variant");
     } else {
       setError("");
     }
-    
+
     setVariants(newVariants);
   };
 
@@ -162,7 +190,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
       setError("Brand is required");
       return false;
     }
-    
+
     // Validate images based on whether variants are enabled
     if (!showVariants) {
       if (images.length < 3) {
@@ -170,7 +198,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
         return false;
       }
     }
-    
+
     // Validate variants only if they are shown
     if (showVariants) {
       for (let i = 0; i < variants.length; i++) {
@@ -197,70 +225,92 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
         }
       }
     }
-    
+
     return true;
   };
 
   // Test function to check authentication and categories
   const testConnection = async () => {
     try {
-      console.log('Testing connection...');
-      
+      console.log("Testing connection...");
+
       // Check if admin token exists
-      const adminToken = localStorage.getItem('adminAccessToken');
-      console.log('Admin token exists:', !!adminToken);
-      console.log('Admin token (first 20 chars):', adminToken ? adminToken.substring(0, 20) + '...' : 'None');
-      
+      const adminToken = localStorage.getItem("adminAccessToken");
+      console.log("Admin token exists:", !!adminToken);
+      console.log(
+        "Admin token (first 20 chars):",
+        adminToken ? adminToken.substring(0, 20) + "..." : "None"
+      );
+
       // Test categories endpoint
-      console.log('Testing categories endpoint...');
-      const categoriesResponse = await adminAxios.get('/categories?status=active');
-      console.log('Categories response:', categoriesResponse);
-      console.log('Categories data:', categoriesResponse.data);
-      console.log('Categories data type:', typeof categoriesResponse.data);
-      
+      console.log("Testing categories endpoint...");
+      const categoriesResponse = await adminAxios.get(
+        "/categories?status=active"
+      );
+      console.log("Categories response:", categoriesResponse);
+      console.log("Categories data:", categoriesResponse.data);
+      console.log("Categories data type:", typeof categoriesResponse.data);
+
       // Handle different response structures
-      const categoriesArray = categoriesResponse.data.categories || categoriesResponse.data;
-      console.log('Categories array:', categoriesArray);
-      console.log('Categories array length:', categoriesArray?.length);
-      console.log('Categories endpoint working:', categoriesArray?.length || 0, 'categories found');
-      
+      const categoriesArray =
+        categoriesResponse.data.categories || categoriesResponse.data;
+      console.log("Categories array:", categoriesArray);
+      console.log("Categories array length:", categoriesArray?.length);
+      console.log(
+        "Categories endpoint working:",
+        categoriesArray?.length || 0,
+        "categories found"
+      );
+
       // Test products endpoint
-      console.log('Testing products endpoint...');
-      const productsResponse = await adminAxios.get('/products');
-      console.log('Products response:', productsResponse);
-      console.log('Products data:', productsResponse.data);
-      console.log('Products data type:', typeof productsResponse.data);
-      
+      console.log("Testing products endpoint...");
+      const productsResponse = await adminAxios.get("/products");
+      console.log("Products response:", productsResponse);
+      console.log("Products data:", productsResponse.data);
+      console.log("Products data type:", typeof productsResponse.data);
+
       // Handle different response structures for products
-      const productsArray = productsResponse.data.products || productsResponse.data;
-      console.log('Products array:', productsArray);
-      console.log('Products array length:', productsArray?.length);
-      console.log('Products endpoint working:', productsArray?.length || 0, 'products found');
-      
+      const productsArray =
+        productsResponse.data.products || productsResponse.data;
+      console.log("Products array:", productsArray);
+      console.log("Products array length:", productsArray?.length);
+      console.log(
+        "Products endpoint working:",
+        productsArray?.length || 0,
+        "products found"
+      );
+
       // Test if we can access the categories prop
-      console.log('Categories prop in component:', categories);
-      console.log('Categories prop length:', categories?.length);
-      
+      console.log("Categories prop in component:", categories);
+      console.log("Categories prop length:", categories?.length);
+
       // Test if categories are available for the dropdown
       if (categories && categories.length > 0) {
-        console.log('✅ Categories available for dropdown:', categories.map(c => ({ id: c._id, name: c.name })));
+        console.log(
+          "✅ Categories available for dropdown:",
+          categories.map((c) => ({ id: c._id, name: c.name }))
+        );
       } else {
-        console.log('❌ No categories available for dropdown');
+        console.log("❌ No categories available for dropdown");
       }
-      
-      alert('✅ Connection test successful! Check console for details.');
+
+      alert("✅ Connection test successful! Check console for details.");
     } catch (error) {
-      console.error('Connection test failed:', error);
-      console.error('Error response:', error.response);
-      console.error('Error status:', error.response?.status);
-      console.error('Error data:', error.response?.data);
-      alert(`❌ Connection test failed: ${error.response?.data?.message || error.message}`);
+      console.error("Connection test failed:", error);
+      console.error("Error response:", error.response);
+      console.error("Error status:", error.response?.status);
+      console.error("Error data:", error.response?.data);
+      alert(
+        `❌ Connection test failed: ${
+          error.response?.data?.message || error.message
+        }`
+      );
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Product name validation
     const trimmedName = formData.name.trim();
     if (!trimmedName) {
@@ -268,7 +318,9 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
       return;
     }
     if (!/^[\w\s.,'"!?-]{0,100}$/.test(trimmedName)) {
-      setNameError("Invalid product name. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters).");
+      setNameError(
+        "Invalid product name. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters)."
+      );
       return;
     }
     setNameError("");
@@ -280,28 +332,36 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
       return;
     }
     if (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmedBrand)) {
-      setBrandError("Invalid brand name. Only letters, spaces, and basic punctuation are allowed (max 100 characters).");
+      setBrandError(
+        "Invalid brand name. Only letters, spaces, and basic punctuation are allowed (max 100 characters)."
+      );
       return;
     }
     setBrandError("");
 
     // Validate all variant colours
     const newColourErrors = variants.map((variant, index) => {
-      const trimmed = (variant.colour || '').trim();
-      if (!trimmed) return 'Colour is required.';
-      if (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmed)) return 'Invalid colour. Only letters, spaces, and basic punctuation are allowed (max 100 characters).';
-      return '';
+      const trimmed = (variant.colour || "").trim();
+      if (!trimmed) return "Colour is required.";
+      if (!/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmed))
+        return "Invalid colour. Only letters, spaces, and basic punctuation are allowed (max 100 characters).";
+      return "";
     });
     setColourErrors(newColourErrors);
     // Validate all variant capacities
     const newCapacityErrors = variants.map((variant, index) => {
-      const trimmed = (variant.capacity || '').trim();
-      if (!trimmed) return 'Capacity is required.';
-      if (!/^\d+(\.\d+)*L$/.test(trimmed)) return 'Invalid capacity. Must start with a number, can have dots (not at the beginning or end), and end with a capital L.';
-      return '';
+      const trimmed = (variant.capacity || "").trim();
+      if (!trimmed) return "Capacity is required.";
+      if (!/^\d+(\.\d+)*L$/.test(trimmed))
+        return "Invalid capacity. Must start with a number, can have dots (not at the beginning or end), and end with a capital L.";
+      return "";
     });
     setCapacityErrors(newCapacityErrors);
-    if (newColourErrors.some(err => err) || newCapacityErrors.some(err => err)) return;
+    if (
+      newColourErrors.some((err) => err) ||
+      newCapacityErrors.some((err) => err)
+    )
+      return;
 
     if (!validateForm()) {
       return;
@@ -313,16 +373,16 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
 
     try {
       const formDataToSend = new FormData();
-      
+
       // Add product data
       formDataToSend.append("name", formData.name);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("category", formData.category);
       formDataToSend.append("brand", formData.brand);
       formDataToSend.append("status", formData.status);
-      
+
       // Debug logging
-      console.log('Form data being sent:', {
+      console.log("Form data being sent:", {
         name: formData.name,
         description: formData.description,
         category: formData.category,
@@ -330,26 +390,31 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
         status: formData.status,
         showVariants,
         imagesCount: images.length,
-        variantsCount: variants.length
+        variantsCount: variants.length,
       });
-      
+
       // Add variants as JSON string only if variants are shown
       if (showVariants) {
         // Remove images from variants before sending as JSON
-        const variantsWithoutImages = variants.map(v => ({
+        const variantsWithoutImages = variants.map((v) => ({
           colour: v.colour,
           capacity: v.capacity,
           price: v.price,
           stock: v.stock,
-          status: v.status
+          status: v.status,
         }));
-        formDataToSend.append("variants", JSON.stringify(variantsWithoutImages));
-        
-        console.log('Variants being sent:', variantsWithoutImages);
-        
+        formDataToSend.append(
+          "variants",
+          JSON.stringify(variantsWithoutImages)
+        );
+
+        console.log("Variants being sent:", variantsWithoutImages);
+
         // Add variant images
         variants.forEach((variant, variantIndex) => {
-          console.log(`Adding ${variant.images.length} images for variant ${variantIndex}`);
+          console.log(
+            `Adding ${variant.images.length} images for variant ${variantIndex}`
+          );
           variant.images.forEach((image, imageIndex) => {
             formDataToSend.append(`variantImages_${variantIndex}`, image);
           });
@@ -358,54 +423,64 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
         // Add product-level images
         console.log(`Adding ${images.length} product-level images`);
         images.forEach((image, index) => {
-          console.log(`Adding image ${index + 1}:`, image.name, image.type, image.size);
+          console.log(
+            `Adding image ${index + 1}:`,
+            image.name,
+            image.type,
+            image.size
+          );
           formDataToSend.append("images", image);
         });
       }
 
-      console.log('Sending request to /products...');
+      console.log("Sending request to /products...");
       const response = await adminAxios.post("/products", formDataToSend, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
-      console.log('Product created successfully:', response.data);
+      console.log("Product created successfully:", response.data);
       setSuccess("Product added successfully!");
       setTimeout(() => {
         onProductAdded();
         onHide();
       }, 1500);
-
     } catch (err) {
-      console.error('Product creation error:', err);
-      console.error('Error response:', err.response?.data);
-      
+      console.error("Product creation error:", err);
+      console.error("Error response:", err.response?.data);
+
       // Show detailed error information
       if (err.response?.data) {
         const errorData = err.response.data;
         let errorMessage = errorData.message || "Failed to add product";
-        
+
         // Add additional error details if available
         if (errorData.missingFields) {
-          errorMessage += `\nMissing fields: ${errorData.missingFields.join(', ')}`;
+          errorMessage += `\nMissing fields: ${errorData.missingFields.join(
+            ", "
+          )}`;
         }
-        
+
         if (errorData.errors && Array.isArray(errorData.errors)) {
-          errorMessage += `\nValidation errors: ${errorData.errors.join(', ')}`;
+          errorMessage += `\nValidation errors: ${errorData.errors.join(", ")}`;
         }
-        
+
         if (errorData.imagesReceived !== undefined) {
           errorMessage += `\nImages received: ${errorData.imagesReceived}`;
         }
-        
+
         if (errorData.nonImageFiles && errorData.nonImageFiles.length > 0) {
-          errorMessage += `\nNon-image files: ${errorData.nonImageFiles.join(', ')}`;
+          errorMessage += `\nNon-image files: ${errorData.nonImageFiles.join(
+            ", "
+          )}`;
         }
-        
+
         setError(errorMessage);
       } else {
-        setError("Failed to add product. Please check your connection and try again.");
+        setError(
+          "Failed to add product. Please check your connection and try again."
+        );
       }
     } finally {
       setLoading(false);
@@ -417,12 +492,12 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
       <Modal.Header closeButton>
         <Modal.Title>Add New Product</Modal.Title>
       </Modal.Header>
-      
+
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
-          
+
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
@@ -431,17 +506,19 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={e => {
+                  onChange={(e) => {
                     handleInputChange(e);
                     setNameError("");
                   }}
                   placeholder="Enter product name"
-                  required
+                  
                 />
-                { nameError && <div className="text-danger small mt-1">{nameError}</div> }
+                {nameError && (
+                  <div className="text-danger small mt-1">{nameError}</div>
+                )}
               </Form.Group>
             </Col>
-            
+
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Category *</Form.Label>
@@ -449,7 +526,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  required
+                  
                 >
                   <option value="">Select Category</option>
                   {categories.map((category) => (
@@ -470,14 +547,16 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                   type="text"
                   name="brand"
                   value={formData.brand}
-                  onChange={e => {
+                  onChange={(e) => {
                     handleInputChange(e);
                     setBrandError("");
                   }}
                   placeholder="Enter brand name"
-                  required
+                  
                 />
-                { brandError && <div className="text-danger small mt-1">{brandError}</div> }
+                {brandError && (
+                  <div className="text-danger small mt-1">{brandError}</div>
+                )}
               </Form.Group>
             </Col>
           </Row>
@@ -507,7 +586,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
           </Form.Group>
 
           {/* Debug Section - Remove in production */}
-          {process.env.NODE_ENV === 'development' && (
+          {/* {process.env.NODE_ENV === 'development' && (
             <div className="mb-3 p-3 bg-light border rounded">
               <h6>Debug Info (Development Only)</h6>
               <div className="small">
@@ -535,7 +614,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                 Test Connection
               </Button>
             </div>
-          )}
+          )} */}
 
           {/* Variants Section - Optional */}
           <div className="mb-3">
@@ -550,7 +629,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                 {showVariants ? "Hide Variants" : "Add Variants"}
               </Button>
             </div>
-            
+
             {showVariants && (
               <>
                 <div className="d-flex justify-content-end mb-2">
@@ -563,7 +642,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                     <Plus size={16} /> Add Variant
                   </Button>
                 </div>
-                
+
                 {variants.map((variant, index) => (
                   <div key={index} className="border rounded p-3 mb-3">
                     <div className="d-flex justify-content-between align-items-center mb-3">
@@ -579,7 +658,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                         </Button>
                       )}
                     </div>
-                    
+
                     {/* Variant Basic Information Group */}
                     <div className="mb-3">
                       <h6 className="text-primary mb-2">Basic Information</h6>
@@ -591,16 +670,26 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                               type="text"
                               value={variant.colour}
                               onChange={(e) => {
-                                handleVariantChange(index, "colour", e.target.value);
-                                setColourErrors((prev) => prev.map((err, i) => i === index ? '' : err));
+                                handleVariantChange(
+                                  index,
+                                  "colour",
+                                  e.target.value
+                                );
+                                setColourErrors((prev) =>
+                                  prev.map((err, i) => (i === index ? "" : err))
+                                );
                               }}
                               placeholder="e.g., Red, Blue"
-                              required
+                              
                             />
                           </Form.Group>
-                          {colourErrors[index] && <div className="text-danger small mt-1">{colourErrors[index]}</div>}
+                          {colourErrors[index] && (
+                            <div className="text-danger small mt-1">
+                              {colourErrors[index]}
+                            </div>
+                          )}
                         </Col>
-                        
+
                         <Col md={6}>
                           <Form.Group>
                             <Form.Label>Capacity *</Form.Label>
@@ -608,14 +697,24 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                               type="text"
                               value={variant.capacity}
                               onChange={(e) => {
-                                handleVariantChange(index, "capacity", e.target.value);
-                                setCapacityErrors((prev) => prev.map((err, i) => i === index ? '' : err));
+                                handleVariantChange(
+                                  index,
+                                  "capacity",
+                                  e.target.value
+                                );
+                                setCapacityErrors((prev) =>
+                                  prev.map((err, i) => (i === index ? "" : err))
+                                );
                               }}
                               placeholder="e.g., 1L, 1.5L"
-                              required
+                              
                             />
                           </Form.Group>
-                          {capacityErrors[index] && <div className="text-danger small mt-1">{capacityErrors[index]}</div>}
+                          {capacityErrors[index] && (
+                            <div className="text-danger small mt-1">
+                              {capacityErrors[index]}
+                            </div>
+                          )}
                         </Col>
                       </Row>
                     </div>
@@ -630,35 +729,53 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                             <Form.Control
                               type="number"
                               value={variant.price}
-                              onChange={(e) => handleVariantChange(index, "price", e.target.value)}
+                              onChange={(e) =>
+                                handleVariantChange(
+                                  index,
+                                  "price",
+                                  e.target.value
+                                )
+                              }
                               placeholder="0.00"
                               min="0"
                               step="0.01"
-                              required
+                              
                             />
                           </Form.Group>
                         </Col>
-                        
+
                         <Col md={4}>
                           <Form.Group>
                             <Form.Label>Stock *</Form.Label>
                             <Form.Control
                               type="number"
                               value={variant.stock}
-                              onChange={(e) => handleVariantChange(index, "stock", e.target.value)}
+                              onChange={(e) =>
+                                handleVariantChange(
+                                  index,
+                                  "stock",
+                                  e.target.value
+                                )
+                              }
                               placeholder="0"
                               min="0"
-                              required
+                              
                             />
                           </Form.Group>
                         </Col>
-                        
+
                         <Col md={4}>
                           <Form.Group>
                             <Form.Label>Status</Form.Label>
                             <Form.Select
                               value={variant.status}
-                              onChange={(e) => handleVariantChange(index, "status", e.target.value)}
+                              onChange={(e) =>
+                                handleVariantChange(
+                                  index,
+                                  "status",
+                                  e.target.value
+                                )
+                              }
                             >
                               <option value="active">Active</option>
                               <option value="inactive">Inactive</option>
@@ -677,21 +794,27 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                         multiple
                         accept="image/*"
                         onChange={(e) => handleVariantImageChange(index, e)}
-                        required
+                        
                       />
                       <Form.Text className="text-muted">
-                        Select at least 3 images for this variant. First image will be the main image.
+                        Select at least 3 images for this variant. First image
+                        will be the main image.
                       </Form.Text>
-                      
+
                       {variant.images && variant.images.length > 0 && (
                         <div className="mt-3">
                           <h6>Selected Images for Variant {index + 1}:</h6>
                           <div className="d-flex flex-wrap gap-2">
                             {variant.images.map((image, imageIndex) => (
-                              <div key={imageIndex} className="position-relative">
+                              <div
+                                key={imageIndex}
+                                className="position-relative"
+                              >
                                 <img
                                   src={URL.createObjectURL(image)}
-                                  alt={`Variant ${index + 1} Preview ${imageIndex + 1}`}
+                                  alt={`Variant ${index + 1} Preview ${
+                                    imageIndex + 1
+                                  }`}
                                   style={{
                                     width: "80px",
                                     height: "80px",
@@ -705,7 +828,9 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                                   size="sm"
                                   className="position-absolute top-0 end-0"
                                   style={{ transform: "translate(50%, -50%)" }}
-                                  onClick={() => removeVariantImage(index, imageIndex)}
+                                  onClick={() =>
+                                    removeVariantImage(index, imageIndex)
+                                  }
                                 >
                                   <X size={12} />
                                 </Button>
@@ -735,12 +860,12 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                 multiple
                 accept="image/*"
                 onChange={handleImageChange}
-                required
+                
               />
               <Form.Text className="text-muted">
                 Select at least 3 images. First image will be the main image.
               </Form.Text>
-              
+
               {imagePreview.length > 0 && (
                 <div className="mt-3">
                   <h6>Selected Images:</h6>
@@ -780,7 +905,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
             </div>
           )}
         </Modal.Body>
-        
+
         <Modal.Footer>
           <Button variant="secondary" onClick={onHide} disabled={loading}>
             Cancel
@@ -801,4 +926,4 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   );
 };
 
-export default AddProductModal; 
+export default AddProductModal;

@@ -58,8 +58,10 @@ const UserSignup = () => {
     if (!formData.email.trim()) return "Email is required";
     if (!/\S+@\S+\.\S+/.test(formData.email)) return "Email is invalid";
     if (!formData.password) return "Password is required";
-    if (formData.password.length < 8) return "Password must be at least 8 characters";
-    if (formData.password !== formData.confirmPassword) return "Passwords do not match";
+    if (formData.password.length < 8)
+      return "Password must be at least 8 characters";
+    if (formData.password !== formData.confirmPassword)
+      return "Passwords do not match";
     return null;
   };
 
@@ -71,9 +73,14 @@ const UserSignup = () => {
     if (err) return setServerError(err);
     setLoading(true);
     try {
-      await api.post("auth/request-otp", { email: formData.email, username: formData.username });
+      await api.post("auth/request-otp", {
+        email: formData.email,
+        username: formData.username,
+      });
       setStep(2);
-      setSuccessMsg(isResend ? "OTP resent to your email." : "OTP sent to your email.");
+      setSuccessMsg(
+        isResend ? "OTP resent to your email." : "OTP sent to your email."
+      );
       setTimer(OTP_EXPIRY_SECONDS);
     } catch (error) {
       setServerError(error.response?.data?.message || "Failed to send OTP");
@@ -97,7 +104,9 @@ const UserSignup = () => {
       dispatch(loginSuccess({ user: res.data.user, token: res.data.token }));
       navigate("/");
     } catch (error) {
-      setServerError(error.response?.data?.message || "OTP verification failed");
+      setServerError(
+        error.response?.data?.message || "OTP verification failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -111,12 +120,16 @@ const UserSignup = () => {
             <Card.Body className="p-4 p-md-5">
               <div className="text-center mb-4">
                 <h1 className="h3 mb-3">Create an Account</h1>
-                <p className="text-muted">Join our community and start shopping today</p>
+                <p className="text-muted">
+                  Join our community and start shopping today
+                </p>
               </div>
               <Button
                 variant="outline-danger"
                 className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                onClick={() => window.location.href = "http://localhost:5000/auth/google"}
+                onClick={() =>
+                  (window.location.href = "http://localhost:5000/auth/google")
+                }
               >
                 <FaGoogle /> Sign up with Google
               </Button>
@@ -128,44 +141,50 @@ const UserSignup = () => {
                     <Form.Group className="mb-3">
                       <Form.Label>Username</Form.Label>
                       <InputGroup>
-                        <InputGroup.Text><FaUser /></InputGroup.Text>
+                        <InputGroup.Text>
+                          <FaUser />
+                        </InputGroup.Text>
                         <Form.Control
                           type="text"
                           name="username"
                           value={formData.username}
                           onChange={handleChange}
                           placeholder="Enter your username"
-                          required
                         />
                       </InputGroup>
                     </Form.Group>
                     <Form.Group className="mb-3">
                       <Form.Label>Email Address</Form.Label>
                       <InputGroup>
-                        <InputGroup.Text><FaEnvelope /></InputGroup.Text>
+                        <InputGroup.Text>
+                          <FaEnvelope />
+                        </InputGroup.Text>
                         <Form.Control
                           type="email"
                           name="email"
                           value={formData.email}
                           onChange={handleChange}
                           placeholder="Enter your email"
-                          required
                         />
                       </InputGroup>
                     </Form.Group>
                     <Form.Group className="mb-3">
                       <Form.Label>Password</Form.Label>
                       <InputGroup>
-                        <InputGroup.Text><FaLock /></InputGroup.Text>
+                        <InputGroup.Text>
+                          <FaLock />
+                        </InputGroup.Text>
                         <Form.Control
                           type={showPassword ? "text" : "password"}
                           name="password"
                           value={formData.password}
                           onChange={handleChange}
                           placeholder="Enter your password"
-                          required
                         />
-                        <Button variant="outline-secondary" onClick={() => setShowPassword((v) => !v)}>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => setShowPassword((v) => !v)}
+                        >
                           {showPassword ? <FaEyeSlash /> : <FaEye />}
                         </Button>
                       </InputGroup>
@@ -173,18 +192,24 @@ const UserSignup = () => {
                     <Form.Group className="mb-3">
                       <Form.Label>Confirm Password</Form.Label>
                       <InputGroup>
-                        <InputGroup.Text><FaLock /></InputGroup.Text>
+                        <InputGroup.Text>
+                          <FaLock />
+                        </InputGroup.Text>
                         <Form.Control
                           type={showPassword ? "text" : "password"}
                           name="confirmPassword"
                           value={formData.confirmPassword}
                           onChange={handleChange}
                           placeholder="Confirm your password"
-                          required
                         />
                       </InputGroup>
                     </Form.Group>
-                    <Button type="submit" variant="primary" className="w-100" disabled={loading}>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="w-100"
+                      disabled={loading}
+                    >
                       {loading ? "Sending OTP..." : "Sign Up & Get OTP"}
                     </Button>
                   </Form>
@@ -208,10 +233,14 @@ const UserSignup = () => {
                           setSuccessMsg("");
                         }}
                         placeholder="Enter OTP"
-                        required
                       />
                     </Form.Group>
-                    <Button type="submit" variant="success" className="w-100" disabled={loading}>
+                    <Button
+                      type="submit"
+                      variant="success"
+                      className="w-100"
+                      disabled={loading}
+                    >
                       {loading ? "Verifying..." : "Verify & Create Account"}
                     </Button>
                     <Button
