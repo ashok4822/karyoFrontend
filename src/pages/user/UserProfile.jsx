@@ -4,6 +4,7 @@ import { Container, Row, Col, ListGroup, Card, Image, Button, Form, Spinner, Ale
 import { FaUser, FaMapMarkerAlt, FaBoxOpen, FaEdit, FaTimesCircle, FaKey, FaCamera } from "react-icons/fa";
 import userAxios from "../../lib/userAxios";
 import { loginSuccess } from "../../redux/reducers/authSlice";
+import { OTP_EXPIRY_SECONDS } from "../../lib/utils";
 
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
@@ -12,6 +13,7 @@ const sidebarItems = [
   { label: "Show orders", icon: <FaBoxOpen /> },
   { label: "Cancel orders", icon: <FaTimesCircle /> },
   { label: "Forgot password", icon: <FaKey /> },
+  { label: "Edit Email", icon: <FaEdit /> },
 ];
 
 const UserProfile = () => {
@@ -49,6 +51,13 @@ const UserProfile = () => {
     isDefault: false,
   });
   const [setDefaultLoadingId, setSetDefaultLoadingId] = useState(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editEmailError, setEditEmailError] = useState("");
+  const [editEmailSuccess, setEditEmailSuccess] = useState("");
+  const [editEmailLoading, setEditEmailLoading] = useState(false);
+  const [editEmailOtp, setEditEmailOtp] = useState("");
+  const [editEmailVerifyLoading, setEditEmailVerifyLoading] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
 
   const handleAvatarClick = () => {
     fileInputRef.current.click();
@@ -434,11 +443,135 @@ const UserProfile = () => {
   );
 
   useEffect(() => {
+    let timer;
+    if (otpTimer > 0) {
+      timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [otpTimer]);
+
+  const handleSendEmailOtp = async () => {
+    setEditEmailError("");
+    setEditEmailSuccess("");
+    setEditEmailLoading(true);
+    try {
+      const res = await userAxios.post(
+        "/users/request-email-change-otp",
+        { email: editEmail },
+        { headers: { Authorization: `Bearer ${userAccessToken}` } }
+      );
+      setEditEmailSuccess(res.data.message || "OTP sent to email");
+      setOtpTimer(OTP_EXPIRY_SECONDS);
+    } catch (err) {
+      setEditEmailError(
+        err.response?.data?.message || "Failed to send OTP. Please try again."
+      );
+    } finally {
+      setEditEmailLoading(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    setEditEmailError("");
+    setEditEmailSuccess("");
+    setEditEmailVerifyLoading(true);
+    try {
+      const res = await userAxios.post(
+        "/users/verify-email-change-otp",
+        { email: editEmail, otp: editEmailOtp },
+        { headers: { Authorization: `Bearer ${userAccessToken}` } }
+      );
+      setEditEmailSuccess(res.data.message || "Email updated successfully");
+      // Update Redux user state with new email
+      dispatch(loginSuccess({ user: { ...user, email: res.data.email }, userAccessToken }));
+      setEditEmail("");
+      setEditEmailOtp("");
+    } catch (err) {
+      setEditEmailError(
+        err.response?.data?.message || "Failed to verify OTP. Please try again."
+      );
+    } finally {
+      setEditEmailVerifyLoading(false);
+    }
+  };
+
+  // Edit Email content
+  const editEmailContent = (
+    <Card className="shadow-sm border-0">
+      <Card.Body>
+        <h5 className="fw-bold mb-3">Edit Email</h5>
+        {editEmailError && <Alert variant="danger">{editEmailError}</Alert>}
+        {editEmailSuccess && <Alert variant="success">{editEmailSuccess}</Alert>}
+        <Form autoComplete="off">
+          <Form.Group className="mb-3">
+            <Form.Label>New Email</Form.Label>
+            <Form.Control
+              type="email"
+              value={editEmail}
+              onChange={e => setEditEmail(e.target.value)}
+              placeholder="Enter new email"
+              disabled={editEmailLoading || editEmailSuccess}
+            />
+          </Form.Group>
+          <Button variant="primary" type="button" onClick={handleSendEmailOtp} disabled={editEmailLoading || !editEmail || editEmailSuccess} className="mb-3">
+            {editEmailLoading ? "Sending..." : "Send OTP"}
+          </Button>
+          {/* Show OTP input if OTP sent and not yet verified */}
+          {editEmailSuccess && !editEmailSuccess.includes("updated") && (
+            <>
+              <Form.Group className="mb-3">
+                <Form.Label>Enter OTP</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={editEmailOtp}
+                  onChange={e => setEditEmailOtp(e.target.value)}
+                  placeholder="Enter OTP"
+                  maxLength={6}
+                  disabled={editEmailVerifyLoading || otpTimer === 0}
+                />
+              </Form.Group>
+              <div className="mb-2 text-muted">
+                {otpTimer > 0
+                  ? `OTP expires in ${otpTimer} second${otpTimer !== 1 ? "s" : ""}`
+                  : "OTP expired. Please resend OTP."}
+              </div>
+              <Button variant="success" type="button" onClick={handleVerifyEmailOtp} disabled={editEmailVerifyLoading || !editEmailOtp || otpTimer === 0}>
+                {editEmailVerifyLoading ? "Verifying..." : "Verify & Update Email"}
+              </Button>
+              <Button
+                variant="secondary"
+                type="button"
+                className="ms-2 mt-2"
+                onClick={() => {
+                  setEditEmailOtp("");
+                  setEditEmailError("");
+                  setEditEmailSuccess("OTP resent. Please check your email.");
+                  handleSendEmailOtp();
+                }}
+                disabled={otpTimer > 0 || editEmailLoading}
+              >
+                Resend OTP
+              </Button>
+            </>
+          )}
+        </Form>
+      </Card.Body>
+    </Card>
+  );
+
+  useEffect(() => {
     if (addSuccess) {
       const timer = setTimeout(() => setAddSuccess("") , 2000);
       return () => clearTimeout(timer);
     }
   }, [addSuccess]);
+
+  useEffect(() => {
+    if (editEmailSuccess && editEmailSuccess.includes("updated")) {
+      const timer = setTimeout(() => setEditEmailSuccess("") , 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [editEmailSuccess]);
 
   return (
     <Container className="py-5">
@@ -515,6 +648,7 @@ const UserProfile = () => {
           {activeIndex === 0 && userDetailsContent}
           {activeIndex === 1 && editProfileContent}
           {activeIndex === 2 && showAddressContent}
+          {activeIndex === 6 && editEmailContent}
         </Col>
       </Row>
     </Container>
