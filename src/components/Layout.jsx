@@ -24,6 +24,10 @@ const Layout = () => {
     } catch (err) {
       console.error("Logout error", err);
     }
+    // Only clear user tokens/state
+    localStorage.removeItem("userAccessToken");
+    localStorage.removeItem("user");
+    // Do NOT clear admin tokens
     dispatch(logoutUser());
     navigate("/");
   };

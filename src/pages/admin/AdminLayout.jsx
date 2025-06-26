@@ -39,8 +39,18 @@ const AdminLayout = () => {
     { path: '/admin/settings', icon: <FaCog />, label: 'Settings' },
   ];
 
-  const handleLogout = () => {
-    // Implement logout logic here
+  const handleLogout = async () => {
+    try {
+      // Call admin logout endpoint if available
+      await fetch("/api/admin/logout", { method: "POST", credentials: "include" });
+    } catch (err) {
+      console.error("Admin logout error", err);
+    }
+    // Only clear admin tokens/state
+    localStorage.removeItem("adminAccessToken");
+    localStorage.removeItem("admin");
+    // Do NOT clear user tokens
+    // If you use redux for admin, dispatch admin logout here
     navigate('/admin/login');
   };
 
