@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Row,
@@ -14,41 +14,40 @@ import {
   Alert,
   Pagination,
   Modal,
-} from 'react-bootstrap';
-import {
-  FaSearch,
-  FaPlus,
-  FaUserTimes,
-  FaUserCheck,
-} from 'react-icons/fa';
-import AdminLeftbar from '../../components/AdminLeftbar';
-import adminAxios from '../../lib/adminAxios';
+} from "react-bootstrap";
+import { FaSearch, FaPlus, FaUserTimes, FaUserCheck } from "react-icons/fa";
+import AdminLeftbar from "../../components/AdminLeftbar";
+import adminAxios from "../../lib/adminAxios";
 
 const UserManagement = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const usersPerPage = 5;
-  const [statusFilter, setStatusFilter] = useState('active'); // 'active', 'blocked', 'all'
+  const [statusFilter, setStatusFilter] = useState("all"); // 'active', 'blocked', 'all'
 
-  const fetchUsers = async (page = 1, search = '', status = statusFilter) => {
+  const fetchUsers = async (page = 1, search = "", status = statusFilter) => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const res = await adminAxios.get(`/users?page=${page}&limit=${usersPerPage}&search=${encodeURIComponent(search)}&status=${status}`);
+      const res = await adminAxios.get(
+        `/users?page=${page}&limit=${usersPerPage}&search=${encodeURIComponent(
+          search
+        )}&status=${status}`
+      );
       setUsers(res.data.users);
       setTotalPages(res.data.totalPages);
       setTotal(res.data.total);
       setCurrentPage(res.data.page);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch users');
+      setError(err.response?.data?.message || "Failed to fetch users");
     } finally {
       setLoading(false);
     }
@@ -83,7 +82,7 @@ const UserManagement = () => {
       setShowStatusModal(false);
       setSelectedUser(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update user status');
+      setError(err.response?.data?.message || "Failed to update user status");
     } finally {
       setLoading(false);
     }
@@ -104,7 +103,7 @@ const UserManagement = () => {
               <Col xs="auto">
                 <Button
                   variant="primary"
-                  onClick={() => navigate('/admin/users/new')}
+                  onClick={() => navigate("/admin/users/new")}
                   className="d-flex align-items-center gap-2"
                 >
                   <FaPlus /> Add User
@@ -123,6 +122,17 @@ const UserManagement = () => {
                     value={searchTerm}
                     onChange={handleSearch}
                   />
+                  {searchTerm && (
+                    <Button
+                      variant="outline-secondary"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setCurrentPage(1);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  )}
                 </InputGroup>
               </Col>
               <Col md={3}>
@@ -165,25 +175,41 @@ const UserManagement = () => {
                       ) : (
                         users.map((user, idx) => (
                           <tr key={user._id}>
-                            <td>{(currentPage - 1) * usersPerPage + idx + 1}</td>
+                            <td>
+                              {(currentPage - 1) * usersPerPage + idx + 1}
+                            </td>
                             <td>{user.username}</td>
                             <td>{user.email}</td>
-                            <td><Badge bg={user.role === 'admin' ? 'primary' : 'secondary'}>{user.role}</Badge></td>
                             <td>
-                              <Badge bg={user.isDeleted ? 'danger' : 'success'}>
-                                {user.isDeleted ? 'Blocked' : 'Active'}
+                              <Badge
+                                bg={
+                                  user.role === "admin"
+                                    ? "primary"
+                                    : "secondary"
+                                }
+                              >
+                                {user.role}
+                              </Badge>
+                            </td>
+                            <td>
+                              <Badge bg={user.isDeleted ? "danger" : "success"}>
+                                {user.isDeleted ? "Blocked" : "Active"}
                               </Badge>
                             </td>
                             <td>{new Date(user.createdAt).toLocaleString()}</td>
                             <td>
                               <Button
-                                variant={user.isDeleted ? 'success' : 'danger'}
+                                variant={user.isDeleted ? "success" : "danger"}
                                 size="sm"
                                 className="me-2"
                                 onClick={() => handleBlockUnblock(user)}
                               >
-                                {user.isDeleted ? <FaUserCheck /> : <FaUserTimes />}
-                                {user.isDeleted ? ' Unblock' : ' Block'}
+                                {user.isDeleted ? (
+                                  <FaUserCheck />
+                                ) : (
+                                  <FaUserTimes />
+                                )}
+                                {user.isDeleted ? " Unblock" : " Block"}
                               </Button>
                             </td>
                           </tr>
@@ -197,8 +223,14 @@ const UserManagement = () => {
             <div className="d-flex justify-content-between align-items-center mt-3">
               <div>Total Users: {total}</div>
               <Pagination>
-                <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
-                <Pagination.Prev onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} />
+                <Pagination.First
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                />
+                <Pagination.Prev
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                />
                 {[...Array(totalPages)].map((_, idx) => (
                   <Pagination.Item
                     key={idx + 1}
@@ -208,23 +240,45 @@ const UserManagement = () => {
                     {idx + 1}
                   </Pagination.Item>
                 ))}
-                <Pagination.Next onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} />
-                <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} />
+                <Pagination.Next
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                />
+                <Pagination.Last
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                />
               </Pagination>
             </div>
-            <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered>
+            <Modal
+              show={showStatusModal}
+              onHide={() => setShowStatusModal(false)}
+              centered
+            >
               <Modal.Header closeButton>
-                <Modal.Title>{selectedUser?.isDeleted ? 'Unblock User' : 'Block User'}</Modal.Title>
+                <Modal.Title>
+                  {selectedUser?.isDeleted ? "Unblock User" : "Block User"}
+                </Modal.Title>
               </Modal.Header>
               <Modal.Body>
-                Are you sure you want to {selectedUser?.isDeleted ? 'unblock' : 'block'} user <b>{selectedUser?.username}</b>?
+                Are you sure you want to{" "}
+                {selectedUser?.isDeleted ? "unblock" : "block"} user{" "}
+                <b>{selectedUser?.username}</b>?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowStatusModal(false)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowStatusModal(false)}
+                >
                   Cancel
                 </Button>
-                <Button variant={selectedUser?.isDeleted ? 'success' : 'danger'} onClick={confirmBlockUnblock}>
-                  {selectedUser?.isDeleted ? 'Unblock' : 'Block'}
+                <Button
+                  variant={selectedUser?.isDeleted ? "success" : "danger"}
+                  onClick={confirmBlockUnblock}
+                >
+                  {selectedUser?.isDeleted ? "Unblock" : "Block"}
                 </Button>
               </Modal.Footer>
             </Modal>
@@ -236,13 +290,3 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
-
-
-
-
-
-
-
-
-
-

@@ -208,16 +208,6 @@ const ProductListing = () => {
     navigate(`/products/${productId}`);
   };
 
-  if (loading) {
-    return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-      </Container>
-    );
-  }
-
   if (error) {
     return (
       <Container className="py-5">
@@ -238,7 +228,29 @@ const ProductListing = () => {
             currentFilters={filters}
           />
         </Col>
-        <Col lg={9}>
+        <Col lg={9} style={{ position: 'relative' }}>
+          {/* Overlay spinner when loading */}
+          {loading && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: 'rgba(255,255,255,0.7)',
+                zIndex: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '1rem',
+              }}
+            >
+              <Spinner animation="border" role="status" style={{ width: 60, height: 60 }}>
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+            </div>
+          )}
           <Row className="mb-4 align-items-center">
             <Col md={4}>
               <Form onSubmit={handleSearch}>
@@ -353,91 +365,113 @@ const ProductListing = () => {
           </Row>
 
           <Row className={view === "grid" ? "g-4" : "g-3"}>
-            {products.map((product) => (
-              <Col
-                key={product.id || product._id}
-                xs={12}
-                md={view === "grid" ? 6 : 12}
-                lg={view === "grid" ? 4 : 12}
-              >
-                <Card
-                  className={`h-100 border-0 shadow rounded-4 mb-4 ${view === "list" ? "flex-row" : ""} product-card`}
-                  onClick={() => handleProductClick(product.id || product._id)}
-                  style={{ transition: "transform 0.2s", cursor: "pointer" }}
-                  onMouseOver={e => (e.currentTarget.style.transform = "translateY(-5px)")}
-                  onMouseOut={e => (e.currentTarget.style.transform = "translateY(0)")}
-                >
-                  <div
-                    className={`position-relative ${view === "list" ? "col-md-4" : ""}`}
-                    style={{ height: view === "list" ? "auto" : "240px" }}
-                  >
-                    <Card.Img
-                      src={getImageUrl(product.mainImage, product)}
-                      alt={product.name}
-                      className="h-100 rounded-top object-fit-cover"
-                      style={{ objectFit: "cover", borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem" }}
-                    />
-                    {product.isNew && (
-                      <Badge bg="primary" className="position-absolute top-0 start-0 m-2">New</Badge>
-                    )}
-                  </div>
-                  <Card.Body className={view === "list" ? "col-md-8" : "d-flex flex-column justify-content-between"} style={{ padding: "1.25rem" }}>
-                    <div>
-                      <Card.Title className="h5 mb-1 text-truncate" title={product.name}>{product.name}</Card.Title>
-                      {product.category && (
-                        <div className="mb-1">
-                          <span className="badge bg-secondary small">{product.category.name || product.category}</span>
-                        </div>
-                      )}
-                      <Card.Text className="text-muted small mb-2" style={{ minHeight: 40 }}>
-                        {product.description}
-                      </Card.Text>
-                      <div className="d-flex align-items-center gap-2 mb-2">
-                        {[...Array(5)].map((_, index) => (
-                          <FaStar
-                            key={index}
-                            className={index < Math.floor(product.rating) ? "text-warning" : "text-muted"}
-                            style={{ fontSize: "1rem" }}
-                          />
-                        ))}
-                        <span className="ms-1 text-muted small">({product.reviews || 0})</span>
-                      </div>
-                    </div>
-                    <div className="mt-auto">
-                      <div className="d-flex align-items-end justify-content-between mb-3">
-                        <div>
-                          {(() => {
-                            const firstVariant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
-                            const price = firstVariant && firstVariant.price ? firstVariant.price : product.price;
-                            const comparePrice = firstVariant && firstVariant.comparePrice ? firstVariant.comparePrice : product.comparePrice;
-                            return (
-                              <>
-                                <span className="h4 fw-bold text-primary mb-0">${price}</span>
-                                <span className="text-muted text-decoration-line-through ms-2">
-                                  $99.99
-                                </span>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                      <Button
-                        variant="primary"
-                        size="md"
-                        className="w-100 rounded-pill fw-semibold py-2"
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleAddToCart(product);
-                        }}
-                        style={{ letterSpacing: 1 }}
-                      >
-                        <FaShoppingCart className="me-2" />Add to Cart
-                      </Button>
-                    </div>
-                  </Card.Body>
-                </Card>
+            {(!loading && products.length === 0) ? (
+              <Col xs={12} className="text-center text-muted py-5">
+                <div style={{ fontSize: '1.5rem' }}>
+                  <FaExclamationTriangle className="me-2 text-warning" />
+                  No products found matching your search.
+                </div>
               </Col>
-            ))}
+            ) : (
+              products.map((product) => (
+                <Col
+                  key={product.id || product._id}
+                  xs={12}
+                  md={view === "grid" ? 6 : 12}
+                  lg={view === "grid" ? 4 : 12}
+                >
+                  <Card
+                    className={`h-100 border-0 shadow rounded-4 mb-4 ${view === "list" ? "flex-row" : ""} product-card`}
+                    onClick={() => handleProductClick(product.id || product._id)}
+                    style={{ transition: "transform 0.2s", cursor: "pointer" }}
+                    onMouseOver={e => (e.currentTarget.style.transform = "translateY(-5px)")}
+                    onMouseOut={e => (e.currentTarget.style.transform = "translateY(0)")}
+                  >
+                    <div
+                      className={`position-relative ${view === "list" ? "col-md-4" : ""}`}
+                      style={{ height: view === "list" ? "auto" : "240px" }}
+                    >
+                      <Card.Img
+                        src={getImageUrl(product.mainImage, product)}
+                        alt={product.name}
+                        className="h-100 rounded-top object-fit-cover"
+                        style={{ objectFit: "cover", borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem" }}
+                      />
+                      {product.isNew && (
+                        <Badge bg="primary" className="position-absolute top-0 start-0 m-2">New</Badge>
+                      )}
+                    </div>
+                    <Card.Body className={view === "list" ? "col-md-8" : "d-flex flex-column justify-content-between"} style={{ padding: "1.25rem" }}>
+                      <div>
+                        <Card.Title className="h5 mb-1 text-truncate" title={product.name}>{product.name}</Card.Title>
+                        <div className="mb-1">
+                          <span className="badge bg-info text-dark small">
+                            {product.brand || 'Unknown Brand'}
+                          </span>
+                        </div>
+                        {product.category && (
+                          <div className="mb-1">
+                            <span className="badge bg-secondary small">{product.category.name || product.category}</span>
+                          </div>
+                        )}
+                        <Card.Text className="text-muted small mb-2" style={{ minHeight: 40 }}>
+                          {product.description}
+                        </Card.Text>
+                        <div className="d-flex align-items-center gap-2 mb-2">
+                          {[...Array(5)].map((_, index) => (
+                            <FaStar
+                              key={index}
+                              className={index < Math.floor(product.rating) ? "text-warning" : "text-muted"}
+                              style={{ fontSize: "1rem" }}
+                            />
+                          ))}
+                          <span className="ms-1 text-muted small">({product.reviews || 0})</span>
+                        </div>
+                      </div>
+                      <div className="mt-auto">
+                        <div className="d-flex align-items-end justify-content-between mb-3">
+                          <div>
+                            {(() => {
+                              const firstVariant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
+                              const price = firstVariant && firstVariant.price ? firstVariant.price : product.price;
+                              const comparePrice = firstVariant && firstVariant.comparePrice ? firstVariant.comparePrice : product.comparePrice;
+                              const colour = firstVariant && firstVariant.colour ? firstVariant.colour : null;
+                              const capacity = firstVariant && firstVariant.capacity ? firstVariant.capacity : null;
+                              return (
+                                <>
+                                  <span className="h4 fw-bold text-primary mb-0">₹{price}</span>
+                                  <span className="text-muted text-decoration-line-through ms-2">
+                                    ₹99.99
+                                  </span>
+                                  {(colour || capacity) && (
+                                    <div className="mt-1">
+                                      {colour && <span className="badge bg-light text-dark me-1">{colour}</span>}
+                                      {capacity && <span className="badge bg-light text-dark">{capacity}</span>}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="md"
+                          className="w-100 rounded-pill fw-semibold py-2"
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleAddToCart(product);
+                          }}
+                          style={{ letterSpacing: 1 }}
+                        >
+                          <FaShoppingCart className="me-2" />Add to Cart
+                        </Button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))
+            )}
           </Row>
 
           {pagination.totalPages > 1 && (

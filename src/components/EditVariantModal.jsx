@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { X } from "lucide-react";
 import adminAxios from "../lib/adminAxios";
@@ -17,6 +17,9 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
   const [success, setSuccess] = useState("");
   const [colourError, setColourError] = useState("");
   const [capacityError, setCapacityError] = useState("");
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const fileInputRef = useRef();
 
   // Populate form when modal is opened
   useEffect(() => {
@@ -28,6 +31,8 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
         stock: variant.stock !== undefined && variant.stock !== null ? String(variant.stock) : "",
         status: variant.status || "active",
       });
+      setImagePreviews(variant.imageUrls || []);
+      setSelectedImages([]);
     }
   }, [show]); // Only depend on show
 
@@ -48,6 +53,18 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
     });
     setError("");
     setSuccess("");
+    setSelectedImages([]);
+    setImagePreviews([]);
+    if (fileInputRef.current) fileInputRef.current.value = null;
+  };
+
+  // Handle image selection
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedImages(files);
+    // Generate previews
+    const previews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews(previews);
   };
 
   const handleInputChange = (e) => {
@@ -102,13 +119,20 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
     setSuccess("");
 
     try {
-      const response = await adminAxios.put(`/products/${product._id}/variants/${variant._id}`, {
-        colour: formData.colour,
-        capacity: formData.capacity,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        status: formData.status,
+      const form = new FormData();
+      form.append("colour", formData.colour);
+      form.append("capacity", formData.capacity);
+      form.append("price", parseFloat(formData.price));
+      form.append("stock", parseInt(formData.stock));
+      form.append("status", formData.status);
+      selectedImages.forEach((file) => {
+        form.append("images", file);
       });
+      const response = await adminAxios.put(
+        `/products/${product._id}/variants/${variant._id}`,
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
 
       setSuccess("Variant updated successfully!");
       setTimeout(() => {
@@ -129,7 +153,7 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
         <Modal.Title>Edit Variant</Modal.Title>
       </Modal.Header>
       
-      <Form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit} encType="multipart/form-data">
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
           {success && <Alert variant="success">{success}</Alert>}
@@ -137,6 +161,9 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
           <div className="mb-3">
             <h6>Product: {product?.name}</h6>
             <p className="text-muted">Editing variant: {variant?.colour} {variant?.capacity}</p>
+            <div className="alert alert-warning mt-2">
+              Uploading new images will <b>replace</b> the old images for this variant.
+            </div>
           </div>
           
           <Row>
@@ -220,6 +247,32 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label>Variant Images (min 3, will replace old images)</Form.Label>
+                <Form.Control
+                  type="file"
+                  name="images"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  ref={fileInputRef}
+                />
+                <div className="d-flex flex-wrap mt-2 gap-2">
+                  {imagePreviews && imagePreviews.length > 0 && imagePreviews.map((src, idx) => (
+                    <img
+                      key={idx}
+                      src={src}
+                      alt={`Preview ${idx + 1}`}
+                      style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
+                    />
+                  ))}
+                </div>
               </Form.Group>
             </Col>
           </Row>

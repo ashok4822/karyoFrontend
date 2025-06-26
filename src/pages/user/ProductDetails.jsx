@@ -715,7 +715,7 @@ const ProductDetails = () => {
                               </div>
                             </div>
                             <div className="text-center mb-2">
-                              <span className="h6 text-primary fw-bold mb-0" style={{ fontSize: '1rem' }}>${variant.price}</span>
+                              <span className="h6 text-primary fw-bold mb-0" style={{ fontSize: '1rem' }}>₹{variant.price}</span>
                             </div>
                             <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap">
                               <small className={`${variant.stock > 0 ? 'text-success' : 'text-danger'} fw-semibold`} style={{ fontSize: '0.95rem' }}>
@@ -750,7 +750,7 @@ const ProductDetails = () => {
                   <div className="alert alert-info">
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
-                        <strong>Selected:</strong> {selectedVariant.colour} {selectedVariant.capacity} - ${selectedVariant.price}
+                        <strong>Selected:</strong> {selectedVariant.colour} {selectedVariant.capacity} - ₹{selectedVariant.price}
                         <br />
                         <small className="text-muted">
                           Stock: {selectedVariant.stock} units
@@ -803,8 +803,8 @@ const ProductDetails = () => {
           {/* Price, Discount, Coupon */}
           <div className="mb-4">
             <div className="d-flex align-items-center gap-2 mb-2">
-              <span className="h3 text-primary fw-bold">${getFinalPrice()}</span>
-              <span className="text-muted text-decoration-line-through ms-2">$99.99</span>
+              <span className="h3 text-primary fw-bold">₹{getFinalPrice()}</span>
+              <span className="text-muted text-decoration-line-through ms-2">₹99.99</span>
               {activeCoupon && (
                 <Badge bg="success">
                   <FaCheck className="me-1" />
@@ -822,7 +822,7 @@ const ProductDetails = () => {
                 const maxPrice = Math.max(...prices);
                 return minPrice !== maxPrice && (
                   <div className="text-muted small">
-                    Price range: ${minPrice} - ${maxPrice}
+                    Price range: ₹{minPrice} - ₹{maxPrice}
                   </div>
                 );
               }

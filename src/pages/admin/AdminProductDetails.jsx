@@ -234,7 +234,7 @@ const AdminProductDetails = () => {
                       <Form.Group>
                         <Form.Label>Compare Price</Form.Label>
                         <InputGroup>
-                          <InputGroup.Text>$</InputGroup.Text>
+                          <InputGroup.Text>₹</InputGroup.Text>
                           <Form.Control
                             type="number"
                             value={product.comparePrice}
@@ -383,7 +383,7 @@ const AdminProductDetails = () => {
                             <Form.Group>
                               <Form.Label>Price</Form.Label>
                               <InputGroup>
-                                <InputGroup.Text>$</InputGroup.Text>
+                                <InputGroup.Text>₹</InputGroup.Text>
                                 <Form.Control
                                   type="number"
                                   value={variant.price || 0}

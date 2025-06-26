@@ -286,7 +286,7 @@ const AdminProductForm = () => {
                         <Form.Group>
                           <Form.Label>Price</Form.Label>
                           <InputGroup hasValidation>
-                            <InputGroup.Text>$</InputGroup.Text>
+                            <InputGroup.Text>₹</InputGroup.Text>
                             <Form.Control
                               type="number"
                               required
@@ -310,7 +310,7 @@ const AdminProductForm = () => {
                         <Form.Group>
                           <Form.Label>Compare Price</Form.Label>
                           <InputGroup>
-                            <InputGroup.Text>$</InputGroup.Text>
+                            <InputGroup.Text>₹</InputGroup.Text>
                             <Form.Control
                               type="number"
                               min="0"

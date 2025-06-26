@@ -53,6 +53,17 @@ const Layout = () => {
               </Nav.Link>
             </Nav>
             <div className="d-flex align-items-center gap-3">
+              {user && userAccessToken && (
+                <span className="fw-semibold text-primary me-2 d-flex align-items-center gap-2">
+                  {user.username || user.email}
+                  <img
+                    src={user.profileImage || "/profile.png"}
+                    alt="Profile"
+                    style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: "1px solid #ddd", cursor: "pointer" }}
+                    onClick={() => navigate("/profile")}
+                  />
+                </span>
+              )}
               <Link to="/wishlist" className="text-dark position-relative">
                 <FaHeart size={20} />
               </Link>
