@@ -14,6 +14,7 @@ const Layout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, userAccessToken } = useSelector((state) => state.auth);
+  const wishlistCount = useSelector((state) => state.wishlist.items.length);
 
   // Debug logging
   console.log("Layout - Current auth state:", { user, userAccessToken });
@@ -70,6 +71,11 @@ const Layout = () => {
               )}
               <Link to="/wishlist" className="text-dark position-relative">
                 <FaHeart size={20} />
+                {wishlistCount > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
               <Link to="/cart" className="text-dark position-relative me-3">
                 <FaShoppingCart size={20} />

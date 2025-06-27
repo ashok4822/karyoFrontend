@@ -43,6 +43,7 @@ import AuthSync from "../../utils/sessionRestorationUtility/AuthSync";
 import AdminProtectedRoute from "./protectedRoutes/AdminProtectedRoute";
 import UserProtectedRoute from "./protectedRoutes/UserProtectedRoute";
 import UserProfile from "../../pages/user/UserProfile";
+import Wishlist from "../../pages/user/Wishlist";
 
 const queryClient = new QueryClient();
 
@@ -156,6 +157,7 @@ const AppRoutes = () => {
                 </UserProtectedRoute>
               }
             />
+            <Route path="/wishlist" element={<Wishlist />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

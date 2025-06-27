@@ -30,7 +30,7 @@ import { OTP_EXPIRY_SECONDS } from "../../lib/utils";
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
   { label: "Edit profile", icon: <FaEdit /> },
-  { label: "Show address", icon: <FaMapMarkerAlt /> },
+  { label: "Address Management", icon: <FaMapMarkerAlt /> },
   { label: "Show orders", icon: <FaBoxOpen /> },
   { label: "Cancel orders", icon: <FaTimesCircle /> },
   { label: "Reset password", icon: <FaKey /> },
@@ -248,9 +248,13 @@ const UserProfile = () => {
   const handleSetDefault = async (addressId) => {
     setSetDefaultLoadingId(addressId);
     try {
-      await userAxios.put(`/users/shipping-address/${addressId}/default`, {}, {
-        headers: { Authorization: `Bearer ${userAccessToken}` },
-      });
+      await userAxios.put(
+        `/users/shipping-address/${addressId}/default`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${userAccessToken}` },
+        }
+      );
       // Refresh addresses
       const res = await userAxios.get("/users/shipping-addresses", {
         headers: { Authorization: `Bearer ${userAccessToken}` },
@@ -287,9 +291,13 @@ const UserProfile = () => {
     setEditAddressError("");
     setEditAddressSuccess("");
     try {
-      await userAxios.put(`/users/shipping-address/${editingAddress._id}`, editAddressForm, {
-        headers: { Authorization: `Bearer ${userAccessToken}` },
-      });
+      await userAxios.put(
+        `/users/shipping-address/${editingAddress._id}`,
+        editAddressForm,
+        {
+          headers: { Authorization: `Bearer ${userAccessToken}` },
+        }
+      );
       setEditAddressSuccess("Address updated successfully");
       setEditAddressModal(false);
       // Refresh addresses
@@ -298,7 +306,9 @@ const UserProfile = () => {
       });
       setShippingAddresses(res.data.addresses || []);
     } catch (err) {
-      setEditAddressError(err.response?.data?.message || "Failed to update address");
+      setEditAddressError(
+        err.response?.data?.message || "Failed to update address"
+      );
     } finally {
       setEditAddressLoading(false);
     }
@@ -324,7 +334,7 @@ const UserProfile = () => {
         await userAxios.delete(`/users/shipping-address/${addressId}`, {
           headers: { Authorization: `Bearer ${userAccessToken}` },
         });
-        
+
         // Show success message
         Swal.fire({
           title: "Deleted!",
@@ -333,16 +343,17 @@ const UserProfile = () => {
           timer: 2000,
           showConfirmButton: false,
         });
-        
+
         // Refresh addresses
         const res = await userAxios.get("/users/shipping-addresses", {
           headers: { Authorization: `Bearer ${userAccessToken}` },
         });
         setShippingAddresses(res.data.addresses || []);
       } catch (err) {
-        const errorMessage = err.response?.data?.message || "Failed to delete address";
+        const errorMessage =
+          err.response?.data?.message || "Failed to delete address";
         setDeleteAddressError(errorMessage);
-        
+
         // Show error message
         Swal.fire({
           title: "Error!",
@@ -572,7 +583,9 @@ const UserProfile = () => {
         <Alert variant="danger">{shippingError}</Alert>
       ) : (
         <>
-          {deleteAddressError && <Alert variant="danger">{deleteAddressError}</Alert>}
+          {deleteAddressError && (
+            <Alert variant="danger">{deleteAddressError}</Alert>
+          )}
           <Row>
             {shippingAddresses.length === 0 && (
               <div className="text-muted text-center">No addresses found.</div>
@@ -605,8 +618,14 @@ const UserProfile = () => {
                           size="sm"
                           variant="outline-danger"
                           onClick={() => handleDeleteAddress(addr._id)}
-                          disabled={deleteAddressLoading === addr._id || addr.isDefault}
-                          title={addr.isDefault ? "Cannot delete default address" : "Delete Address"}
+                          disabled={
+                            deleteAddressLoading === addr._id || addr.isDefault
+                          }
+                          title={
+                            addr.isDefault
+                              ? "Cannot delete default address"
+                              : "Delete Address"
+                          }
                         >
                           {deleteAddressLoading === addr._id ? (
                             <Spinner size="sm" animation="border" />
@@ -782,8 +801,12 @@ const UserProfile = () => {
           <Modal.Title>Edit Shipping Address</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {editAddressError && <Alert variant="danger">{editAddressError}</Alert>}
-          {editAddressSuccess && <Alert variant="success">{editAddressSuccess}</Alert>}
+          {editAddressError && (
+            <Alert variant="danger">{editAddressError}</Alert>
+          )}
+          {editAddressSuccess && (
+            <Alert variant="success">{editAddressSuccess}</Alert>
+          )}
           <Form onSubmit={handleUpdateAddress} autoComplete="off">
             <Form.Group className="mb-2">
               <Form.Label>Recipient Name</Form.Label>
@@ -806,7 +829,10 @@ const UserProfile = () => {
                 type="text"
                 value={editAddressForm.addressLine1}
                 onChange={(e) =>
-                  setEditAddressForm((a) => ({ ...a, addressLine1: e.target.value }))
+                  setEditAddressForm((a) => ({
+                    ...a,
+                    addressLine1: e.target.value,
+                  }))
                 }
                 placeholder="Enter address line 1"
                 required
@@ -818,7 +844,10 @@ const UserProfile = () => {
                 type="text"
                 value={editAddressForm.addressLine2}
                 onChange={(e) =>
-                  setEditAddressForm((a) => ({ ...a, addressLine2: e.target.value }))
+                  setEditAddressForm((a) => ({
+                    ...a,
+                    addressLine2: e.target.value,
+                  }))
                 }
                 placeholder="Enter address line 2 (optional)"
               />
@@ -853,7 +882,10 @@ const UserProfile = () => {
                 type="text"
                 value={editAddressForm.postalCode}
                 onChange={(e) =>
-                  setEditAddressForm((a) => ({ ...a, postalCode: e.target.value }))
+                  setEditAddressForm((a) => ({
+                    ...a,
+                    postalCode: e.target.value,
+                  }))
                 }
                 placeholder="Enter postal code"
                 required
@@ -877,7 +909,10 @@ const UserProfile = () => {
                 type="text"
                 value={editAddressForm.phoneNumber}
                 onChange={(e) =>
-                  setEditAddressForm((a) => ({ ...a, phoneNumber: e.target.value }))
+                  setEditAddressForm((a) => ({
+                    ...a,
+                    phoneNumber: e.target.value,
+                  }))
                 }
                 placeholder="Enter phone number"
                 required
@@ -889,7 +924,10 @@ const UserProfile = () => {
               label="Set as default address"
               checked={editAddressForm.isDefault}
               onChange={(e) =>
-                setEditAddressForm((a) => ({ ...a, isDefault: e.target.checked }))
+                setEditAddressForm((a) => ({
+                  ...a,
+                  isDefault: e.target.checked,
+                }))
               }
             />
             <Button

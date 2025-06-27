@@ -36,6 +36,7 @@ import {
 } from 'react-icons/fa';
 import userAxios from '../../lib/userAxios';
 import { fetchProductsFromBackend } from '../../redux/reducers/productSlice';
+import { addToWishlist, removeFromWishlist } from '../../redux/reducers/wishlistSlice';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -44,6 +45,7 @@ const ProductDetails = () => {
   
   // Redux state
   const { products } = useSelector(state => state.products);
+  const wishlist = useSelector(state => state.wishlist.items);
   
   // Local state
   const [product, setProduct] = useState(null);
@@ -59,6 +61,11 @@ const ProductDetails = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isZoomed, setIsZoomed] = useState(false);
+
+  // Check if current product+variant is wishlisted
+  const isWishlisted = !!wishlist.find(
+    (item) => item.id === product?._id && item.variant === selectedVariant?._id
+  );
 
   // Fetch product details
   useEffect(() => {
@@ -196,10 +203,21 @@ const ProductDetails = () => {
     });
   };
 
-  // Add to wishlist handler
-  const handleAddToWishlist = () => {
-    // TODO: Implement wishlist functionality
-    console.log('Adding to wishlist:', product._id);
+  // Toggle wishlist handler
+  const handleToggleWishlist = () => {
+    if (!product || !selectedVariant) return;
+    if (isWishlisted) {
+      dispatch(removeFromWishlist({ id: product._id, variant: selectedVariant._id }));
+    } else {
+      dispatch(addToWishlist({
+        id: product._id,
+        name: product.name,
+        price: selectedVariant.price,
+        image: (selectedVariant.imageUrls && selectedVariant.imageUrls[0]) || (product.mainImage || ''),
+        variant: selectedVariant._id,
+        variantName: selectedVariant.name || '',
+      }));
+    }
   };
 
   // Coupon application handler
@@ -793,8 +811,8 @@ const ProductDetails = () => {
               ))}
               <span className="ms-2 text-muted">({product.reviews || 128} reviews)</span>
             </div>
-            <Button variant="link" className="p-0" onClick={handleAddToWishlist}>
-              <FaHeart className="text-danger" size={20} />
+            <Button variant="link" className="p-0" onClick={handleToggleWishlist}>
+              <FaHeart className={isWishlisted ? 'text-danger' : ''} size={20} fill={isWishlisted ? '#dc3545' : 'none'} stroke="#dc3545" strokeWidth={4} />
             </Button>
           </div>
 
