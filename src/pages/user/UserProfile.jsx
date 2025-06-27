@@ -22,6 +22,7 @@ import {
   FaKey,
   FaCamera,
 } from "react-icons/fa";
+import Swal from "sweetalert2";
 import userAxios from "../../lib/userAxios";
 import { loginSuccess } from "../../redux/reducers/authSlice";
 import { OTP_EXPIRY_SECONDS } from "../../lib/utils";
@@ -71,6 +72,24 @@ const UserProfile = () => {
     isDefault: false,
   });
   const [setDefaultLoadingId, setSetDefaultLoadingId] = useState(null);
+  const [editAddressModal, setEditAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [editAddressForm, setEditAddressForm] = useState({
+    recipientName: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "",
+    phoneNumber: "",
+    isDefault: false,
+  });
+  const [editAddressLoading, setEditAddressLoading] = useState(false);
+  const [editAddressError, setEditAddressError] = useState("");
+  const [editAddressSuccess, setEditAddressSuccess] = useState("");
+  const [deleteAddressLoading, setDeleteAddressLoading] = useState(null);
+  const [deleteAddressError, setDeleteAddressError] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editEmailError, setEditEmailError] = useState("");
   const [editEmailSuccess, setEditEmailSuccess] = useState("");
@@ -229,22 +248,111 @@ const UserProfile = () => {
   const handleSetDefault = async (addressId) => {
     setSetDefaultLoadingId(addressId);
     try {
-      await userAxios.put(
-        `/users/shipping-address/${addressId}/default`,
-        {},
-        { headers: { Authorization: `Bearer ${userAccessToken}` } }
-      );
-      // Refetch addresses to update UI
-      setShippingLoading(true);
+      await userAxios.put(`/users/shipping-address/${addressId}/default`, {}, {
+        headers: { Authorization: `Bearer ${userAccessToken}` },
+      });
+      // Refresh addresses
       const res = await userAxios.get("/users/shipping-addresses", {
         headers: { Authorization: `Bearer ${userAccessToken}` },
       });
       setShippingAddresses(res.data.addresses || []);
     } catch (err) {
-      alert("Failed to set default address");
+      console.error("Failed to set default address:", err);
     } finally {
       setSetDefaultLoadingId(null);
-      setShippingLoading(false);
+    }
+  };
+
+  const handleEditAddress = (address) => {
+    setEditingAddress(address);
+    setEditAddressForm({
+      recipientName: address.recipientName || "",
+      addressLine1: address.addressLine1 || "",
+      addressLine2: address.addressLine2 || "",
+      city: address.city || "",
+      state: address.state || "",
+      postalCode: address.postalCode || "",
+      country: address.country || "",
+      phoneNumber: address.phoneNumber || "",
+      isDefault: address.isDefault || false,
+    });
+    setEditAddressError("");
+    setEditAddressSuccess("");
+    setEditAddressModal(true);
+  };
+
+  const handleUpdateAddress = async (e) => {
+    e.preventDefault();
+    setEditAddressLoading(true);
+    setEditAddressError("");
+    setEditAddressSuccess("");
+    try {
+      await userAxios.put(`/users/shipping-address/${editingAddress._id}`, editAddressForm, {
+        headers: { Authorization: `Bearer ${userAccessToken}` },
+      });
+      setEditAddressSuccess("Address updated successfully");
+      setEditAddressModal(false);
+      // Refresh addresses
+      const res = await userAxios.get("/users/shipping-addresses", {
+        headers: { Authorization: `Bearer ${userAccessToken}` },
+      });
+      setShippingAddresses(res.data.addresses || []);
+    } catch (err) {
+      setEditAddressError(err.response?.data?.message || "Failed to update address");
+    } finally {
+      setEditAddressLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId) => {
+    const result = await Swal.fire({
+      title: "Delete Address",
+      text: "Are you sure you want to delete this address? This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      setDeleteAddressLoading(addressId);
+      setDeleteAddressError("");
+      try {
+        await userAxios.delete(`/users/shipping-address/${addressId}`, {
+          headers: { Authorization: `Bearer ${userAccessToken}` },
+        });
+        
+        // Show success message
+        Swal.fire({
+          title: "Deleted!",
+          text: "Address has been deleted successfully.",
+          icon: "success",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        
+        // Refresh addresses
+        const res = await userAxios.get("/users/shipping-addresses", {
+          headers: { Authorization: `Bearer ${userAccessToken}` },
+        });
+        setShippingAddresses(res.data.addresses || []);
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || "Failed to delete address";
+        setDeleteAddressError(errorMessage);
+        
+        // Show error message
+        Swal.fire({
+          title: "Error!",
+          text: errorMessage,
+          icon: "error",
+          confirmButtonColor: "#3085d6",
+        });
+      } finally {
+        setDeleteAddressLoading(null);
+      }
     }
   };
 
@@ -463,54 +571,82 @@ const UserProfile = () => {
       ) : shippingError ? (
         <Alert variant="danger">{shippingError}</Alert>
       ) : (
-        <Row>
-          {shippingAddresses.length === 0 && (
-            <div className="text-muted text-center">No addresses found.</div>
-          )}
-          {shippingAddresses.map((addr) => (
-            <Col md={6} lg={4} key={addr._id || addr.id} className="mb-4">
-              <Card
-                className={
-                  addr.isDefault ? "border-primary shadow-sm" : "shadow-sm"
-                }
-              >
-                <Card.Body>
-                  <div className="mb-2 d-flex align-items-center justify-content-between">
+        <>
+          {deleteAddressError && <Alert variant="danger">{deleteAddressError}</Alert>}
+          <Row>
+            {shippingAddresses.length === 0 && (
+              <div className="text-muted text-center">No addresses found.</div>
+            )}
+            {shippingAddresses.map((addr) => (
+              <Col md={6} lg={4} key={addr._id || addr.id} className="mb-4">
+                <Card
+                  className={
+                    addr.isDefault ? "border-primary shadow-sm" : "shadow-sm"
+                  }
+                >
+                  <Card.Body>
+                    <div className="mb-2 d-flex align-items-center justify-content-between">
+                      <div>
+                        <strong>{addr.recipientName}</strong>
+                        {addr.isDefault && (
+                          <span className="badge bg-primary ms-2">Default</span>
+                        )}
+                      </div>
+                      <div className="d-flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline-secondary"
+                          onClick={() => handleEditAddress(addr)}
+                          title="Edit Address"
+                        >
+                          <FaEdit size={12} />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          onClick={() => handleDeleteAddress(addr._id)}
+                          disabled={deleteAddressLoading === addr._id || addr.isDefault}
+                          title={addr.isDefault ? "Cannot delete default address" : "Delete Address"}
+                        >
+                          {deleteAddressLoading === addr._id ? (
+                            <Spinner size="sm" animation="border" />
+                          ) : (
+                            <FaTimesCircle size={12} />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div>{addr.addressLine1}</div>
+                    {addr.addressLine2 && <div>{addr.addressLine2}</div>}
                     <div>
-                      <strong>{addr.recipientName}</strong>
-                      {addr.isDefault && (
-                        <span className="badge bg-primary ms-2">Default</span>
-                      )}
+                      {addr.city}, {addr.state} {addr.postalCode}
+                    </div>
+                    <div>{addr.country}</div>
+                    <div className="mt-2 text-muted small">
+                      Phone: {addr.phoneNumber}
                     </div>
                     {!addr.isDefault && (
-                      <Button
-                        size="sm"
-                        variant="outline-primary"
-                        disabled={setDefaultLoadingId === addr._id}
-                        onClick={() => handleSetDefault(addr._id)}
-                      >
-                        {setDefaultLoadingId === addr._id ? (
-                          <Spinner size="sm" animation="border" />
-                        ) : (
-                          "Set as Default"
-                        )}
-                      </Button>
+                      <div className="mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline-primary"
+                          disabled={setDefaultLoadingId === addr._id}
+                          onClick={() => handleSetDefault(addr._id)}
+                        >
+                          {setDefaultLoadingId === addr._id ? (
+                            <Spinner size="sm" animation="border" />
+                          ) : (
+                            "Set as Default"
+                          )}
+                        </Button>
+                      </div>
                     )}
-                  </div>
-                  <div>{addr.addressLine1}</div>
-                  {addr.addressLine2 && <div>{addr.addressLine2}</div>}
-                  <div>
-                    {addr.city}, {addr.state} {addr.postalCode}
-                  </div>
-                  <div>{addr.country}</div>
-                  <div className="mt-2 text-muted small">
-                    Phone: {addr.phoneNumber}
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </>
       )}
       <Modal
         show={showAddressModal}
@@ -631,6 +767,138 @@ const UserProfile = () => {
               disabled={addLoading}
             >
               {addLoading ? "Adding..." : "Add Address"}
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Edit Address Modal */}
+      <Modal
+        show={editAddressModal}
+        onHide={() => setEditAddressModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Shipping Address</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {editAddressError && <Alert variant="danger">{editAddressError}</Alert>}
+          {editAddressSuccess && <Alert variant="success">{editAddressSuccess}</Alert>}
+          <Form onSubmit={handleUpdateAddress} autoComplete="off">
+            <Form.Group className="mb-2">
+              <Form.Label>Recipient Name</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.recipientName}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({
+                    ...a,
+                    recipientName: e.target.value,
+                  }))
+                }
+                placeholder="Enter recipient name"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Address Line 1</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.addressLine1}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({ ...a, addressLine1: e.target.value }))
+                }
+                placeholder="Enter address line 1"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Address Line 2</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.addressLine2}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({ ...a, addressLine2: e.target.value }))
+                }
+                placeholder="Enter address line 2 (optional)"
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>City</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.city}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({ ...a, city: e.target.value }))
+                }
+                placeholder="Enter city"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>State</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.state}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({ ...a, state: e.target.value }))
+                }
+                placeholder="Enter state"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Postal Code</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.postalCode}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({ ...a, postalCode: e.target.value }))
+                }
+                placeholder="Enter postal code"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Country</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.country}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({ ...a, country: e.target.value }))
+                }
+                placeholder="Enter country"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Phone Number</Form.Label>
+              <Form.Control
+                type="text"
+                value={editAddressForm.phoneNumber}
+                onChange={(e) =>
+                  setEditAddressForm((a) => ({ ...a, phoneNumber: e.target.value }))
+                }
+                placeholder="Enter phone number"
+                required
+              />
+            </Form.Group>
+            <Form.Check
+              className="mb-2"
+              type="checkbox"
+              label="Set as default address"
+              checked={editAddressForm.isDefault}
+              onChange={(e) =>
+                setEditAddressForm((a) => ({ ...a, isDefault: e.target.checked }))
+              }
+            />
+            <Button
+              variant="primary"
+              className="w-100 mt-2"
+              type="submit"
+              disabled={editAddressLoading}
+            >
+              {editAddressLoading ? "Updating..." : "Update Address"}
             </Button>
           </Form>
         </Modal.Body>
@@ -954,6 +1222,13 @@ const UserProfile = () => {
       return () => clearTimeout(timer);
     }
   }, [addSuccess]);
+
+  useEffect(() => {
+    if (editAddressSuccess) {
+      const timer = setTimeout(() => setEditAddressSuccess(""), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [editAddressSuccess]);
 
   useEffect(() => {
     if (editEmailSuccess && editEmailSuccess.includes("updated")) {
