@@ -1,7 +1,27 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Container, Row, Col, ListGroup, Card, Image, Button, Form, Spinner, Alert, Modal } from "react-bootstrap";
-import { FaUser, FaMapMarkerAlt, FaBoxOpen, FaEdit, FaTimesCircle, FaKey, FaCamera } from "react-icons/fa";
+import {
+  Container,
+  Row,
+  Col,
+  ListGroup,
+  Card,
+  Image,
+  Button,
+  Form,
+  Spinner,
+  Alert,
+  Modal,
+} from "react-bootstrap";
+import {
+  FaUser,
+  FaMapMarkerAlt,
+  FaBoxOpen,
+  FaEdit,
+  FaTimesCircle,
+  FaKey,
+  FaCamera,
+} from "react-icons/fa";
 import userAxios from "../../lib/userAxios";
 import { loginSuccess } from "../../redux/reducers/authSlice";
 import { OTP_EXPIRY_SECONDS } from "../../lib/utils";
@@ -12,7 +32,7 @@ const sidebarItems = [
   { label: "Show address", icon: <FaMapMarkerAlt /> },
   { label: "Show orders", icon: <FaBoxOpen /> },
   { label: "Cancel orders", icon: <FaTimesCircle /> },
-  { label: "Forgot password", icon: <FaKey /> },
+  { label: "Reset password", icon: <FaKey /> },
   { label: "Edit Email", icon: <FaEdit /> },
 ];
 
@@ -59,6 +79,19 @@ const UserProfile = () => {
   const [editEmailVerifyLoading, setEditEmailVerifyLoading] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
 
+  // Forgot password state
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1: email, 2: otp, 3: new password
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordOtp, setForgotPasswordOtp] = useState("");
+  const [forgotPasswordNewPassword, setForgotPasswordNewPassword] =
+    useState("");
+  const [forgotPasswordConfirmPassword, setForgotPasswordConfirmPassword] =
+    useState("");
+  const [forgotPasswordError, setForgotPasswordError] = useState("");
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState("");
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordTimer, setForgotPasswordTimer] = useState(0);
+
   const handleAvatarClick = () => {
     fileInputRef.current.click();
   };
@@ -76,7 +109,12 @@ const UserProfile = () => {
         if (res.data?.profileImage) {
           setAvatar(res.data.profileImage);
           // Update Redux user state with new image
-          dispatch(loginSuccess({ user: { ...user, profileImage: res.data.profileImage }, userAccessToken }));
+          dispatch(
+            loginSuccess({
+              user: { ...user, profileImage: res.data.profileImage },
+              userAccessToken,
+            })
+          );
         }
       } catch (err) {
         alert("Image upload failed");
@@ -89,8 +127,8 @@ const UserProfile = () => {
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
@@ -102,11 +140,9 @@ const UserProfile = () => {
     setEditError("");
     setEditSuccess("");
     try {
-      const res = await userAxios.put(
-        "/users/profile",
-        editForm,
-        { headers: { Authorization: `Bearer ${userAccessToken}` } }
-      );
+      const res = await userAxios.put("/users/profile", editForm, {
+        headers: { Authorization: `Bearer ${userAccessToken}` },
+      });
       if (res.data?.user) {
         dispatch(loginSuccess({ user: res.data.user, userAccessToken }));
         setEditSuccess("Profile updated successfully");
@@ -121,7 +157,7 @@ const UserProfile = () => {
   // Fade out success message after 5 seconds
   useEffect(() => {
     if (editSuccess) {
-      const timer = setTimeout(() => setEditSuccess("") , 5000);
+      const timer = setTimeout(() => setEditSuccess(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [editSuccess]);
@@ -152,11 +188,9 @@ const UserProfile = () => {
     setAddError("");
     setAddSuccess("");
     try {
-      const res = await userAxios.post(
-        "/users/shipping-address",
-        newAddress,
-        { headers: { Authorization: `Bearer ${userAccessToken}` } }
-      );
+      const res = await userAxios.post("/users/shipping-address", newAddress, {
+        headers: { Authorization: `Bearer ${userAccessToken}` },
+      });
       setAddSuccess("Address added successfully");
       setShowAddressModal(false);
       setNewAddress({
@@ -171,10 +205,16 @@ const UserProfile = () => {
         isDefault: false,
       });
       // Refresh address list
-      setShippingAddresses((prev) => [res.data.address, ...prev.filter(a => !a.isDefault)]);
+      setShippingAddresses((prev) => [
+        res.data.address,
+        ...prev.filter((a) => !a.isDefault),
+      ]);
       // If new address is default, update others
       if (res.data.address.isDefault) {
-        setShippingAddresses((prev) => [res.data.address, ...prev.filter(a => !a.isDefault)]);
+        setShippingAddresses((prev) => [
+          res.data.address,
+          ...prev.filter((a) => !a.isDefault),
+        ]);
       } else {
         setShippingAddresses((prev) => [...prev, res.data.address]);
       }
@@ -208,6 +248,103 @@ const UserProfile = () => {
     }
   };
 
+  // Fade out forgot password success message
+  useEffect(() => {
+    if (forgotPasswordSuccess && forgotPasswordSuccess.includes("successful")) {
+      const timer = setTimeout(() => setForgotPasswordSuccess(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [forgotPasswordSuccess]);
+
+  // Forgot password handlers
+  const handleForgotPasswordRequestOtp = async (e, isResend = false) => {
+    if (e) e.preventDefault();
+    setForgotPasswordError("");
+    setForgotPasswordSuccess("");
+    if (!forgotPasswordEmail || !/\S+@\S+\.\S+/.test(forgotPasswordEmail)) {
+      setForgotPasswordError("Please enter a valid email");
+      return;
+    }
+    setForgotPasswordLoading(true);
+    try {
+      await userAxios.post("auth/request-password-reset-otp", {
+        email: forgotPasswordEmail,
+      });
+      setForgotPasswordSuccess(
+        isResend ? "OTP resent to your email." : "OTP sent to your email."
+      );
+      setForgotPasswordStep(2);
+      setForgotPasswordTimer(OTP_EXPIRY_SECONDS);
+    } catch (error) {
+      setForgotPasswordError(
+        error.response?.data?.message || "Failed to send OTP"
+      );
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleForgotPasswordVerifyOtp = async (e) => {
+    e.preventDefault();
+    setForgotPasswordError("");
+    setForgotPasswordSuccess("");
+    if (!forgotPasswordOtp) {
+      setForgotPasswordError("Please enter the OTP");
+      return;
+    }
+    setForgotPasswordLoading(true);
+    try {
+      await userAxios.post("auth/verify-password-reset-otp", {
+        email: forgotPasswordEmail,
+        otp: forgotPasswordOtp,
+      });
+      setForgotPasswordSuccess("OTP verified. Please enter your new password.");
+      setForgotPasswordStep(3);
+    } catch (error) {
+      setForgotPasswordError(
+        error.response?.data?.message || "OTP verification failed"
+      );
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleForgotPasswordReset = async (e) => {
+    e.preventDefault();
+    setForgotPasswordError("");
+    setForgotPasswordSuccess("");
+    if (!forgotPasswordNewPassword || forgotPasswordNewPassword.length < 8) {
+      setForgotPasswordError("Password must be at least 8 characters");
+      return;
+    }
+    if (forgotPasswordNewPassword !== forgotPasswordConfirmPassword) {
+      setForgotPasswordError("Passwords do not match");
+      return;
+    }
+    setForgotPasswordLoading(true);
+    try {
+      await userAxios.post("auth/reset-password", {
+        email: forgotPasswordEmail,
+        otp: forgotPasswordOtp,
+        newPassword: forgotPasswordNewPassword,
+      });
+      setForgotPasswordSuccess("Password reset successful!");
+      // Reset form
+      setForgotPasswordStep(1);
+      setForgotPasswordEmail("");
+      setForgotPasswordOtp("");
+      setForgotPasswordNewPassword("");
+      setForgotPasswordConfirmPassword("");
+      setForgotPasswordTimer(0);
+    } catch (error) {
+      setForgotPasswordError(
+        error.response?.data?.message || "Password reset failed"
+      );
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
   // User Details content
   const userDetailsContent = (
     <Card className="shadow-sm border-0">
@@ -216,7 +353,12 @@ const UserProfile = () => {
           <Image
             src={avatar}
             roundedCircle
-            style={{ width: 120, height: 120, objectFit: "cover", border: "4px solid #0d6efd" }}
+            style={{
+              width: 120,
+              height: 120,
+              objectFit: "cover",
+              border: "4px solid #0d6efd",
+            }}
             className="mb-3 shadow-sm"
             alt="User Avatar"
           />
@@ -257,7 +399,9 @@ const UserProfile = () => {
             <Form.Control
               type="text"
               value={editForm.firstName}
-              onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, firstName: e.target.value }))
+              }
               placeholder="Enter first name"
             />
           </Form.Group>
@@ -266,7 +410,9 @@ const UserProfile = () => {
             <Form.Control
               type="text"
               value={editForm.lastName}
-              onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, lastName: e.target.value }))
+              }
               placeholder="Enter last name"
             />
           </Form.Group>
@@ -275,7 +421,9 @@ const UserProfile = () => {
             <Form.Control
               type="tel"
               value={editForm.mobileNo}
-              onChange={e => setEditForm(f => ({ ...f, mobileNo: e.target.value }))}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, mobileNo: e.target.value }))
+              }
               placeholder="Enter mobile number"
             />
           </Form.Group>
@@ -285,7 +433,9 @@ const UserProfile = () => {
               as="textarea"
               rows={2}
               value={editForm.address}
-              onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, address: e.target.value }))
+              }
               placeholder="Enter address"
             />
           </Form.Group>
@@ -307,20 +457,30 @@ const UserProfile = () => {
         </Button>
       </div>
       {shippingLoading ? (
-        <div className="text-center py-4"><Spinner animation="border" /></div>
+        <div className="text-center py-4">
+          <Spinner animation="border" />
+        </div>
       ) : shippingError ? (
         <Alert variant="danger">{shippingError}</Alert>
       ) : (
         <Row>
-          {shippingAddresses.length === 0 && <div className="text-muted text-center">No addresses found.</div>}
+          {shippingAddresses.length === 0 && (
+            <div className="text-muted text-center">No addresses found.</div>
+          )}
           {shippingAddresses.map((addr) => (
             <Col md={6} lg={4} key={addr._id || addr.id} className="mb-4">
-              <Card className={addr.isDefault ? "border-primary shadow-sm" : "shadow-sm"}>
+              <Card
+                className={
+                  addr.isDefault ? "border-primary shadow-sm" : "shadow-sm"
+                }
+              >
                 <Card.Body>
                   <div className="mb-2 d-flex align-items-center justify-content-between">
                     <div>
                       <strong>{addr.recipientName}</strong>
-                      {addr.isDefault && <span className="badge bg-primary ms-2">Default</span>}
+                      {addr.isDefault && (
+                        <span className="badge bg-primary ms-2">Default</span>
+                      )}
                     </div>
                     {!addr.isDefault && (
                       <Button
@@ -329,7 +489,11 @@ const UserProfile = () => {
                         disabled={setDefaultLoadingId === addr._id}
                         onClick={() => handleSetDefault(addr._id)}
                       >
-                        {setDefaultLoadingId === addr._id ? <Spinner size="sm" animation="border" /> : "Set as Default"}
+                        {setDefaultLoadingId === addr._id ? (
+                          <Spinner size="sm" animation="border" />
+                        ) : (
+                          "Set as Default"
+                        )}
                       </Button>
                     )}
                   </div>
@@ -339,14 +503,20 @@ const UserProfile = () => {
                     {addr.city}, {addr.state} {addr.postalCode}
                   </div>
                   <div>{addr.country}</div>
-                  <div className="mt-2 text-muted small">Phone: {addr.phoneNumber}</div>
+                  <div className="mt-2 text-muted small">
+                    Phone: {addr.phoneNumber}
+                  </div>
                 </Card.Body>
               </Card>
             </Col>
           ))}
         </Row>
       )}
-      <Modal show={showAddressModal} onHide={() => setShowAddressModal(false)} centered>
+      <Modal
+        show={showAddressModal}
+        onHide={() => setShowAddressModal(false)}
+        centered
+      >
         <Modal.Header closeButton>
           <Modal.Title>Add New Shipping Address</Modal.Title>
         </Modal.Header>
@@ -359,7 +529,12 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.recipientName}
-                onChange={e => setNewAddress(a => ({ ...a, recipientName: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({
+                    ...a,
+                    recipientName: e.target.value,
+                  }))
+                }
                 placeholder="Enter recipient name"
               />
             </Form.Group>
@@ -368,7 +543,9 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.addressLine1}
-                onChange={e => setNewAddress(a => ({ ...a, addressLine1: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({ ...a, addressLine1: e.target.value }))
+                }
                 placeholder="Enter address line 1"
               />
             </Form.Group>
@@ -377,7 +554,9 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.addressLine2}
-                onChange={e => setNewAddress(a => ({ ...a, addressLine2: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({ ...a, addressLine2: e.target.value }))
+                }
                 placeholder="Enter address line 2 (optional)"
               />
             </Form.Group>
@@ -386,7 +565,9 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.city}
-                onChange={e => setNewAddress(a => ({ ...a, city: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({ ...a, city: e.target.value }))
+                }
                 placeholder="Enter city"
               />
             </Form.Group>
@@ -395,7 +576,9 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.state}
-                onChange={e => setNewAddress(a => ({ ...a, state: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({ ...a, state: e.target.value }))
+                }
                 placeholder="Enter state"
               />
             </Form.Group>
@@ -404,7 +587,9 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.postalCode}
-                onChange={e => setNewAddress(a => ({ ...a, postalCode: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({ ...a, postalCode: e.target.value }))
+                }
                 placeholder="Enter postal code"
               />
             </Form.Group>
@@ -413,7 +598,9 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.country}
-                onChange={e => setNewAddress(a => ({ ...a, country: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({ ...a, country: e.target.value }))
+                }
                 placeholder="Enter country"
               />
             </Form.Group>
@@ -422,7 +609,9 @@ const UserProfile = () => {
               <Form.Control
                 type="text"
                 value={newAddress.phoneNumber}
-                onChange={e => setNewAddress(a => ({ ...a, phoneNumber: e.target.value }))}
+                onChange={(e) =>
+                  setNewAddress((a) => ({ ...a, phoneNumber: e.target.value }))
+                }
                 placeholder="Enter phone number"
               />
             </Form.Group>
@@ -431,9 +620,16 @@ const UserProfile = () => {
               type="checkbox"
               label="Set as default address"
               checked={newAddress.isDefault}
-              onChange={e => setNewAddress(a => ({ ...a, isDefault: e.target.checked }))}
+              onChange={(e) =>
+                setNewAddress((a) => ({ ...a, isDefault: e.target.checked }))
+              }
             />
-            <Button variant="primary" className="w-100 mt-2" type="submit" disabled={addLoading}>
+            <Button
+              variant="primary"
+              className="w-100 mt-2"
+              type="submit"
+              disabled={addLoading}
+            >
               {addLoading ? "Adding..." : "Add Address"}
             </Button>
           </Form>
@@ -449,6 +645,18 @@ const UserProfile = () => {
     }
     return () => clearTimeout(timer);
   }, [otpTimer]);
+
+  // Forgot password timer effect
+  useEffect(() => {
+    let timer;
+    if (forgotPasswordTimer > 0) {
+      timer = setTimeout(
+        () => setForgotPasswordTimer(forgotPasswordTimer - 1),
+        1000
+      );
+    }
+    return () => clearTimeout(timer);
+  }, [forgotPasswordTimer]);
 
   const handleSendEmailOtp = async () => {
     setEditEmailError("");
@@ -483,7 +691,12 @@ const UserProfile = () => {
       );
       setEditEmailSuccess(res.data.message || "Email updated successfully");
       // Update Redux user state with new email
-      dispatch(loginSuccess({ user: { ...user, email: res.data.email }, userAccessToken }));
+      dispatch(
+        loginSuccess({
+          user: { ...user, email: res.data.email },
+          userAccessToken,
+        })
+      );
       setEditEmail("");
       setEditEmailOtp("");
     } catch (err) {
@@ -501,19 +714,27 @@ const UserProfile = () => {
       <Card.Body>
         <h5 className="fw-bold mb-3">Edit Email</h5>
         {editEmailError && <Alert variant="danger">{editEmailError}</Alert>}
-        {editEmailSuccess && <Alert variant="success">{editEmailSuccess}</Alert>}
+        {editEmailSuccess && (
+          <Alert variant="success">{editEmailSuccess}</Alert>
+        )}
         <Form autoComplete="off">
           <Form.Group className="mb-3">
             <Form.Label>New Email</Form.Label>
             <Form.Control
               type="email"
               value={editEmail}
-              onChange={e => setEditEmail(e.target.value)}
+              onChange={(e) => setEditEmail(e.target.value)}
               placeholder="Enter new email"
               disabled={editEmailLoading || editEmailSuccess}
             />
           </Form.Group>
-          <Button variant="primary" type="button" onClick={handleSendEmailOtp} disabled={editEmailLoading || !editEmail || editEmailSuccess} className="mb-3">
+          <Button
+            variant="primary"
+            type="button"
+            onClick={handleSendEmailOtp}
+            disabled={editEmailLoading || !editEmail || editEmailSuccess}
+            className="mb-3"
+          >
             {editEmailLoading ? "Sending..." : "Send OTP"}
           </Button>
           {/* Show OTP input if OTP sent and not yet verified */}
@@ -524,7 +745,7 @@ const UserProfile = () => {
                 <Form.Control
                   type="text"
                   value={editEmailOtp}
-                  onChange={e => setEditEmailOtp(e.target.value)}
+                  onChange={(e) => setEditEmailOtp(e.target.value)}
                   placeholder="Enter OTP"
                   maxLength={6}
                   disabled={editEmailVerifyLoading || otpTimer === 0}
@@ -532,11 +753,22 @@ const UserProfile = () => {
               </Form.Group>
               <div className="mb-2 text-muted">
                 {otpTimer > 0
-                  ? `OTP expires in ${otpTimer} second${otpTimer !== 1 ? "s" : ""}`
+                  ? `OTP expires in ${otpTimer} second${
+                      otpTimer !== 1 ? "s" : ""
+                    }`
                   : "OTP expired. Please resend OTP."}
               </div>
-              <Button variant="success" type="button" onClick={handleVerifyEmailOtp} disabled={editEmailVerifyLoading || !editEmailOtp || otpTimer === 0}>
-                {editEmailVerifyLoading ? "Verifying..." : "Verify & Update Email"}
+              <Button
+                variant="success"
+                type="button"
+                onClick={handleVerifyEmailOtp}
+                disabled={
+                  editEmailVerifyLoading || !editEmailOtp || otpTimer === 0
+                }
+              >
+                {editEmailVerifyLoading
+                  ? "Verifying..."
+                  : "Verify & Update Email"}
               </Button>
               <Button
                 variant="secondary"
@@ -559,16 +791,173 @@ const UserProfile = () => {
     </Card>
   );
 
+  // Forgot Password content
+  const forgotPasswordContent = (
+    <Card className="shadow-sm border-0">
+      <Card.Body>
+        <h5 className="fw-bold mb-3">Reset Password</h5>
+        <p className="text-muted mb-4">
+          Reset your password using OTP verification
+        </p>
+        {forgotPasswordError && (
+          <Alert variant="danger">{forgotPasswordError}</Alert>
+        )}
+        {forgotPasswordSuccess && (
+          <Alert variant="success">{forgotPasswordSuccess}</Alert>
+        )}
+
+        {forgotPasswordStep === 1 && (
+          <Form onSubmit={handleForgotPasswordRequestOtp} autoComplete="off">
+            <Form.Group className="mb-3">
+              <Form.Label>Email Address</Form.Label>
+              <Form.Control
+                type="email"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                placeholder="Enter your email address"
+                required
+              />
+            </Form.Group>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-100"
+              disabled={forgotPasswordLoading}
+            >
+              {forgotPasswordLoading ? "Sending OTP..." : "Send OTP"}
+            </Button>
+          </Form>
+        )}
+
+        {forgotPasswordStep === 2 && (
+          <Form onSubmit={handleForgotPasswordVerifyOtp} autoComplete="off">
+            <Form.Group className="mb-3">
+              <Form.Label>Enter OTP</Form.Label>
+              <Form.Control
+                type="text"
+                value={forgotPasswordOtp}
+                onChange={(e) => setForgotPasswordOtp(e.target.value)}
+                placeholder="Enter 6-digit OTP"
+                maxLength={6}
+                required
+                disabled={forgotPasswordTimer === 0}
+              />
+              <div className="mt-2 text-muted small">
+                {forgotPasswordTimer > 0
+                  ? `OTP expires in ${forgotPasswordTimer} second${
+                      forgotPasswordTimer !== 1 ? "s" : ""
+                    }`
+                  : "OTP expired. Please resend OTP."}
+              </div>
+            </Form.Group>
+            <Button
+              type="submit"
+              variant="success"
+              className="w-100 mb-2"
+              disabled={forgotPasswordLoading || forgotPasswordTimer === 0}
+            >
+              {forgotPasswordLoading ? "Verifying..." : "Verify OTP"}
+            </Button>
+            <Button
+              variant="outline-secondary"
+              className="w-100 mb-2"
+              onClick={() => setForgotPasswordStep(1)}
+            >
+              Change Email
+            </Button>
+            <Button
+              variant="outline-primary"
+              className="w-100"
+              disabled={forgotPasswordTimer > 0 || forgotPasswordLoading}
+              onClick={(e) => handleForgotPasswordRequestOtp(e, true)}
+            >
+              {forgotPasswordTimer > 0
+                ? `Resend OTP in ${forgotPasswordTimer}s`
+                : "Resend OTP"}
+            </Button>
+          </Form>
+        )}
+
+        {forgotPasswordStep === 3 && (
+          <Form onSubmit={handleForgotPasswordReset} autoComplete="off">
+            <Form.Group className="mb-3">
+              <Form.Label>New Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={forgotPasswordNewPassword}
+                onChange={(e) => setForgotPasswordNewPassword(e.target.value)}
+                placeholder="Enter new password (min 8 characters)"
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Confirm New Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={forgotPasswordConfirmPassword}
+                onChange={(e) =>
+                  setForgotPasswordConfirmPassword(e.target.value)
+                }
+                placeholder="Confirm new password"
+                required
+              />
+            </Form.Group>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-100"
+              disabled={forgotPasswordLoading}
+            >
+              {forgotPasswordLoading ? "Resetting..." : "Reset Password"}
+            </Button>
+          </Form>
+        )}
+      </Card.Body>
+    </Card>
+  );
+
+  // Show Orders content
+  const showOrdersContent = (
+    <Card className="shadow-sm border-0">
+      <Card.Body>
+        <h5 className="fw-bold mb-3">My Orders</h5>
+        <div className="text-center py-5">
+          <FaBoxOpen size={48} className="text-muted mb-3" />
+          <h6 className="text-muted">Order History</h6>
+          <p className="text-muted small">
+            Your order history will appear here
+          </p>
+          <p className="text-muted small">This feature is coming soon!</p>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+
+  // Cancel Orders content
+  const cancelOrdersContent = (
+    <Card className="shadow-sm border-0">
+      <Card.Body>
+        <h5 className="fw-bold mb-3">Cancel Orders</h5>
+        <div className="text-center py-5">
+          <FaTimesCircle size={48} className="text-muted mb-3" />
+          <h6 className="text-muted">Order Cancellation</h6>
+          <p className="text-muted small">Cancel your pending orders here</p>
+          <p className="text-muted small">This feature is coming soon!</p>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+
   useEffect(() => {
     if (addSuccess) {
-      const timer = setTimeout(() => setAddSuccess("") , 2000);
+      const timer = setTimeout(() => setAddSuccess(""), 2000);
       return () => clearTimeout(timer);
     }
   }, [addSuccess]);
 
   useEffect(() => {
     if (editEmailSuccess && editEmailSuccess.includes("updated")) {
-      const timer = setTimeout(() => setEditEmailSuccess("") , 4000);
+      const timer = setTimeout(() => setEditEmailSuccess(""), 4000);
       return () => clearTimeout(timer);
     }
   }, [editEmailSuccess]);
@@ -577,13 +966,22 @@ const UserProfile = () => {
     <Container className="py-5">
       <Row className="justify-content-center">
         <Col md={3}>
-          <Card className="mb-4 shadow-sm border-0" style={{ background: "#f8f9fa" }}>
+          <Card
+            className="mb-4 shadow-sm border-0"
+            style={{ background: "#f8f9fa" }}
+          >
             <Card.Body className="text-center pb-2 pt-4">
               <div style={{ position: "relative", display: "inline-block" }}>
                 <Image
                   src={avatar}
                   roundedCircle
-                  style={{ width: 80, height: 80, objectFit: "cover", border: "3px solid #0d6efd", cursor: uploading ? "not-allowed" : "pointer" }}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    border: "3px solid #0d6efd",
+                    cursor: uploading ? "not-allowed" : "pointer",
+                  }}
                   className="mb-2 shadow-sm"
                   alt="User Avatar"
                   onClick={uploading ? undefined : handleAvatarClick}
@@ -602,7 +1000,11 @@ const UserProfile = () => {
                   onClick={uploading ? undefined : handleAvatarClick}
                   title="Change profile picture"
                 >
-                  {uploading ? <Spinner animation="border" size="sm" /> : <FaCamera color="#0d6efd" size={18} />}
+                  {uploading ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : (
+                    <FaCamera color="#0d6efd" size={18} />
+                  )}
                 </span>
                 <Form style={{ display: "none" }}>
                   <Form.Control
@@ -614,8 +1016,12 @@ const UserProfile = () => {
                   />
                 </Form>
               </div>
-              <h5 className="fw-bold mb-1 mt-2">{user?.username || "User Name"}</h5>
-              <div className="text-muted small mb-3">{user?.email || "user@email.com"}</div>
+              <h5 className="fw-bold mb-1 mt-2">
+                {user?.username || "User Name"}
+              </h5>
+              <div className="text-muted small mb-3">
+                {user?.email || "user@email.com"}
+              </div>
             </Card.Body>
             <ListGroup variant="flush" className="mb-3">
               {sidebarItems.map((item, idx) => (
@@ -627,7 +1033,10 @@ const UserProfile = () => {
                     background: idx === activeIndex ? "#e7f1ff" : "inherit",
                     color: idx === activeIndex ? "#0d6efd" : "#333",
                     fontWeight: idx === activeIndex ? 600 : 400,
-                    borderLeft: idx === activeIndex ? "4px solid #0d6efd" : "4px solid transparent",
+                    borderLeft:
+                      idx === activeIndex
+                        ? "4px solid #0d6efd"
+                        : "4px solid transparent",
                     display: "flex",
                     alignItems: "center",
                     gap: 12,
@@ -637,7 +1046,9 @@ const UserProfile = () => {
                   className="border-0"
                   onClick={() => setActiveIndex(idx)}
                 >
-                  <span style={{ fontSize: 18, marginRight: 10 }}>{item.icon}</span>
+                  <span style={{ fontSize: 18, marginRight: 10 }}>
+                    {item.icon}
+                  </span>
                   {item.label}
                 </ListGroup.Item>
               ))}
@@ -648,6 +1059,9 @@ const UserProfile = () => {
           {activeIndex === 0 && userDetailsContent}
           {activeIndex === 1 && editProfileContent}
           {activeIndex === 2 && showAddressContent}
+          {activeIndex === 3 && showOrdersContent}
+          {activeIndex === 4 && cancelOrdersContent}
+          {activeIndex === 5 && forgotPasswordContent}
           {activeIndex === 6 && editEmailContent}
         </Col>
       </Row>
