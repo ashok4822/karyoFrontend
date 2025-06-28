@@ -5,6 +5,7 @@ const initialState = {
   items: [], // Each item: { id, name, price, image, variant }
   loading: false,
   error: null,
+  initialized: false, // Track if wishlist has been initialized
 };
 
 // Fetch wishlist from backend
@@ -17,10 +18,10 @@ export const fetchWishlist = createAsyncThunk(
       return res.data.map((item) => ({
         id: item.product._id,
         name: item.product.name,
-        price: item.product.price,
+        price: item.variantPrice || item.product.price, // Use variant price if available, fallback to product price
         image: item.image,
         variant: item.variant,
-        variantName: "", // Optionally fetch variant name if needed
+        variantName: item.variantName || "", // Add variant name if available
       }));
     } catch (err) {
       return thunkAPI.rejectWithValue(
@@ -73,20 +74,31 @@ const wishlistSlice = createSlice({
     clearWishlist: (state) => {
       state.items = [];
     },
+    resetWishlist: (state) => {
+      state.items = [];
+      state.loading = false;
+      state.error = null;
+      state.initialized = false;
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchWishlist.pending, (state) => {
-        state.loading = true;
+        // Only show loading if not already initialized
+        if (!state.initialized) {
+          state.loading = true;
+        }
         state.error = null;
       })
       .addCase(fetchWishlist.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
+        state.initialized = true;
       })
       .addCase(fetchWishlist.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.initialized = true;
       })
       .addCase(addToWishlist.fulfilled, (state, action) => {
         const exists = state.items.find(
@@ -110,5 +122,5 @@ const wishlistSlice = createSlice({
   },
 });
 
-export const { clearWishlist } = wishlistSlice.actions;
+export const { clearWishlist, resetWishlist } = wishlistSlice.actions;
 export default wishlistSlice.reducer;

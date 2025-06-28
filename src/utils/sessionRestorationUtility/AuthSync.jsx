@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom/dist/umd/react-router-dom.development";
 import userAxios from "../../lib/userAxios";
 import adminAxios from "../../lib/adminAxios";
 import { loginSuccess, setUserAccessToken, logoutUser, setAdminAccessToken, loginSuccess as adminLoginSuccess, logoutAdmin } from '../../redux/reducers/authSlice';
+import { fetchWishlist } from '../../redux/reducers/wishlistSlice';
+import { fetchCart } from '../../redux/reducers/cartSlice';
 
 const AuthSync = ({ onRestored = () => {} }) => {
   const dispatch = useDispatch();
@@ -12,7 +14,8 @@ const AuthSync = ({ onRestored = () => {} }) => {
   const { userAccessToken, adminAccessToken } = useSelector(
     (state) => state.auth
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     const publicPaths = [
@@ -99,7 +102,8 @@ const AuthSync = ({ onRestored = () => {} }) => {
     };
 
     const runSync = async () => {
-      setLoading(true);
+      // Start a timer to show loading after 500ms
+      timerRef.current = setTimeout(() => setLoading(true), 500);
       const tasks = [];
 
       // Always restore user session if not on admin route
@@ -107,11 +111,32 @@ const AuthSync = ({ onRestored = () => {} }) => {
       if (!adminAccessToken) tasks.push(restoreAdmin());
 
       await Promise.allSettled(tasks);
+      // Restoration finished, clear timer and hide loading
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      // Fetch wishlist if user is logged in and not on admin route
+      if (!location.pathname.startsWith("/admin") && localStorage.getItem("userAccessToken")) {
+        dispatch(fetchWishlist());
+      }
+      // Fetch cart if user is logged in and not on admin route
+      if (!location.pathname.startsWith("/admin") && localStorage.getItem("userAccessToken")) {
+        dispatch(fetchCart());
+      }
       setLoading(false);
       onRestored();
     };
 
     runSync();
+
+    // Cleanup timer on unmount or rerun
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [
     dispatch,
     userAccessToken,

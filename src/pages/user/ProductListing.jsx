@@ -43,7 +43,7 @@ const ProductListing = () => {
   );
 
   // Debug logging
-  console.log('ProductListing render:', { products, loading, error, pagination });
+  // console.log('ProductListing render:', { products, loading, error, pagination });
 
   const [view, setView] = useState("grid");
   const [sort, setSort] = useState("newest");
@@ -61,7 +61,7 @@ const ProductListing = () => {
   useEffect(() => {
     const categoryParam = searchParams.get('category');
     if (categoryParam) {
-      console.log('ProductListing: Found category in URL:', categoryParam);
+      // console.log('ProductListing: Found category in URL:', categoryParam);
       const initialFilters = {
         categories: [categoryParam],
         brands: [],
@@ -73,7 +73,7 @@ const ProductListing = () => {
       
       // Fetch products with the category filter
       const params = buildFilterParams(1, "", initialFilters, sort);
-      console.log('ProductListing: Initial load with category filter:', params);
+      // console.log('ProductListing: Initial load with category filter:', params);
       dispatch(fetchProductsFromBackend(params));
     }
   }, [searchParams, dispatch, sort]);
@@ -134,17 +134,17 @@ const ProductListing = () => {
     const categoryParam = searchParams.get('category');
     if (!categoryParam) {
       const params = buildFilterParams(1, "", filters, sort);
-      console.log('ProductListing useEffect - dispatching fetchProductsFromBackend with params:', params);
+      // console.log('ProductListing useEffect - dispatching fetchProductsFromBackend with params:', params);
       dispatch(fetchProductsFromBackend(params));
     }
   }, [dispatch, searchParams]);
 
   const handleFilterChange = (newFilters) => {
-    console.log('ProductListing: handleFilterChange called with:', newFilters);
+    // console.log('ProductListing: handleFilterChange called with:', newFilters);
     setFilters(newFilters);
     // Reset to page 1 when filters change
     const params = buildFilterParams(1, searchQuery, newFilters, sort);
-    console.log('ProductListing: dispatching with params:', params);
+    // console.log('ProductListing: dispatching with params:', params);
     dispatch(fetchProductsFromBackend(params));
   };
 

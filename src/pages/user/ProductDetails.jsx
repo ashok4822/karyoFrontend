@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import Swal from 'sweetalert2';
 import {
   Container,
   Row,
@@ -37,6 +38,7 @@ import {
 import userAxios from '../../lib/userAxios';
 import { fetchProductsFromBackend } from '../../redux/reducers/productSlice';
 import { addToWishlist, removeFromWishlist } from '../../redux/reducers/wishlistSlice';
+import { addToCart, getAvailableStock } from '../../redux/reducers/cartSlice';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -46,6 +48,7 @@ const ProductDetails = () => {
   // Redux state
   const { products } = useSelector(state => state.products);
   const wishlist = useSelector(state => state.wishlist.items);
+  const { availableStock, availableStockLoading, items: cartItems } = useSelector(state => state.cart);
   
   // Local state
   const [product, setProduct] = useState(null);
@@ -61,6 +64,7 @@ const ProductDetails = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isZoomed, setIsZoomed] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   // Check if current product+variant is wishlisted
   const isWishlisted = !!wishlist.find(
@@ -74,13 +78,9 @@ const ProductDetails = () => {
         setProductLoading(true);
         setProductError(null);
         
-        console.log('ProductDetails: Fetching product with ID:', id);
-        console.log('ProductDetails: Available products in Redux store:', products);
-        
         // First try to get from Redux store
         const productFromStore = products.find(p => p._id === id);
         if (productFromStore) {
-          console.log('ProductDetails: Found product in Redux store:', productFromStore);
           setProduct(productFromStore);
           
           // Set default selected variant (first available one)
@@ -97,26 +97,17 @@ const ProductDetails = () => {
           // Fetch related products
           fetchRelatedProducts(productFromStore);
           
+          // Fetch available stock (considering cart quantities)
+          dispatch(getAvailableStock(productFromStore._id));
+          
           setProductLoading(false);
           return;
         }
         
         // If not in store, try API call
-        console.log('ProductDetails: Making API call to fetch product:', id);
+        // If not in store, try API call
         const response = await userAxios.get(`/products/${id}`);
         const productData = response.data;
-        
-        console.log('ProductDetails: API response status:', response.status);
-        console.log('ProductDetails: Received product data:', productData);
-        console.log('ProductDetails: Product data structure:', {
-          hasVariants: !!productData.variants,
-          variantsLength: productData.variants?.length,
-          hasVariantDetails: !!productData.variantDetails,
-          variantDetailsLength: productData.variantDetails?.length,
-          hasMainImage: !!productData.mainImage,
-          hasOtherImages: !!productData.otherImages,
-          otherImagesLength: productData.otherImages?.length
-        });
         
         // Check if product is blocked or unavailable
         if (productData.blocked || productData.unavailable || productData.status !== 'active') {
@@ -136,6 +127,9 @@ const ProductDetails = () => {
         // Fetch related products
         fetchRelatedProducts(productData);
         
+        // Fetch available stock (considering cart quantities)
+        dispatch(getAvailableStock(productData._id));
+        
       } catch (error) {
         console.error('Error fetching product:', error);
         setProductError('Failed to load product details');
@@ -147,6 +141,8 @@ const ProductDetails = () => {
           if (productFromStore.variants && productFromStore.variants.length > 0) {
             setSelectedVariant(productFromStore.variants[0]);
           }
+          // Fetch available stock even for fallback
+          dispatch(getAvailableStock(productFromStore._id));
         } else {
           // If not found anywhere, redirect to products page
           navigate('/products');
@@ -160,6 +156,20 @@ const ProductDetails = () => {
       fetchProduct();
     }
   }, [id, products, navigate, dispatch]);
+
+  // Refresh available stock when component mounts or product changes
+  useEffect(() => {
+    if (product?._id && !availableStock[product._id]) {
+      dispatch(getAvailableStock(product._id));
+    }
+  }, [product?._id, availableStock, dispatch]);
+
+  // Refresh available stock when cart changes
+  useEffect(() => {
+    if (product?._id) {
+      dispatch(getAvailableStock(product._id));
+    }
+  }, [cartItems.length, product?._id, dispatch]);
 
   // Fetch related products
   const fetchRelatedProducts = async (currentProduct) => {
@@ -189,18 +199,85 @@ const ProductDetails = () => {
   };
 
   // Add to cart handler
-  const handleAddToCart = () => {
-    if (product.blocked || product.unavailable || product.status !== 'active') {
-      navigate('/products');
+  const handleAddToCart = async () => {
+    if (!product || !selectedVariant) {
+      Swal.fire({
+        title: 'Error',
+        text: 'Please select a product variant',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
       return;
     }
-    
-    // TODO: Implement add to cart functionality
-    console.log('Adding to cart:', {
-      product: product._id,
-      variant: selectedVariant?._id,
-      quantity
-    });
+
+    if (product.blocked || product.unavailable || product.status !== 'active') {
+      Swal.fire({
+        title: 'Product Not Available',
+        text: 'This product is not available for purchase',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    if (selectedVariant.stock === 0) {
+      Swal.fire({
+        title: 'Out of Stock',
+        text: 'This variant is currently out of stock',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    const availableStockForVariant = getCurrentStock();
+    if (quantity > availableStockForVariant) {
+      Swal.fire({
+        title: 'Insufficient Stock',
+        text: `Only ${availableStockForVariant} items available in stock`,
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    if (quantity > 5) {
+      Swal.fire({
+        title: 'Quantity Limit',
+        text: 'Maximum quantity allowed is 5 items per variant',
+        icon: 'warning',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+      await dispatch(addToCart({
+        productVariantId: selectedVariant._id,
+        quantity: quantity
+      })).unwrap();
+
+      Swal.fire({
+        title: 'Added to Cart!',
+        text: `${quantity} ${quantity === 1 ? 'item' : 'items'} added to your cart successfully`,
+        icon: 'success',
+        confirmButtonText: 'OK'
+      });
+
+      // Reset quantity to 1 after successful addition
+      setQuantity(1);
+
+    } catch (error) {
+      Swal.fire({
+        title: 'Failed to Add to Cart',
+        text: error || 'Something went wrong. Please try again.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   // Toggle wishlist handler
@@ -272,32 +349,19 @@ const ProductDetails = () => {
   // Get variants from variantDetails (from backend aggregation)
   const getVariants = () => {
     if (!product) {
-      console.log('getVariants: product is null');
       return [];
     }
     
-    console.log('getVariants: product data structure:', {
-      hasVariantDetails: !!product.variantDetails,
-      variantDetailsLength: product.variantDetails?.length,
-      hasVariants: !!product.variants,
-      variantsLength: product.variants?.length,
-      productKeys: Object.keys(product),
-      variantDetailsData: product.variantDetails
-    });
-    
     // Use variantDetails from backend aggregation
     if (product.variantDetails && product.variantDetails.length > 0) {
-      console.log('getVariants: using product.variantDetails:', product.variantDetails);
       return product.variantDetails;
     }
     
     // Fallback to variants if variantDetails is not available
     if (product.variants && product.variants.length > 0) {
-      console.log('getVariants: using product.variants (fallback):', product.variants);
       return product.variants;
     }
     
-    console.log('getVariants: no variants found');
     return [];
   };
 
@@ -324,17 +388,52 @@ const ProductDetails = () => {
     if (!product) return 0;
     
     if (selectedVariant) {
+      // Check if we have available stock data for this product
+      const productAvailableStock = availableStock[product._id];
+      if (productAvailableStock) {
+        const variantStock = productAvailableStock.find(
+          v => v.variantId === selectedVariant._id
+        );
+        if (variantStock) {
+          return variantStock.availableStock;
+        }
+      }
+      // Fallback to original stock if available stock data not loaded yet
       return selectedVariant.stock;
     }
     
     // If no variant selected, sum all variant stocks
     const variants = getVariants();
     if (variants.length > 0) {
+      // Check if we have available stock data for this product
+      const productAvailableStock = availableStock[product._id];
+      if (productAvailableStock) {
+        return productAvailableStock.reduce((sum, v) => sum + v.availableStock, 0);
+      }
+      // Fallback to original stock if available stock data not loaded yet
       return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
     }
     
     // Fallback to product total stock
     return product.totalStock || 0;
+  };
+
+  // Get available stock for a specific variant
+  const getVariantAvailableStock = (variant) => {
+    if (!product || !variant) return 0;
+    
+    // Check if we have available stock data for this product
+    const productAvailableStock = availableStock[product._id];
+    if (productAvailableStock) {
+      const variantStock = productAvailableStock.find(
+        v => v.variantId === variant._id
+      );
+      if (variantStock) {
+        return variantStock.availableStock;
+      }
+    }
+    // Fallback to original stock if available stock data not loaded yet
+    return variant.stock || 0;
   };
 
   // Calculate final price with discount and coupon
@@ -437,27 +536,105 @@ const ProductDetails = () => {
 
   // 1. Set first variant as selected on product load
   useEffect(() => {
-    console.log('useEffect triggered - product:', {
-      hasProduct: !!product,
-      hasVariantDetails: !!product?.variantDetails,
-      variantDetailsLength: product?.variantDetails?.length,
-      hasVariants: !!product?.variants,
-      variantsLength: product?.variants?.length,
-      variantDetails: product?.variantDetails
-    });
-    
     if (product && product.variantDetails && product.variantDetails.length > 0) {
-      console.log('Setting first variant as selected:', product.variantDetails[0]);
       setSelectedVariant(product.variantDetails[0]);
       setSelectedImage(0); // Reset to show the selected variant's image
     } else if (product && product.variants && product.variants.length > 0) {
-      console.log('Setting first variant as selected (fallback):', product.variants[0]);
       setSelectedVariant(product.variants[0]);
       setSelectedImage(0); // Reset to show the selected variant's image
-    } else {
-      console.log('No variants found or product not loaded yet');
     }
   }, [product]);
+
+  // Calculate stock and sold out status only after product is loaded
+  const variants = getVariants();
+  const currentStock = useMemo(() => getCurrentStock(), [availableStock, product, selectedVariant]);
+  const isSoldOut = currentStock === 0;
+
+  // Get images only when product is available
+  const images = getDisplayImages();
+  const mainImage = images[0];
+  const sideImages = images.slice(1);
+
+  // Memoized variant cards to prevent unnecessary re-renders
+  const variantCards = useMemo(() => {
+    return variants.map((variant) => {
+      const isActive = variant.status === 'active';
+      const availableStockForVariant = getVariantAvailableStock(variant);
+      const isInStock = availableStockForVariant > 0;
+      return (
+        <div key={variant._id} className="col-12 col-sm-6 col-lg-4 mb-3">
+          <div 
+            className={`card h-100 ${(isActive && isInStock) ? 'cursor-pointer' : 'opacity-50'} ${selectedVariant?._id === variant._id ? 'border-primary' : 'border-light'} shadow-sm rounded-3`} 
+            onClick={(isActive && isInStock) ? () => handleVariantSelect(variant) : undefined}
+            style={{ cursor: (isActive && isInStock) ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
+            onMouseEnter={(isActive && isInStock) ? (e) => e.currentTarget.style.transform = 'translateY(-2px)' : undefined}
+            onMouseLeave={(isActive && isInStock) ? (e) => e.currentTarget.style.transform = 'translateY(0)' : undefined}
+          >
+            <div className="card-body p-2 d-flex flex-column justify-content-between h-100">
+              <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <div className="d-flex gap-1 flex-wrap align-items-center">
+                  {variant.colour && (
+                    <Badge bg="light" text="dark" className="small mb-1">
+                      {variant.colour}
+                    </Badge>
+                  )}
+                  {variant.capacity && (
+                    <Badge bg="light" text="dark" className="small mb-1">
+                      {variant.capacity}
+                    </Badge>
+                  )}
+                </div>
+                <div className="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                  {selectedVariant?._id === variant._id && isActive && (
+                    <Badge bg="primary" className="small mb-1">
+                      <FaCheck size={10} />
+                    </Badge>
+                  )}
+                  {!isActive && (
+                    <Badge bg="secondary" className="small mb-1">Inactive</Badge>
+                  )}
+                </div>
+              </div>
+              <div className="text-center mb-2">
+                <span className="h6 text-primary fw-bold mb-0" style={{ fontSize: '1rem' }}>₹{variant.price}</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                <small className={`${availableStockForVariant > 0 ? 'text-success' : 'text-danger'} fw-semibold`} style={{ fontSize: '0.95rem' }}>
+                  {availableStockForVariant > 0 ? `${availableStockForVariant} in stock` : 'Out of stock'}
+                </small>
+                {availableStockForVariant === 0 && (
+                  <Badge bg="danger" className="small mb-1">Sold Out</Badge>
+                )}
+              </div>
+              {/* Variant Images (if available) */}
+              {variant.imageUrls && variant.imageUrls.length > 0 && (
+                <div className="mt-2 text-center">
+                  <img 
+                    src={variant.imageUrls[0].startsWith('http') ? variant.imageUrls[0] : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${variant.imageUrls[0]}`}
+                    alt={`${variant.colour} ${variant.capacity}`}
+                    className="img-fluid rounded mx-auto d-block"
+                    style={{ height: '60px', objectFit: 'cover', width: '100%', maxWidth: 100 }}
+                    onError={(e) => {
+                      e.target.src = '/placeholder.svg';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    });
+  }, [variants, availableStock, selectedVariant, handleVariantSelect]);
+
+  // Related products (same category, not self, max 4)
+  const getRelatedProducts = () => {
+    if (!product || !product.category) return [];
+    
+    return products
+      .filter(p => p._id !== product._id && p.category?._id === product.category._id)
+      .slice(0, 4);
+  };
 
   // Loading state
   if (productLoading) {
@@ -502,54 +679,6 @@ const ProductDetails = () => {
       </Container>
     );
   }
-
-  // Calculate stock and sold out status only after product is loaded
-  const variants = getVariants();
-  const currentStock = getCurrentStock();
-  const isSoldOut = currentStock === 0;
-
-  // Get images only when product is available
-  const images = getDisplayImages();
-  const mainImage = images[0];
-  const sideImages = images.slice(1);
-
-  // Debug logging
-  console.log('Product data:', {
-    _id: product._id,
-    name: product.name,
-    mainImage: product.mainImage,
-    otherImages: product.otherImages,
-    variantDetails: product.variantDetails?.map(v => ({
-      _id: v._id,
-      colour: v.colour,
-      capacity: v.capacity,
-      imageUrls: v.imageUrls,
-      price: v.price,
-      stock: v.stock
-    })),
-    variants: product.variants?.map(v => ({
-      _id: v._id,
-      colour: v.colour,
-      capacity: v.capacity,
-      imageUrls: v.imageUrls,
-      price: v.price,
-      stock: v.stock
-    }))
-  });
-  console.log('Processed images:', {
-    totalImages: images.length,
-    mainImage,
-    sideImages
-  });
-
-  // Related products (same category, not self, max 4)
-  const getRelatedProducts = () => {
-    if (!product || !product.category) return [];
-    
-    return products
-      .filter(p => p._id !== product._id && p.category?._id === product.category._id)
-      .slice(0, 4);
-  };
 
   return (
     <Container className="py-4">
@@ -684,84 +813,12 @@ const ProductDetails = () => {
 
           {/* Variant Selection - moved here below images */}
           {(() => {
-            console.log('Rendering variant selection UI:', {
-              variantsLength: variants.length,
-              variants: variants,
-              selectedVariant: selectedVariant
-            });
-            
             return variants.length > 0 && (
               <div className="mb-4 mt-4">
                 <h5 className="mb-3">Select Variant</h5>
                 {/* Mini Variant Display */}
                 <div className="row g-5 mb-3">
-                  {variants.map((variant) => {
-                    const isActive = variant.status === 'active';
-                    const isInStock = variant.stock > 0;
-                    return (
-                      <div key={variant._id} className="col-12 col-sm-6 col-lg-4 mb-3">
-                        <div 
-                          className={`card h-100 ${(isActive && isInStock) ? 'cursor-pointer' : 'opacity-50'} ${selectedVariant?._id === variant._id ? 'border-primary' : 'border-light'} shadow-sm rounded-3`} 
-                          onClick={(isActive && isInStock) ? () => handleVariantSelect(variant) : undefined}
-                          style={{ cursor: (isActive && isInStock) ? 'pointer' : 'not-allowed', transition: 'all 0.2s' }}
-                          onMouseEnter={(isActive && isInStock) ? (e) => e.currentTarget.style.transform = 'translateY(-2px)' : undefined}
-                          onMouseLeave={(isActive && isInStock) ? (e) => e.currentTarget.style.transform = 'translateY(0)' : undefined}
-                        >
-                          <div className="card-body p-2 d-flex flex-column justify-content-between h-100">
-                            <div className="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
-                              <div className="d-flex gap-1 flex-wrap align-items-center">
-                                {variant.colour && (
-                                  <Badge bg="light" text="dark" className="small mb-1">
-                                    {variant.colour}
-                                  </Badge>
-                                )}
-                                {variant.capacity && (
-                                  <Badge bg="light" text="dark" className="small mb-1">
-                                    {variant.capacity}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="d-flex flex-column align-items-end gap-1 flex-shrink-0">
-                                {selectedVariant?._id === variant._id && isActive && (
-                                  <Badge bg="primary" className="small mb-1">
-                                    <FaCheck size={10} />
-                                  </Badge>
-                                )}
-                                {!isActive && (
-                                  <Badge bg="secondary" className="small mb-1">Inactive</Badge>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-center mb-2">
-                              <span className="h6 text-primary fw-bold mb-0" style={{ fontSize: '1rem' }}>₹{variant.price}</span>
-                            </div>
-                            <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap">
-                              <small className={`${variant.stock > 0 ? 'text-success' : 'text-danger'} fw-semibold`} style={{ fontSize: '0.95rem' }}>
-                                {variant.stock > 0 ? `${variant.stock} in stock` : 'Out of stock'}
-                              </small>
-                              {variant.stock === 0 && (
-                                <Badge bg="danger" className="small mb-1">Sold Out</Badge>
-                              )}
-                            </div>
-                            {/* Variant Images (if available) */}
-                            {variant.imageUrls && variant.imageUrls.length > 0 && (
-                              <div className="mt-2 text-center">
-                                <img 
-                                  src={variant.imageUrls[0].startsWith('http') ? variant.imageUrls[0] : `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${variant.imageUrls[0]}`}
-                                  alt={`${variant.colour} ${variant.capacity}`}
-                                  className="img-fluid rounded mx-auto d-block"
-                                  style={{ height: '60px', objectFit: 'cover', width: '100%', maxWidth: 100 }}
-                                  onError={(e) => {
-                                    e.target.src = '/placeholder.svg';
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {variantCards}
                 </div>
                 {/* Selected Variant Details */}
                 {selectedVariant && (
@@ -771,7 +828,7 @@ const ProductDetails = () => {
                         <strong>Selected:</strong> {selectedVariant.colour} {selectedVariant.capacity} - ₹{selectedVariant.price}
                         <br />
                         <small className="text-muted">
-                          Stock: {selectedVariant.stock} units
+                          Stock: {getVariantAvailableStock(selectedVariant)} units
                         </small>
                       </div>
                       <div className="d-flex gap-2">
@@ -885,15 +942,10 @@ const ProductDetails = () => {
           {/* Stock Status */}
           <div className="mb-4">
             <div className="d-flex align-items-center gap-2 mb-2">
-              <span className={selectedVariant && selectedVariant.stock === 0 ? 'text-danger fw-bold' : 'text-success fw-bold'}>
-                {selectedVariant
-                  ? (selectedVariant.stock === 0 ? 'Sold Out' : `In Stock: ${selectedVariant.stock}`)
-                  : (product.totalStock === 0 ? 'Sold Out' : `In Stock: ${product.totalStock}`)}
+              <span className={currentStock === 0 ? 'text-danger fw-bold' : 'text-success fw-bold'}>
+                {currentStock === 0 ? 'Sold Out' : `In Stock: ${currentStock}`}
               </span>
-              {selectedVariant && selectedVariant.stock <= 5 && selectedVariant.stock > 0 && (
-                <Badge bg="warning" text="dark">Low Stock</Badge>
-              )}
-              {!selectedVariant && currentStock <= 5 && currentStock > 0 && (
+              {currentStock <= 5 && currentStock > 0 && (
                 <Badge bg="warning" text="dark">Low Stock</Badge>
               )}
             </div>
@@ -901,7 +953,12 @@ const ProductDetails = () => {
             {/* Show variant-specific stock if variant is selected */}
             {selectedVariant && (
               <div className="text-muted small mb-2">
-                <strong>Selected Variant:</strong> {selectedVariant.colour} {selectedVariant.capacity} - {selectedVariant.stock} available
+                <strong>Selected Variant:</strong> {selectedVariant.colour} {selectedVariant.capacity} - {currentStock} available
+                {availableStock[product._id] && (
+                  <span className="ms-2">
+                    (Total: {selectedVariant.stock}, In Cart: {selectedVariant.stock - currentStock})
+                  </span>
+                )}
               </div>
             )}
             
@@ -909,6 +966,11 @@ const ProductDetails = () => {
             {variants.length > 1 && (
               <div className="text-muted small">
                 <strong>Total Stock:</strong> {product.totalStock} units across {variants.length} variants
+                {availableStock[product._id] && (
+                  <span className="ms-2">
+                    (Available: {currentStock})
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -956,10 +1018,19 @@ const ProductDetails = () => {
                 size="lg"
                 className="px-4"
                 onClick={handleAddToCart}
-                disabled={isSoldOut}
+                disabled={isSoldOut || addingToCart || !selectedVariant}
               >
-                <FaShoppingCart className="me-2" />
-                {isSoldOut ? 'Sold Out' : 'Add to Cart'}
+                {addingToCart ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <FaShoppingCart className="me-2" />
+                    {isSoldOut ? 'Sold Out' : 'Add to Cart'}
+                  </>
+                )}
               </Button>
             </div>
           </div>
