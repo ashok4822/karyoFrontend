@@ -436,6 +436,23 @@ const ProductDetails = () => {
     return variant.stock || 0;
   };
 
+  // Get total available stock across all variants
+  const getTotalAvailableStock = () => {
+    if (!product) return 0;
+    
+    const variants = getVariants();
+    if (variants.length === 0) return 0;
+    
+    // Check if we have available stock data for this product
+    const productAvailableStock = availableStock[product._id];
+    if (productAvailableStock) {
+      return productAvailableStock.reduce((sum, v) => sum + v.availableStock, 0);
+    }
+    
+    // Fallback to original total stock if available stock data not loaded yet
+    return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+  };
+
   // Calculate final price with discount and coupon
   const getFinalPrice = () => {
     if (!product) return '0.00';
@@ -548,6 +565,7 @@ const ProductDetails = () => {
   // Calculate stock and sold out status only after product is loaded
   const variants = getVariants();
   const currentStock = useMemo(() => getCurrentStock(), [availableStock, product, selectedVariant]);
+  const totalAvailableStock = useMemo(() => getTotalAvailableStock(), [availableStock, product]);
   const isSoldOut = currentStock === 0;
 
   // Get images only when product is available
@@ -965,10 +983,10 @@ const ProductDetails = () => {
             {/* Show total stock across all variants */}
             {variants.length > 1 && (
               <div className="text-muted small">
-                <strong>Total Stock:</strong> {product.totalStock} units across {variants.length} variants
+                <strong>Total Stock:</strong> {totalAvailableStock} units across {variants.length} variants
                 {availableStock[product._id] && (
                   <span className="ms-2">
-                    (Available: {currentStock})
+                    (Original: {product.totalStock || variants.reduce((sum, v) => sum + (v.stock || 0), 0)}, Available: {totalAvailableStock})
                   </span>
                 )}
               </div>
