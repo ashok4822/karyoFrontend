@@ -6,6 +6,8 @@ import categoryReducer from "../reducers/categorySlice";
 import userReducer from "../reducers/userSlice";
 import dashboardReducer from "../reducers/dashboardSlice";
 import wishlistReducer from "../reducers/wishlistSlice";
+import orderReducer from "../reducers/orderSlice";
+import shippingAddressReducer from "../reducers/shippingAddressSlice";
 import storage from "redux-persist/lib/storage";
 import { persistStore, persistReducer } from "redux-persist";
 
@@ -26,6 +28,8 @@ export const store = configureStore({
     users: userReducer,
     dashboard: dashboardReducer,
     wishlist: wishlistReducer,
+    order: orderReducer,
+    shippingAddress: shippingAddressReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false }),

@@ -46,6 +46,8 @@ import UserProtectedRoute from "./protectedRoutes/UserProtectedRoute";
 import UserProfile from "../../pages/user/UserProfile";
 import Wishlist from "../../pages/user/Wishlist";
 import Cart from "../../pages/user/Cart";
+import Checkout from "../../pages/user/Checkout";
+import OrderConfirmation from "../../pages/user/OrderConfirmation";
 
 const queryClient = new QueryClient();
 
@@ -175,6 +177,15 @@ const AppRoutes = () => {
             />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/cart" element={<Cart />} />
+            <Route 
+              path="/checkout" 
+              element={
+                <UserProtectedRoute>
+                  <Checkout />
+                </UserProtectedRoute>
+              } 
+            />
+            <Route path="/order-confirmation" element={<OrderConfirmation />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

@@ -567,6 +567,7 @@ const Cart = () => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ margin: 0 }}>Total: ₹{calculateTotal().toFixed(2)}</h3>
           <button
+            onClick={() => navigate("/checkout")}
             disabled={hasDisabledItems}
             style={{
               padding: "12px 24px",
