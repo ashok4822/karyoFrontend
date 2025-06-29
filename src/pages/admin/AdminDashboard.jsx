@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 // import api from "@/lib/utils";
 import {
   Container,
@@ -33,7 +34,9 @@ import adminAxios from "../../lib/adminAxios";
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { loading, error, stats } = useSelector((state) => state.dashboard);
+  const { admin, adminAccessToken } = useSelector((state) => state.auth);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -50,6 +53,19 @@ const AdminDashboard = () => {
 
     fetchDashboardData();
   }, [dispatch]);
+
+  // Prevent navigating back to login if already authenticated
+  useEffect(() => {
+    const handlePopState = () => {
+      if (admin && admin.role === "admin" && adminAccessToken) {
+        if (window.location.pathname === "/admin/login") {
+          navigate("/admin", { replace: true });
+        }
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [admin, adminAccessToken, navigate]);
 
   if (loading) {
     return (

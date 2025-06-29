@@ -1,6 +1,7 @@
 import { Provider } from "react-redux";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
 
 import { store } from "./redux/store/store";
 import { useState } from "react";
@@ -15,6 +16,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AppRoutes />
+          <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
     </Provider>

@@ -8,7 +8,7 @@ const RedirectRoute = function ({ element }) {
   }
 
   if (user && user.role === "admin") {
-    return <Navigate to="/admin/dashboard" />;
+    return <Navigate to="/admin" />;
   }
 
   return element;

@@ -36,6 +36,7 @@ import ProductListing from "../../pages/user/ProductListing";
 import ProductDetails from "../../pages/user/ProductDetails";
 import AdminUserForm from "../../pages/admin/AdminUserForm";
 import RedirectRoute from "../../components/RedirectRoute";
+import AdminRedirectRoute from "../../components/AdminRedirectRoute";
 import ForgotPassword from "../../pages/user/ForgotPassword";
 import GoogleAuthSuccess from "../../pages/user/GoogleAuthSuccess";
 import UserLogin from "../../pages/user/UserLogin";
@@ -73,7 +74,12 @@ const AppRoutes = () => {
           <Route path="/google-auth-success" element={<GoogleAuthSuccess />} />
 
           {/* Admin Routes - No Layout */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route 
+            path="/admin/login" 
+            element={
+              <AdminRedirectRoute element={<AdminLogin />} />
+            } 
+          />
           <Route
             path="/admin"
             element={
@@ -119,6 +125,15 @@ const AppRoutes = () => {
             element={
               <AdminProtectedRoute>
                 <CategoryManagement />
+              </AdminProtectedRoute>
+            }
+          />
+          {/* Catch-all admin route - redirect to admin dashboard */}
+          <Route
+            path="/admin/*"
+            element={
+              <AdminProtectedRoute>
+                <Navigate to="/admin" replace />
               </AdminProtectedRoute>
             }
           />
