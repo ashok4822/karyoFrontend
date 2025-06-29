@@ -62,7 +62,7 @@ const Index = () => {
             </Col>
             <Col lg={6} className="d-none d-lg-block">
               <img
-                src="/public/herobg2.png"
+                src="/herobg2.png"
                 alt="Laptop Backpack PNGTree"
                 className="img-fluid rounded-3 shadow"
               />
