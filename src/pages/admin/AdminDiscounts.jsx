@@ -24,14 +24,24 @@ import {
   FaUndo,
 } from 'react-icons/fa';
 import AdminLeftbar from '../../components/AdminLeftbar';
+import {
+  fetchDiscounts,
+  createDiscount,
+  updateDiscount,
+  deleteDiscount,
+  restoreDiscount,
+  clearError,
+} from '../../redux/reducers/discountSlice';
+import Swal from 'sweetalert2';
 
 const AdminDiscounts = () => {
   const dispatch = useDispatch();
+  const { discounts, loading, error, total, page, totalPages } = useSelector((state) => state.discounts);
   const [showModal, setShowModal] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -42,36 +52,63 @@ const AdminDiscounts = () => {
     validFrom: '',
     validTo: '',
     status: 'active',
+    maxUsage: '',
   });
 
-  // Mock data for now - replace with actual Redux state later
-  const [discounts, setDiscounts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
   useEffect(() => {
-    // TODO: Replace with actual API call
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setDiscounts([]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    // Fetch discounts on component mount
+    dispatch(fetchDiscounts({
+      page: 1,
+      limit: 10,
+      search: searchQuery,
+      status: statusFilter,
+      sortBy: sortConfig.key,
+      sortOrder: sortConfig.direction,
+    }));
+  }, [dispatch]);
+
+  // Refetch discounts when filters change
+  useEffect(() => {
+    dispatch(fetchDiscounts({
+      page: 1,
+      limit: 10,
+      search: searchQuery,
+      status: statusFilter,
+      sortBy: sortConfig.key,
+      sortOrder: sortConfig.direction,
+    }));
+  }, [dispatch, searchQuery, statusFilter, sortConfig]);
+
+  // Handle errors with SweetAlert
+  useEffect(() => {
+    if (error) {
+      Swal.fire({
+        title: 'Error!',
+        text: error,
+        icon: 'error',
+        confirmButtonColor: '#dc3545'
+      });
+      // Clear error after showing
+      setTimeout(() => {
+        dispatch(clearError());
+      }, 100);
+    }
+  }, [error, dispatch]);
 
   const handleShowModal = (discount = null) => {
     if (discount) {
       setEditingDiscount(discount);
       setFormData({
         name: discount.name,
-        description: discount.description,
+        description: discount.description || '',
         discountType: discount.discountType,
-        discountValue: discount.discountValue,
-        minimumAmount: discount.minimumAmount,
-        maximumDiscount: discount.maximumDiscount,
-        validFrom: discount.validFrom,
-        validTo: discount.validTo,
+        discountValue: discount.discountValue.toString(),
+        minimumAmount: discount.minimumAmount ? discount.minimumAmount.toString() : '',
+        maximumDiscount: discount.maximumDiscount ? discount.maximumDiscount.toString() : '',
+        validFrom: new Date(discount.validFrom).toISOString().slice(0, 16),
+        validTo: new Date(discount.validTo).toISOString().slice(0, 16),
         status: discount.status,
+        maxUsage: discount.maxUsage ? discount.maxUsage.toString() : '',
       });
     } else {
       setEditingDiscount(null);
@@ -85,12 +122,40 @@ const AdminDiscounts = () => {
         validFrom: '',
         validTo: '',
         status: 'active',
+        maxUsage: '',
       });
     }
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
+    // Check if there are unsaved changes
+    const hasChanges = formData.name || formData.description || formData.discountValue || 
+                      formData.minimumAmount || formData.maximumDiscount || formData.validFrom || formData.validTo;
+    
+    if (hasChanges && !editingDiscount) {
+      // For new discount, check if any field is filled
+      Swal.fire({
+        title: 'Unsaved Changes',
+        text: 'You have unsaved changes. Are you sure you want to close?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, close',
+        cancelButtonText: 'Continue editing',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          closeModal();
+        }
+      });
+    } else {
+      closeModal();
+    }
+  };
+
+  const closeModal = () => {
     setShowModal(false);
     setEditingDiscount(null);
     setFormData({
@@ -103,28 +168,175 @@ const AdminDiscounts = () => {
       validFrom: '',
       validTo: '',
       status: 'active',
+      maxUsage: '',
     });
+    dispatch(clearError());
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // TODO: Replace with actual API call
-    console.log('Form submitted:', formData);
-    handleCloseModal();
+    
+    // Show loading state
+    Swal.fire({
+      title: editingDiscount ? 'Updating...' : 'Creating...',
+      text: editingDiscount 
+        ? 'Please wait while we update the discount.' 
+        : 'Please wait while we create the discount.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    if (editingDiscount) {
+      dispatch(updateDiscount({ id: editingDiscount._id, discountData: formData }))
+        .unwrap()
+        .then(() => {
+          Swal.fire({
+            title: 'Updated!',
+            text: 'Discount has been updated successfully.',
+            icon: 'success',
+            confirmButtonColor: '#28a745'
+          });
+          handleCloseModal();
+        })
+        .catch((error) => {
+          Swal.fire({
+            title: 'Error!',
+            text: error || 'Failed to update discount. Please try again.',
+            icon: 'error',
+            confirmButtonColor: '#dc3545'
+          });
+        });
+    } else {
+      dispatch(createDiscount(formData))
+        .unwrap()
+        .then(() => {
+          Swal.fire({
+            title: 'Created!',
+            text: 'Discount has been created successfully.',
+            icon: 'success',
+            confirmButtonColor: '#28a745'
+          });
+          handleCloseModal();
+        })
+        .catch((error) => {
+          Swal.fire({
+            title: 'Error!',
+            text: error || 'Failed to create discount. Please try again.',
+            icon: 'error',
+            confirmButtonColor: '#dc3545'
+          });
+        });
+    }
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this discount?')) {
-      // TODO: Replace with actual API call
-      console.log('Delete discount:', id);
-    }
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      customClass: {
+        confirmButton: 'btn btn-danger',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Show loading state
+        Swal.fire({
+          title: 'Deleting...',
+          text: 'Please wait while we delete the discount.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Dispatch delete action
+        dispatch(deleteDiscount(id))
+          .unwrap()
+          .then(() => {
+            Swal.fire({
+              title: 'Deleted!',
+              text: 'Discount has been deleted successfully.',
+              icon: 'success',
+              confirmButtonColor: '#28a745'
+            });
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: 'Error!',
+              text: error || 'Failed to delete discount. Please try again.',
+              icon: 'error',
+              confirmButtonColor: '#dc3545'
+            });
+          });
+      }
+    });
+  };
+
+  const handleRestore = (id) => {
+    Swal.fire({
+      title: 'Restore Discount?',
+      text: "This will restore the discount and make it active again.",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, restore it!',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      customClass: {
+        confirmButton: 'btn btn-success',
+        cancelButton: 'btn btn-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Show loading state
+        Swal.fire({
+          title: 'Restoring...',
+          text: 'Please wait while we restore the discount.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Dispatch restore action
+        dispatch(restoreDiscount(id))
+          .unwrap()
+          .then(() => {
+            Swal.fire({
+              title: 'Restored!',
+              text: 'Discount has been restored successfully.',
+              icon: 'success',
+              confirmButtonColor: '#28a745'
+            });
+          })
+          .catch((error) => {
+            Swal.fire({
+              title: 'Error!',
+              text: error || 'Failed to restore discount. Please try again.',
+              icon: 'error',
+              confirmButtonColor: '#dc3545'
+            });
+          });
+      }
+    });
   };
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
       key,
-      direction:
-        prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
 
@@ -137,12 +349,29 @@ const AdminDiscounts = () => {
     );
   };
 
-  if (loading) {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatDateTime = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  if (loading && discounts.length === 0) {
     return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
+      <Container fluid className="py-5">
+        <Row>
+          <Col xs={12} md={3} lg={2} className="p-0">
+            <AdminLeftbar />
+          </Col>
+          <Col xs={12} md={9} lg={10}>
+            <Container className="py-5 text-center">
+              <Spinner animation="border" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+            </Container>
+          </Col>
+        </Row>
       </Container>
     );
   }
@@ -171,7 +400,7 @@ const AdminDiscounts = () => {
             </Row>
 
             {error && (
-              <Alert variant="danger" dismissible onClose={() => setError(null)}>
+              <Alert variant="danger" dismissible onClose={() => dispatch(clearError())}>
                 {error}
               </Alert>
             )}
@@ -217,7 +446,7 @@ const AdminDiscounts = () => {
             {/* Discounts Table */}
             <Card className="border-0 shadow-sm">
               <Card.Header className="bg-light">
-                <h5 className="mb-0">Discounts ({discounts.length})</h5>
+                <h5 className="mb-0">Discounts ({total})</h5>
               </Card.Header>
               <Card.Body>
                 <div className="table-responsive">
@@ -245,6 +474,7 @@ const AdminDiscounts = () => {
                             Status {getSortIcon('status')}
                           </div>
                         </th>
+                        <th>Usage</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -258,7 +488,17 @@ const AdminDiscounts = () => {
                               <Button
                                 variant="outline-primary"
                                 size="sm"
-                                onClick={() => handleShowModal()}
+                                onClick={() => {
+                                  handleShowModal();
+                                  // Show a helpful message
+                                  Swal.fire({
+                                    title: 'Create Your First Discount!',
+                                    text: 'Let\'s get started by creating your first discount offer.',
+                                    icon: 'info',
+                                    confirmButtonColor: '#007bff',
+                                    confirmButtonText: 'Got it!'
+                                  });
+                                }}
                               >
                                 Create your first discount
                               </Button>
@@ -269,21 +509,38 @@ const AdminDiscounts = () => {
                         discounts.map((discount) => (
                           <tr key={discount._id}>
                             <td>{discount.name}</td>
-                            <td>{discount.description}</td>
+                            <td>{discount.description || '-'}</td>
                             <td>
                               <Badge bg={discount.discountType === 'percentage' ? 'info' : 'warning'}>
                                 {discount.discountType}
                               </Badge>
                             </td>
-                            <td>{discount.discountValue}</td>
-                            <td>₹{discount.minimumAmount}</td>
                             <td>
-                              {new Date(discount.validFrom).toLocaleDateString()} - {new Date(discount.validTo).toLocaleDateString()}
+                              {discount.discountType === 'percentage' 
+                                ? `${discount.discountValue}%` 
+                                : `₹${discount.discountValue}`
+                              }
                             </td>
                             <td>
-                              <Badge bg={discount.status === 'active' ? 'success' : 'secondary'}>
+                              {discount.minimumAmount > 0 ? `₹${discount.minimumAmount}` : '-'}
+                            </td>
+                            <td>
+                              <div>
+                                <div>From: {formatDate(discount.validFrom)}</div>
+                                <div>To: {formatDate(discount.validTo)}</div>
+                              </div>
+                            </td>
+                            <td>
+                              <Badge bg={
+                                discount.status === 'active' ? 'success' : 
+                                discount.status === 'inactive' ? 'secondary' : 'danger'
+                              }>
                                 {discount.status}
                               </Badge>
+                            </td>
+                            <td>
+                              {discount.usageCount || 0}
+                              {discount.maxUsage && ` / ${discount.maxUsage}`}
                             </td>
                             <td>
                               <div className="d-flex gap-2">
@@ -291,6 +548,7 @@ const AdminDiscounts = () => {
                                   variant="outline-primary"
                                   size="sm"
                                   onClick={() => handleShowModal(discount)}
+                                  title="Edit Discount"
                                 >
                                   <FaEdit />
                                 </Button>
@@ -298,6 +556,7 @@ const AdminDiscounts = () => {
                                   variant="outline-danger"
                                   size="sm"
                                   onClick={() => handleDelete(discount._id)}
+                                  title="Delete Discount"
                                 >
                                   <FaTrash />
                                 </Button>
@@ -377,10 +636,18 @@ const AdminDiscounts = () => {
                   <Form.Label>Discount Value *</Form.Label>
                   <Form.Control
                     type="number"
+                    step="0.01"
+                    min="0"
+                    max={formData.discountType === 'percentage' ? '100' : undefined}
                     value={formData.discountValue}
                     onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
                     required
                   />
+                  {formData.discountType === 'percentage' && (
+                    <Form.Text className="text-muted">
+                      Maximum 100%
+                    </Form.Text>
+                  )}
                 </Form.Group>
               </Col>
             </Row>
@@ -390,6 +657,8 @@ const AdminDiscounts = () => {
                   <Form.Label>Minimum Amount</Form.Label>
                   <Form.Control
                     type="number"
+                    step="0.01"
+                    min="0"
                     value={formData.minimumAmount}
                     onChange={(e) => setFormData({ ...formData, minimumAmount: e.target.value })}
                   />
@@ -400,6 +669,8 @@ const AdminDiscounts = () => {
                   <Form.Label>Maximum Discount</Form.Label>
                   <Form.Control
                     type="number"
+                    step="0.01"
+                    min="0"
                     value={formData.maximumDiscount}
                     onChange={(e) => setFormData({ ...formData, maximumDiscount: e.target.value })}
                   />
@@ -430,13 +701,37 @@ const AdminDiscounts = () => {
                 </Form.Group>
               </Col>
             </Row>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Maximum Usage</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    value={formData.maxUsage}
+                    onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
+                    placeholder="Leave empty for unlimited"
+                  />
+                  <Form.Text className="text-muted">
+                    Leave empty for unlimited usage
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={handleCloseModal}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit">
-              {editingDiscount ? 'Update Discount' : 'Create Discount'}
+            <Button variant="primary" type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {editingDiscount ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                editingDiscount ? 'Update Discount' : 'Create Discount'
+              )}
             </Button>
           </Modal.Footer>
         </Form>
