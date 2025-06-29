@@ -48,6 +48,7 @@ import Wishlist from "../../pages/user/Wishlist";
 import Cart from "../../pages/user/Cart";
 import Checkout from "../../pages/user/Checkout";
 import OrderConfirmation from "../../pages/user/OrderConfirmation";
+import AdminDiscounts from "../../pages/admin/AdminDiscounts";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,14 @@ const AppRoutes = () => {
             element={
               <AdminProtectedRoute>
                 <CategoryManagement />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/discounts"
+            element={
+              <AdminProtectedRoute>
+                <AdminDiscounts />
               </AdminProtectedRoute>
             }
           />

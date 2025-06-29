@@ -11,6 +11,7 @@ import {
   FaGift,
   FaImage,
   FaChartBar,
+  FaPercent,
 } from "react-icons/fa";
 import "./AdminLeftbar.css";
 import { useDispatch } from "react-redux";
@@ -31,6 +32,7 @@ const links = [
   { to: "/admin/categories", icon: <FaList />, label: "Category" },
   { to: "/admin/offers", icon: <FaGift />, label: "Offers" },
   { to: "/admin/banners", icon: <FaImage />, label: "Banner" },
+  { to: "/admin/discounts", icon: <FaPercent />, label: "Discounts" },
   { to: "/admin/sales-report", icon: <FaChartBar />, label: "Sales Report" },
 ];
 
