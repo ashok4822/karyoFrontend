@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Container,
   Row,
@@ -22,12 +22,14 @@ import {
   FaTimesCircle,
   FaKey,
   FaCamera,
+  FaChevronDown,
+  FaChevronRight,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 import userAxios from "../../lib/userAxios";
 import { loginSuccess } from "../../redux/reducers/authSlice";
 import { OTP_EXPIRY_SECONDS } from "../../lib/utils";
-import { fetchUserOrders } from "../../redux/reducers/orderSlice";
+import { fetchUserOrders, cancelOrder } from "../../redux/reducers/orderSlice";
 
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
@@ -114,8 +116,21 @@ const UserProfile = () => {
   const [forgotPasswordTimer, setForgotPasswordTimer] = useState(0);
 
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const { orders, loading: ordersLoading, error: ordersError } = useSelector((state) => state.order);
+  const {
+    orders,
+    loading: ordersLoading,
+    error: ordersError,
+  } = useSelector((state) => state.order);
+
+  // Add state for cancel modal
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelTarget, setCancelTarget] = useState(null); // { orderId, productVariantId (optional) }
+
+  // In showOrdersContent, update tbody:
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
 
   // On mount, check for tab query param
   useEffect(() => {
@@ -501,6 +516,7 @@ const UserProfile = () => {
             }}
             className="mb-3 shadow-sm"
             alt="User Avatar"
+            onClick={uploading ? undefined : handleAvatarClick}
           />
           <h5 className="fw-bold mb-1">{user?.username || "User Name"}</h5>
           <div className="text-muted small mb-3">
@@ -1258,34 +1274,279 @@ const UserProfile = () => {
           <div className="text-center py-5">
             <FaBoxOpen size={48} className="text-muted mb-3" />
             <h6 className="text-muted">No orders found</h6>
-            <p className="text-muted small">You have not placed any orders yet.</p>
+            <p className="text-muted small">
+              You have not placed any orders yet.
+            </p>
           </div>
         ) : (
           <div className="table-responsive">
             <table className="table table-hover align-middle">
               <thead>
                 <tr>
+                  <th></th>
                   <th>Order #</th>
-                  <th>Date</th>
                   <th>Status</th>
                   <th>Total</th>
                   <th>Items</th>
-                  <th></th>
+                  <th>Order Details</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order._id}>
-                    <td className="fw-semibold">{order.orderNumber}</td>
-                    <td>{new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                    <td><span className={`badge bg-${order.status === 'delivered' ? 'success' : order.status === 'cancelled' ? 'danger' : 'info'} bg-opacity-25 text-${order.status === 'delivered' ? 'success' : order.status === 'cancelled' ? 'danger' : 'info'}`}>{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span></td>
-                    <td className="fw-bold">₹{order.total.toFixed(2)}</td>
-                    <td>{order.items.length}</td>
-                    <td>
-                      <a href={`/order-confirmation/${order._id}`} className="btn btn-sm btn-outline-primary">View</a>
-                    </td>
-                  </tr>
-                ))}
+                {orders.map((order) => {
+                  const rows = [
+                    <tr
+                      key={order._id}
+                      style={{ cursor: "pointer" }}
+                      onClick={(e) => {
+                        // Prevent row click if clicking a button or link
+                        if (
+                          e.target.tagName === "BUTTON" ||
+                          e.target.tagName === "A" ||
+                          e.target.closest("button") ||
+                          e.target.closest("a")
+                        )
+                          return;
+                        setExpandedOrderId(
+                          expandedOrderId === order._id ? null : order._id
+                        );
+                      }}
+                    >
+                      <td style={{ width: 32 }}>
+                        {expandedOrderId === order._id ? (
+                          <FaChevronDown />
+                        ) : (
+                          <FaChevronRight />
+                        )}
+                      </td>
+                      <td className="fw-semibold">{order.orderNumber}</td>
+                      <td>
+                        <span
+                          className={`badge bg-${
+                            order.status === "delivered"
+                              ? "success"
+                              : order.status === "cancelled"
+                              ? "danger"
+                              : "info"
+                          } bg-opacity-25 text-${
+                            order.status === "delivered"
+                              ? "success"
+                              : order.status === "cancelled"
+                              ? "danger"
+                              : "info"
+                          }`}
+                        >
+                          {order.status.charAt(0).toUpperCase() +
+                            order.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="fw-bold">
+                        ₹{(order.total ?? 0).toFixed(2)}
+                      </td>
+                      <td>{order.items.length}</td>
+                      <td>
+                        {order.status === "pending" && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            className="ms-2"
+                            onClick={() => handleOpenCancelModal(order._id)}
+                          >
+                            Cancel Order
+                          </Button>
+                        )}
+                        <a
+                          href={`/order-confirmation/${order._id}`}
+                          className="btn btn-sm btn-outline-primary ms-2"
+                        >
+                          View
+                        </a>
+                      </td>
+                    </tr>,
+                  ];
+                  if (expandedOrderId === order._id) {
+                    rows.push(
+                      <tr key={order._id + "-expanded"}>
+                        <td colSpan={7} style={{ background: "#f8f9fa" }}>
+                          <div className="p-3">
+                            <h6 className="fw-bold mb-3">Order Items</h6>
+                            <div className="row g-3">
+                              {order.items.map((item, idx) => (
+                                <div
+                                  key={
+                                    item.productVariantId._id ||
+                                    item.productVariantId
+                                  }
+                                  className="col-md-6 col-lg-4"
+                                >
+                                  <div className="d-flex align-items-center border rounded-3 p-2 bg-white">
+                                    <div
+                                      style={{
+                                        width: 56,
+                                        height: 56,
+                                        cursor: "pointer",
+                                      }}
+                                      className="me-3 flex-shrink-0"
+                                      onClick={() => {
+                                        const productId =
+                                          item.productVariantId?.product?._id ||
+                                          item.productVariantId?.product ||
+                                          item.productVariantId;
+                                        if (productId)
+                                          navigate(`/products/${productId}`);
+                                      }}
+                                    >
+                                      {item.productVariantId?.imageUrls?.[0] ? (
+                                        <img
+                                          src={
+                                            item.productVariantId.imageUrls[0]
+                                          }
+                                          alt={
+                                            item.productVariantId.product?.name
+                                          }
+                                          className="img-fluid rounded-3"
+                                          style={{
+                                            width: 56,
+                                            height: 56,
+                                            objectFit: "cover",
+                                            cursor: "pointer",
+                                          }}
+                                        />
+                                      ) : (
+                                        <div
+                                          className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
+                                          style={{ width: 56, height: 56 }}
+                                        ></div>
+                                      )}
+                                    </div>
+                                    <div className="flex-grow-1">
+                                      <div
+                                        className="fw-semibold text-dark"
+                                        style={{
+                                          cursor: "pointer",
+                                          textDecoration: "underline",
+                                        }}
+                                        onClick={() => {
+                                          const productId =
+                                            item.productVariantId?.product
+                                              ?._id ||
+                                            item.productVariantId?.product ||
+                                            item.productVariantId;
+                                          if (productId)
+                                            navigate(`/products/${productId}`);
+                                        }}
+                                      >
+                                        {item.productVariantId?.product?.name ||
+                                          "Product"}
+                                      </div>
+                                      <div className="text-muted small">
+                                        {item.productVariantId?.colour}{" "}
+                                        {item.productVariantId?.capacity &&
+                                          `- ${item.productVariantId.capacity}`}
+                                      </div>
+                                      <div className="text-muted small">
+                                        Qty: {item.quantity}
+                                      </div>
+                                      <div className="text-muted small">
+                                        Price: ₹
+                                        {(item.price * item.quantity).toFixed(
+                                          2
+                                        )}
+                                      </div>
+                                      <div className="mt-1">
+                                        {item.cancelled ? (
+                                          <span className="badge bg-danger bg-opacity-25 text-danger">
+                                            Cancelled
+                                          </span>
+                                        ) : order.status === "pending" ? (
+                                          <Button
+                                            variant="outline-danger"
+                                            size="sm"
+                                            onClick={() =>
+                                              handleOpenCancelModal(
+                                                order._id,
+                                                item.productVariantId._id ||
+                                                  item.productVariantId
+                                              )
+                                            }
+                                          >
+                                            Cancel Product
+                                          </Button>
+                                        ) : (
+                                          <span className="badge bg-success bg-opacity-25 text-success">
+                                            Active
+                                          </span>
+                                        )}
+                                      </div>
+                                      {item.cancellationReason &&
+                                        item.cancelled && (
+                                          <div className="text-muted small mt-1">
+                                            Reason: {item.cancellationReason}
+                                          </div>
+                                        )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-4">
+                              <h6 className="fw-bold mb-2">
+                                Order Status:{" "}
+                                <span
+                                  className={`badge bg-${
+                                    order.status === "delivered"
+                                      ? "success"
+                                      : order.status === "cancelled"
+                                      ? "danger"
+                                      : "info"
+                                  } bg-opacity-25 text-${
+                                    order.status === "delivered"
+                                      ? "success"
+                                      : order.status === "cancelled"
+                                      ? "danger"
+                                      : "info"
+                                  }`}
+                                >
+                                  {order.status.charAt(0).toUpperCase() +
+                                    order.status.slice(1)}
+                                </span>
+                              </h6>
+                              {order.cancellationReason &&
+                                order.status === "cancelled" && (
+                                  <div className="text-muted small">
+                                    Order Cancellation Reason:{" "}
+                                    {order.cancellationReason}
+                                  </div>
+                                )}
+                              <div className="text-muted small">
+                                Order Date:{" "}
+                                {(() => {
+                                  const d = new Date(order.createdAt);
+                                  const day = String(d.getDate()).padStart(
+                                    2,
+                                    "0"
+                                  );
+                                  const month = String(
+                                    d.getMonth() + 1
+                                  ).padStart(2, "0");
+                                  const year = d.getFullYear();
+                                  const hours = String(d.getHours()).padStart(
+                                    2,
+                                    "0"
+                                  );
+                                  const minutes = String(
+                                    d.getMinutes()
+                                  ).padStart(2, "0");
+                                  return `${day}/${month}/${year}, ${hours}:${minutes}`;
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return rows;
+                })}
               </tbody>
             </table>
           </div>
@@ -1329,6 +1590,34 @@ const UserProfile = () => {
       return () => clearTimeout(timer);
     }
   }, [editEmailSuccess]);
+
+  // Handler to open cancel modal
+  const handleOpenCancelModal = (orderId, productVariantId = null) => {
+    setCancelTarget({ orderId, productVariantId });
+    setCancelReason("");
+    setShowCancelModal(true);
+  };
+
+  // Handler to submit cancellation
+  const handleSubmitCancel = async () => {
+    if (!cancelTarget) return;
+    const { orderId, productVariantId } = cancelTarget;
+    try {
+      await dispatch(
+        cancelOrder({
+          orderId,
+          reason: cancelReason,
+          productVariantIds: productVariantId ? [productVariantId] : undefined,
+        })
+      ).unwrap();
+      setShowCancelModal(false);
+      setCancelTarget(null);
+      setCancelReason("");
+      // Optionally, show a toast or alert for success
+    } catch (err) {
+      // Optionally, show a toast or alert for error
+    }
+  };
 
   return (
     <Container className="py-5">
@@ -1433,6 +1722,34 @@ const UserProfile = () => {
           {activeIndex === 6 && editEmailContent}
         </Col>
       </Row>
+      {/* Add Modal for cancellation reason */}
+      <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Cancel {cancelTarget?.productVariantId ? "Product" : "Order"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Reason for cancellation (optional)</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Enter reason (optional)"
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
+            Close
+          </Button>
+          <Button variant="danger" onClick={handleSubmitCancel}>
+            Confirm Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

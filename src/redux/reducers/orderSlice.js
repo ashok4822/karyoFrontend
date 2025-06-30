@@ -53,6 +53,24 @@ export const fetchOrderById = createAsyncThunk(
   }
 );
 
+// Cancel order or products
+export const cancelOrder = createAsyncThunk(
+  "order/cancelOrder",
+  async ({ orderId, reason, productVariantIds }, thunkAPI) => {
+    try {
+      const response = await userAxios.patch(
+        `/orders/${orderId}/cancel`,
+        { reason, productVariantIds }
+      );
+      return response.data.order;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to cancel order"
+      );
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: "order",
   initialState,
@@ -103,6 +121,26 @@ const orderSlice = createSlice({
         state.currentOrder = action.payload.order;
       })
       .addCase(fetchOrderById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Cancel order
+      .addCase(cancelOrder.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(cancelOrder.fulfilled, (state, action) => {
+        state.loading = false;
+        // Update currentOrder if matches
+        if (state.currentOrder && state.currentOrder._id === action.payload._id) {
+          state.currentOrder = action.payload;
+        }
+        // Update in orders list
+        state.orders = state.orders.map((order) =>
+          order._id === action.payload._id ? action.payload : order
+        );
+      })
+      .addCase(cancelOrder.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

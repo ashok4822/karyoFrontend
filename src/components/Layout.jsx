@@ -37,7 +37,7 @@ const Layout = () => {
       <Navbar bg="light" expand="lg" className="shadow-sm">
         <Container>
           <Navbar.Brand as={Link} to="/" className="fw-bold text-primary">
-            kaARYO
+            CARYO
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
@@ -62,7 +62,14 @@ const Layout = () => {
                   <img
                     src={user.profileImage || "/profile.png"}
                     alt="Profile"
-                    style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: "1px solid #ddd", cursor: "pointer" }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "1px solid #ddd",
+                      cursor: "pointer",
+                    }}
                     onClick={() => navigate("/profile")}
                   />
                 </span>
@@ -115,7 +122,7 @@ const Layout = () => {
         <Container>
           <Row className="mb-4">
             <Col md={4} className="mb-4 mb-md-0">
-              <h4 className="fw-bold mb-3">KARYO</h4>
+              <h4 className="fw-bold mb-3">CARYO</h4>
               <p className="text-muted small mb-3">
                 Your one-stop shop for high-quality backpacks and accessories.
               </p>
