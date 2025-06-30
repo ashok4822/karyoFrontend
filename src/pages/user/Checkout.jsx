@@ -53,6 +53,7 @@ const Checkout = () => {
   const [editErrors, setEditErrors] = useState({});
   const [codAvailable, setCodAvailable] = useState(true);
   const [codChecking, setCodChecking] = useState(false);
+  const [discountsFetchAttempted, setDiscountsFetchAttempted] = useState(false);
 
   // Initialize cart if not already done
   useEffect(() => {
@@ -68,12 +69,19 @@ const Checkout = () => {
     }
   }, [cart.initialized, cartInitialized]);
 
-  // Fetch active discounts when component mounts
+  // Fetch active discounts when component mounts (prevent infinite loop)
   useEffect(() => {
-    if (cartInitialized && !userDiscounts.loading && userDiscounts.activeDiscounts.length === 0) {
+    if (
+      cartInitialized &&
+      !userDiscounts.loading &&
+      userDiscounts.activeDiscounts.length === 0 &&
+      !discountsFetchAttempted &&
+      !userDiscounts.error
+    ) {
       dispatch(fetchUserActiveDiscounts());
+      setDiscountsFetchAttempted(true);
     }
-  }, [dispatch, cartInitialized, userDiscounts.loading, userDiscounts.activeDiscounts.length]);
+  }, [dispatch, cartInitialized, userDiscounts.loading, userDiscounts.activeDiscounts.length, discountsFetchAttempted, userDiscounts.error]);
 
   useEffect(() => {
     // Wait for cart to be initialized before making any checks
@@ -170,11 +178,21 @@ const Checkout = () => {
     const subtotal = calculateSubtotal();
     const discount = userDiscounts.selectedDiscount;
     
+    let discountAmount = 0;
+    
     if (discount.discountType === "percentage") {
-      return (subtotal * discount.discountValue) / 100;
+      discountAmount = (subtotal * discount.discountValue) / 100;
+      
+      // Apply maximum discount limit if set
+      if (discount.maximumDiscount && discountAmount > discount.maximumDiscount) {
+        discountAmount = discount.maximumDiscount;
+      }
     } else {
-      return Math.min(discount.discountValue, subtotal);
+      discountAmount = Math.min(discount.discountValue, subtotal);
     }
+    
+    // Ensure discount doesn't exceed order amount
+    return Math.min(discountAmount, subtotal);
   };
 
   const calculateSubtotalAfterDiscount = () => {
@@ -204,35 +222,35 @@ const Checkout = () => {
       
       setCodAvailable(response.data.isAvailable);
       
-      if (!response.data.isAvailable) {
-        const restrictions = response.data.restrictions;
-        const messages = [];
-        if (restrictions.location) messages.push(restrictions.location);
-        if (restrictions.amount) messages.push(restrictions.amount);
-        
-        toast({
-          title: "COD Not Available",
-          description: messages.join(". "),
-          variant: "destructive",
-        });
-        
-        // Switch to online payment if COD is not available
+      // If COD is not available and currently selected, switch to online payment
+      if (!response.data.isAvailable && paymentMethod === "cod") {
         setPaymentMethod("online");
       }
     } catch (error) {
       console.error("Error checking COD availability:", error);
       setCodAvailable(false);
+      // If there's an error and COD is currently selected, switch to online payment
+      if (paymentMethod === "cod") {
+        setPaymentMethod("online");
+      }
     } finally {
       setCodChecking(false);
     }
-  }, [selectedAddressId, cart.items, userDiscounts.selectedDiscount]);
+  }, [selectedAddressId, cart.items, userDiscounts.selectedDiscount, paymentMethod]);
 
   // Check COD availability when address or total changes
   useEffect(() => {
-    if (selectedAddressId && cartInitialized && paymentMethod === "cod") {
+    if (selectedAddressId && cartInitialized) {
       checkCODAvailability();
     }
-  }, [selectedAddressId, paymentMethod, cartInitialized, checkCODAvailability]);
+  }, [selectedAddressId, cartInitialized, checkCODAvailability]);
+
+  // Check COD availability when user switches to COD payment method
+  useEffect(() => {
+    if (paymentMethod === "cod" && selectedAddressId && cartInitialized) {
+      checkCODAvailability();
+    }
+  }, [paymentMethod, selectedAddressId, cartInitialized, checkCODAvailability]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -455,7 +473,16 @@ const Checkout = () => {
   const getEligibleDiscounts = () => {
     return userDiscounts.activeDiscounts.filter(discount => {
       const subtotal = calculateSubtotal();
-      return subtotal >= discount.minimumAmount;
+      // Backend already filters by status, validity, and usage limits
+      // Frontend only needs to check minimum amount requirement
+      const meetsMinimumAmount = subtotal >= discount.minimumAmount;
+      
+      // Additional frontend check for usage limits (backup to backend)
+      const hasUsageLeft = !discount.maxUsagePerUser || 
+                          !discount.userUsageCount || 
+                          discount.userUsageCount < discount.maxUsagePerUser;
+      
+      return meetsMinimumAmount && hasUsageLeft;
     });
   };
 
@@ -554,6 +581,11 @@ const Checkout = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Optionally, allow retry on error (e.g., via a button)
+  const handleRetryFetchDiscounts = () => {
+    setDiscountsFetchAttempted(false);
   };
 
   // Show loading state while cart is being initialized
@@ -1472,7 +1504,21 @@ const Checkout = () => {
                             : `₹${discount.discountValue} off`
                           }
                           {discount.minimumAmount > 0 && ` (Min. ₹${discount.minimumAmount})`}
+                          {discount.maximumDiscount && discount.discountType === "percentage" && 
+                            ` (Max. ₹${discount.maximumDiscount})`
+                          }
                         </div>
+                        {discount.maxUsagePerUser && (
+                          <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.25rem" }}>
+                            Used: {discount.userUsageCount || 0}/{discount.maxUsagePerUser} times
+                            {discount.userUsageCount >= discount.maxUsagePerUser && (
+                              <span style={{ color: "#ef4444", fontWeight: "500" }}> (Limit reached)</span>
+                            )}
+                            {discount.userUsageCount === discount.maxUsagePerUser - 1 && (
+                              <span style={{ color: "#f59e0b", fontWeight: "500" }}> (Last use!)</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </label>
                   ))}

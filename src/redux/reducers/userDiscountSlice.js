@@ -6,11 +6,11 @@ export const fetchUserActiveDiscounts = createAsyncThunk(
   "userDiscounts/fetchUserActiveDiscounts",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await userAxios.get("/discounts/active/all");
+      const response = await userAxios.get("/users/discounts/eligible");
       return response.data;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch active discounts"
+        error.response?.data?.message || "Failed to fetch eligible discounts"
       );
     }
   }
