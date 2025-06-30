@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useLocation } from "react-router-dom";
 import {
   Container,
   Row,
@@ -26,6 +27,7 @@ import Swal from "sweetalert2";
 import userAxios from "../../lib/userAxios";
 import { loginSuccess } from "../../redux/reducers/authSlice";
 import { OTP_EXPIRY_SECONDS } from "../../lib/utils";
+import { fetchUserOrders } from "../../redux/reducers/orderSlice";
 
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
@@ -110,6 +112,25 @@ const UserProfile = () => {
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState("");
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordTimer, setForgotPasswordTimer] = useState(0);
+
+  const location = useLocation();
+
+  const { orders, loading: ordersLoading, error: ordersError } = useSelector((state) => state.order);
+
+  // On mount, check for tab query param
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get("tab");
+    if (tab === "orders") {
+      setActiveIndex(3);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (activeIndex === 3) {
+      dispatch(fetchUserOrders());
+    }
+  }, [activeIndex, dispatch]);
 
   const handleAvatarClick = () => {
     fileInputRef.current.click();
@@ -1227,14 +1248,48 @@ const UserProfile = () => {
     <Card className="shadow-sm border-0">
       <Card.Body>
         <h5 className="fw-bold mb-3">My Orders</h5>
-        <div className="text-center py-5">
-          <FaBoxOpen size={48} className="text-muted mb-3" />
-          <h6 className="text-muted">Order History</h6>
-          <p className="text-muted small">
-            Your order history will appear here
-          </p>
-          <p className="text-muted small">This feature is coming soon!</p>
-        </div>
+        {ordersLoading ? (
+          <div className="text-center py-5">
+            <Spinner animation="border" />
+          </div>
+        ) : ordersError ? (
+          <Alert variant="danger">{ordersError}</Alert>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-5">
+            <FaBoxOpen size={48} className="text-muted mb-3" />
+            <h6 className="text-muted">No orders found</h6>
+            <p className="text-muted small">You have not placed any orders yet.</p>
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Items</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order._id}>
+                    <td className="fw-semibold">{order.orderNumber}</td>
+                    <td>{new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</td>
+                    <td><span className={`badge bg-${order.status === 'delivered' ? 'success' : order.status === 'cancelled' ? 'danger' : 'info'} bg-opacity-25 text-${order.status === 'delivered' ? 'success' : order.status === 'cancelled' ? 'danger' : 'info'}`}>{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span></td>
+                    <td className="fw-bold">₹{order.total.toFixed(2)}</td>
+                    <td>{order.items.length}</td>
+                    <td>
+                      <a href={`/order-confirmation/${order._id}`} className="btn btn-sm btn-outline-primary">View</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card.Body>
     </Card>
   );

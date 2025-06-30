@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate, useParams } from "react-router-dom";
-import { clearCartState } from "../../redux/reducers/cartSlice";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { clearCartState, clearCart } from "../../redux/reducers/cartSlice";
 import {
   clearCurrentOrder,
   fetchOrderById,
@@ -21,6 +21,7 @@ const OrderConfirmation = () => {
   }, [currentOrder, orderId, dispatch]);
 
   useEffect(() => {
+    dispatch(clearCart());
     dispatch(clearCartState());
     const timer = setTimeout(() => {
       dispatch(clearCurrentOrder());
@@ -105,20 +106,26 @@ const OrderConfirmation = () => {
                 <ul className="list-group list-group-flush">
                   {currentOrder.items.map((item, index) => (
                     <li key={index} className="list-group-item px-0 py-3 d-flex align-items-center">
-                      <div className="order-item-img me-3 flex-shrink-0">
-                        {item.productVariantId?.imageUrls?.[0] ? (
-                          <img src={item.productVariantId.imageUrls[0]} alt={item.productVariantId.product?.name} className="img-fluid rounded-3" style={{width: '48px', height: '48px', objectFit: 'cover'}} />
-                        ) : (
-                          <div className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style={{width: '48px', height: '48px'}}></div>
-                        )}
-                      </div>
-                      <div className="flex-grow-1">
-                        <div className="fw-semibold text-dark">{item.productVariantId?.product?.name || "Product Name"}</div>
-                        <div className="text-muted small">{item.productVariantId?.colour} {item.productVariantId?.capacity && `- ${item.productVariantId.capacity}`}</div>
-                        <div className="text-muted small">Qty: {item.quantity}</div>
-                      </div>
+                      <Link
+                        to={`/products/${item.productVariantId.product?._id}`}
+                        className="d-flex align-items-center flex-grow-1 text-decoration-none"
+                        style={{ color: 'inherit' }}
+                      >
+                        <div className="order-item-img me-3 flex-shrink-0">
+                          {item.productVariantId?.imageUrls?.[0] ? (
+                            <img src={item.productVariantId.imageUrls[0]} alt={item.productVariantId.product?.name} className="img-fluid rounded-3" style={{width: '48px', height: '48px', objectFit: 'cover'}} />
+                          ) : (
+                            <div className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" style={{width: '48px', height: '48px'}}></div>
+                          )}
+                        </div>
+                        <div className="flex-grow-1">
+                          <div className="fw-semibold text-dark">{item.productVariantId?.product?.name || "Product Name"}</div>
+                          <div className="text-muted small">{item.productVariantId?.colour} {item.productVariantId?.capacity && `- ${item.productVariantId.capacity}`}</div>
+                        </div>
+                      </Link>
                       <div className="text-end ms-3">
                         <div className="fw-bold text-dark">₹{(item.price * item.quantity).toFixed(2)}</div>
+                        <div className="text-muted small">Qty: {item.quantity}</div>
                       </div>
                     </li>
                   ))}
@@ -145,7 +152,7 @@ const OrderConfirmation = () => {
                   Continue Shopping
                 </button>
                 <button
-                  onClick={() => navigate("/profile")}
+                  onClick={() => navigate("/profile?tab=orders")}
                   className="btn btn-outline-secondary btn-lg px-4 fw-semibold shadow-sm"
                 >
                   View My Orders
