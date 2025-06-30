@@ -1,0 +1,13 @@
+/* Optional enhancements */
+.card {
+  border-radius: 1rem;
+}
+
+.list-group-item {
+  border: none;
+  border-bottom: 1px solid #eee;
+}
+
+.bg-success-subtle {
+  background-color: #d1e7dd !important;
+}

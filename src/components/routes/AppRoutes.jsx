@@ -203,7 +203,7 @@ const AppRoutes = () => {
                 </UserProtectedRoute>
               } 
             />
-            <Route path="/order-confirmation" element={<OrderConfirmation />} />
+            <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

@@ -561,16 +561,15 @@ const Checkout = () => {
         total: calculateTotal()
       };
 
-      await dispatch(createOrder(orderData)).unwrap();
-      
+      const result = await dispatch(createOrder(orderData)).unwrap();
+      const orderId = result.order?._id;
       toast({
         title: "Order placed successfully!",
         description: "Your order has been placed and you will receive a confirmation email shortly.",
         variant: "default",
       });
-
-      // Redirect to order confirmation page
-      navigate("/order-confirmation");
+      // Redirect to order confirmation page with orderId
+      navigate(`/order-confirmation/${orderId}`);
       
     } catch (error) {
       toast({
