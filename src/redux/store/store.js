@@ -9,6 +9,7 @@ import wishlistReducer from "../reducers/wishlistSlice";
 import orderReducer from "../reducers/orderSlice";
 import shippingAddressReducer from "../reducers/shippingAddressSlice";
 import discountReducer from "../reducers/discountSlice";
+import userDiscountReducer from "../reducers/userDiscountSlice";
 import storage from "redux-persist/lib/storage";
 import { persistStore, persistReducer } from "redux-persist";
 
@@ -32,6 +33,7 @@ export const store = configureStore({
     order: orderReducer,
     shippingAddress: shippingAddressReducer,
     discounts: discountReducer,
+    userDiscounts: userDiscountReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false }),

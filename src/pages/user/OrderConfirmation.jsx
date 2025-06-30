@@ -87,6 +87,9 @@ const OrderConfirmation = () => {
               <strong>Order ID:</strong> {currentOrder._id}
             </div>
             <div style={{ marginBottom: "0.5rem" }}>
+              <strong>Order Number:</strong> {currentOrder.orderNumber}
+            </div>
+            <div style={{ marginBottom: "0.5rem" }}>
               <strong>Order Date:</strong> {new Date(currentOrder.createdAt).toLocaleDateString()}
             </div>
             <div style={{ marginBottom: "0.5rem" }}>
@@ -194,8 +197,31 @@ const OrderConfirmation = () => {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
             <span>Subtotal:</span>
-            <span>₹{currentOrder.subtotal.toFixed(2)}</span>
+            <div style={{ textAlign: "right" }}>
+              {currentOrder.discount ? (
+                <>
+                  <div style={{ textDecoration: "line-through", color: "#999", fontSize: "0.875rem" }}>
+                    ₹{currentOrder.subtotal.toFixed(2)}
+                  </div>
+                  <div style={{ fontWeight: "bold", color: "#10b981" }}>
+                    ₹{currentOrder.subtotalAfterDiscount.toFixed(2)}
+                  </div>
+                </>
+              ) : (
+                <span>₹{currentOrder.subtotal.toFixed(2)}</span>
+              )}
+            </div>
           </div>
+          
+          {currentOrder.discount && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+              <span style={{ color: "#10b981" }}>Discount ({currentOrder.discount.discountName}):</span>
+              <span style={{ color: "#10b981", fontWeight: "500" }}>
+                -₹{currentOrder.discount.discountAmount.toFixed(2)}
+              </span>
+            </div>
+          )}
+          
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
             <span>Shipping:</span>
             <span>{currentOrder.shipping === 0 ? "Free" : `₹${currentOrder.shipping.toFixed(2)}`}</span>

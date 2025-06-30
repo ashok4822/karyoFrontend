@@ -5,11 +5,13 @@ import { toast } from "../../hooks/use-toast";
 import { fetchCart } from "../../redux/reducers/cartSlice";
 import { createOrder } from "../../redux/reducers/orderSlice";
 import { fetchShippingAddresses, createShippingAddress, updateShippingAddress } from "../../redux/reducers/shippingAddressSlice";
+import { fetchUserActiveDiscounts, setSelectedDiscount, clearSelectedDiscount } from "../../redux/reducers/userDiscountSlice";
 
 const Checkout = () => {
   const cart = useSelector((state) => state.cart);
   const auth = useSelector((state) => state.auth);
   const shippingAddress = useSelector((state) => state.shippingAddress);
+  const userDiscounts = useSelector((state) => state.userDiscounts);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -62,6 +64,13 @@ const Checkout = () => {
       setCartInitialized(true);
     }
   }, [cart.initialized, cartInitialized]);
+
+  // Fetch active discounts when component mounts
+  useEffect(() => {
+    if (cartInitialized && !userDiscounts.loading && userDiscounts.activeDiscounts.length === 0) {
+      dispatch(fetchUserActiveDiscounts());
+    }
+  }, [dispatch, cartInitialized, userDiscounts.loading, userDiscounts.activeDiscounts.length]);
 
   useEffect(() => {
     // Wait for cart to be initialized before making any checks
@@ -349,13 +358,64 @@ const Checkout = () => {
     }, 0);
   };
 
+  const calculateDiscount = () => {
+    if (!userDiscounts.selectedDiscount) return 0;
+    
+    const subtotal = calculateSubtotal();
+    const discount = userDiscounts.selectedDiscount;
+    
+    // Check if discount can be applied
+    if (discount.minimumAmount > 0 && subtotal < discount.minimumAmount) {
+      return 0;
+    }
+    
+    let discountAmount = 0;
+    
+    if (discount.discountType === "percentage") {
+      discountAmount = (subtotal * discount.discountValue) / 100;
+    } else {
+      discountAmount = discount.discountValue;
+    }
+    
+    // Apply maximum discount limit if set
+    if (discount.maximumDiscount && discountAmount > discount.maximumDiscount) {
+      discountAmount = discount.maximumDiscount;
+    }
+    
+    // Ensure discount doesn't exceed subtotal
+    if (discountAmount > subtotal) {
+      discountAmount = subtotal;
+    }
+    
+    return Math.round(discountAmount * 100) / 100; // Round to 2 decimal places
+  };
+
+  const calculateSubtotalAfterDiscount = () => {
+    return calculateSubtotal() - calculateDiscount();
+  };
+
   const calculateShipping = () => {
     // Free shipping for orders above ₹500, otherwise ₹50
-    return calculateSubtotal() > 500 ? 0 : 50;
+    return calculateSubtotalAfterDiscount() > 500 ? 0 : 50;
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() + calculateShipping();
+    return calculateSubtotalAfterDiscount() + calculateShipping();
+  };
+
+  const handleDiscountSelect = (discount) => {
+    if (userDiscounts.selectedDiscount?._id === discount._id) {
+      dispatch(clearSelectedDiscount());
+    } else {
+      dispatch(setSelectedDiscount(discount));
+    }
+  };
+
+  const getEligibleDiscounts = () => {
+    const subtotal = calculateSubtotal();
+    return userDiscounts.activeDiscounts.filter(discount => {
+      return discount.minimumAmount <= subtotal;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -413,6 +473,14 @@ const Checkout = () => {
         shippingAddress: shippingAddressData,
         paymentMethod,
         subtotal: calculateSubtotal(),
+        subtotalAfterDiscount: calculateSubtotalAfterDiscount(),
+        discount: userDiscounts.selectedDiscount ? {
+          discountId: userDiscounts.selectedDiscount._id,
+          discountName: userDiscounts.selectedDiscount.name,
+          discountAmount: calculateDiscount(),
+          discountType: userDiscounts.selectedDiscount.discountType,
+          discountValue: userDiscounts.selectedDiscount.discountValue
+        } : null,
         shipping: calculateShipping(),
         total: calculateTotal()
       };
@@ -1286,12 +1354,107 @@ const Checkout = () => {
               })}
             </div>
 
+            {/* Discount Selection */}
+            {getEligibleDiscounts().length > 0 && (
+              <div style={{ marginBottom: "2rem", padding: "1rem", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
+                <h3 style={{ marginBottom: "1rem", fontSize: "1.125rem" }}>Available Discounts</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {/* No Discount Option */}
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      cursor: "pointer",
+                      padding: "0.5rem",
+                      borderRadius: "4px",
+                      backgroundColor: !userDiscounts.selectedDiscount ? "#e0e7ff" : "transparent",
+                      border: !userDiscounts.selectedDiscount ? "1px solid #4f46e5" : "1px solid #ddd"
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="discount"
+                      checked={!userDiscounts.selectedDiscount}
+                      onChange={() => dispatch(clearSelectedDiscount())}
+                      style={{ margin: 0 }}
+                    />
+                    <div style={{ flex: 1, fontWeight: "500", fontSize: "0.875rem" }}>
+                      No Discount
+                    </div>
+                  </label>
+                  {/* Existing discount options below */}
+                  {getEligibleDiscounts().map((discount) => (
+                    <label
+                      key={discount._id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        cursor: "pointer",
+                        padding: "0.5rem",
+                        borderRadius: "4px",
+                        backgroundColor: userDiscounts.selectedDiscount?._id === discount._id ? "#e0e7ff" : "transparent",
+                        border: userDiscounts.selectedDiscount?._id === discount._id ? "1px solid #4f46e5" : "1px solid #ddd"
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="discount"
+                        checked={userDiscounts.selectedDiscount?._id === discount._id}
+                        onChange={() => handleDiscountSelect(discount)}
+                        style={{ margin: 0 }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: "500", fontSize: "0.875rem" }}>
+                          {discount.name}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#666" }}>
+                          {discount.description}
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: "500" }}>
+                          {discount.discountType === "percentage" 
+                            ? `${discount.discountValue}% off` 
+                            : `₹${discount.discountValue} off`
+                          }
+                          {discount.minimumAmount > 0 && ` (Min. ₹${discount.minimumAmount})`}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Price Breakdown */}
             <div style={{ borderTop: "1px solid #eee", paddingTop: "1rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                 <span>Subtotal:</span>
-                <span>₹{calculateSubtotal().toFixed(2)}</span>
+                <div style={{ textAlign: "right" }}>
+                  {userDiscounts.selectedDiscount ? (
+                    <>
+                      <div style={{ textDecoration: "line-through", color: "#999", fontSize: "0.875rem" }}>
+                        ₹{calculateSubtotal().toFixed(2)}
+                      </div>
+                      <div style={{ fontWeight: "bold", color: "#10b981" }}>
+                        ₹{calculateSubtotalAfterDiscount().toFixed(2)}
+                      </div>
+                    </>
+                  ) : (
+                    <span>₹{calculateSubtotal().toFixed(2)}</span>
+                  )}
+                </div>
               </div>
+              
+              {userDiscounts.selectedDiscount && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                  <span style={{ color: "#10b981" }}>Discount ({userDiscounts.selectedDiscount.name}):</span>
+                  <span style={{ color: "#10b981", fontWeight: "500" }}>
+                    -₹{calculateDiscount().toFixed(2)}
+                  </span>
+                </div>
+              )}
+              
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
                 <span>Shipping:</span>
                 <span>{calculateShipping() === 0 ? "Free" : `₹${calculateShipping().toFixed(2)}`}</span>
