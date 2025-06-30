@@ -49,6 +49,7 @@ import Cart from "../../pages/user/Cart";
 import Checkout from "../../pages/user/Checkout";
 import OrderConfirmation from "../../pages/user/OrderConfirmation";
 import AdminDiscounts from "../../pages/admin/AdminDiscounts";
+import AdminDiscountUsage from "../../pages/admin/AdminDiscountUsage";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +137,14 @@ const AppRoutes = () => {
             element={
               <AdminProtectedRoute>
                 <AdminDiscounts />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/discounts/usage"
+            element={
+              <AdminProtectedRoute>
+                <AdminDiscountUsage />
               </AdminProtectedRoute>
             }
           />

@@ -33,6 +33,7 @@ const links = [
   { to: "/admin/offers", icon: <FaGift />, label: "Offers" },
   { to: "/admin/banners", icon: <FaImage />, label: "Banner" },
   { to: "/admin/discounts", icon: <FaPercent />, label: "Discounts" },
+  { to: "/admin/discounts/usage", icon: <FaChartBar />, label: "Discount Analytics" },
   { to: "/admin/sales-report", icon: <FaChartBar />, label: "Sales Report" },
 ];
 

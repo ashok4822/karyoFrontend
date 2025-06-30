@@ -112,7 +112,16 @@ const shippingAddressSlice = createSlice({
       })
       .addCase(createShippingAddress.fulfilled, (state, action) => {
         state.loading = false;
-        state.addresses.push(action.payload.address);
+        const newAddress = action.payload.address;
+        
+        // If the new address is being set as default, unset all other addresses
+        if (newAddress.isDefault) {
+          state.addresses.forEach((addr) => {
+            addr.isDefault = false;
+          });
+        }
+        
+        state.addresses.push(newAddress);
       })
       .addCase(createShippingAddress.rejected, (state, action) => {
         state.loading = false;
@@ -125,11 +134,21 @@ const shippingAddressSlice = createSlice({
       })
       .addCase(updateShippingAddress.fulfilled, (state, action) => {
         state.loading = false;
+        const updatedAddress = action.payload.address;
+        
+        // If the updated address is being set as default, unset all other addresses
+        if (updatedAddress.isDefault) {
+          state.addresses.forEach((addr) => {
+            addr.isDefault = false;
+          });
+        }
+        
+        // Update the specific address
         const index = state.addresses.findIndex(
-          (addr) => addr._id === action.payload.address._id
+          (addr) => addr._id === updatedAddress._id
         );
         if (index !== -1) {
-          state.addresses[index] = action.payload.address;
+          state.addresses[index] = updatedAddress;
         }
       })
       .addCase(updateShippingAddress.rejected, (state, action) => {

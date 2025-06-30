@@ -53,6 +53,7 @@ const AdminDiscounts = () => {
     validTo: '',
     status: 'active',
     maxUsage: '',
+    maxUsagePerUser: '',
   });
 
   useEffect(() => {
@@ -109,6 +110,7 @@ const AdminDiscounts = () => {
         validTo: new Date(discount.validTo).toISOString().slice(0, 16),
         status: discount.status,
         maxUsage: discount.maxUsage ? discount.maxUsage.toString() : '',
+        maxUsagePerUser: discount.maxUsagePerUser ? discount.maxUsagePerUser.toString() : '',
       });
     } else {
       setEditingDiscount(null);
@@ -123,6 +125,7 @@ const AdminDiscounts = () => {
         validTo: '',
         status: 'active',
         maxUsage: '',
+        maxUsagePerUser: '',
       });
     }
     setShowModal(true);
@@ -169,6 +172,7 @@ const AdminDiscounts = () => {
       validTo: '',
       status: 'active',
       maxUsage: '',
+      maxUsagePerUser: '',
     });
     dispatch(clearError());
   };
@@ -475,6 +479,7 @@ const AdminDiscounts = () => {
                           </div>
                         </th>
                         <th>Usage</th>
+                        <th>Per User Limit</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -541,6 +546,9 @@ const AdminDiscounts = () => {
                             <td>
                               {discount.usageCount || 0}
                               {discount.maxUsage && ` / ${discount.maxUsage}`}
+                            </td>
+                            <td>
+                              {discount.maxUsagePerUser ? discount.maxUsagePerUser : '-'}
                             </td>
                             <td>
                               <div className="d-flex gap-2">
@@ -714,6 +722,21 @@ const AdminDiscounts = () => {
                   />
                   <Form.Text className="text-muted">
                     Leave empty for unlimited usage
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Maximum Usage Per User</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    value={formData.maxUsagePerUser}
+                    onChange={(e) => setFormData({ ...formData, maxUsagePerUser: e.target.value })}
+                    placeholder="Leave empty for unlimited"
+                  />
+                  <Form.Text className="text-muted">
+                    Leave empty for unlimited usage per user
                   </Form.Text>
                 </Form.Group>
               </Col>
