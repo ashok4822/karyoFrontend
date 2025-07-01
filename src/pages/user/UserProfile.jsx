@@ -1260,10 +1260,20 @@ const UserProfile = () => {
   );
 
   // Show Orders content
+  const [orderSearch, setOrderSearch] = useState("");
   const showOrdersContent = (
     <Card className="shadow-sm border-0">
       <Card.Body>
-        <h5 className="fw-bold mb-3">My Orders</h5>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="fw-bold mb-3">My Orders</h5>
+          <Form.Control
+            type="text"
+            placeholder="Search orders (order #, product, status)..."
+            value={orderSearch}
+            onChange={e => setOrderSearch(e.target.value)}
+            style={{ maxWidth: 300 }}
+          />
+        </div>
         {ordersLoading ? (
           <div className="text-center py-5">
             <Spinner animation="border" />
@@ -1292,7 +1302,19 @@ const UserProfile = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => {
+                {(orders.filter(order => {
+                  const search = orderSearch.toLowerCase();
+                  const orderNumber = order.orderNumber?.toString().toLowerCase() || "";
+                  const status = order.status?.toLowerCase() || "";
+                  const productNames = order.items
+                    .map(item => item.productVariantId?.product?.name?.toLowerCase() || "")
+                    .join(" ");
+                  return (
+                    orderNumber.includes(search) ||
+                    status.includes(search) ||
+                    productNames.includes(search)
+                  );
+                })).map((order) => {
                   const rows = [
                     <tr
                       key={order._id}
