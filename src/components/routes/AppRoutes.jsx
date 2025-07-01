@@ -50,6 +50,8 @@ import Checkout from "../../pages/user/Checkout";
 import OrderConfirmation from "../../pages/user/OrderConfirmation";
 import AdminDiscounts from "../../pages/admin/AdminDiscounts";
 import AdminDiscountUsage from "../../pages/admin/AdminDiscountUsage";
+import AdminOrders from "../../pages/admin/AdminOrders";
+import AdminOrderDetails from "../../pages/admin/AdminOrderDetails";
 
 const queryClient = new QueryClient();
 
@@ -145,6 +147,22 @@ const AppRoutes = () => {
             element={
               <AdminProtectedRoute>
                 <AdminDiscountUsage />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <AdminProtectedRoute>
+                <AdminOrders />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders/:id"
+            element={
+              <AdminProtectedRoute>
+                <AdminOrderDetails />
               </AdminProtectedRoute>
             }
           />

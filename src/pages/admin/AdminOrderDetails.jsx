@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import adminAxios from '../../lib/adminAxios';
 import {
   Container,
   Row,
@@ -33,10 +33,10 @@ import {
 const AdminOrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { loading, error } = useSelector((state) => state.orders);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [order, setOrder] = useState({
     id: '',
@@ -64,9 +64,20 @@ const AdminOrderDetails = () => {
   });
 
   useEffect(() => {
-    // Fetch order details
-    dispatch({ type: 'FETCH_ORDER_DETAILS', payload: id });
-  }, [dispatch, id]);
+    const fetchOrder = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await adminAxios.get(`/orders/${id}`);
+        setOrder(res.data.order);
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to fetch order details");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrder();
+  }, [id]);
 
   const handleStatusChange = (e) => {
     setSelectedStatus(e.target.value);
@@ -74,10 +85,10 @@ const AdminOrderDetails = () => {
 
   const handleUpdateStatus = async () => {
     try {
-      await dispatch({
-        type: 'UPDATE_ORDER_STATUS',
-        payload: { orderId: id, status: selectedStatus },
-      });
+      await adminAxios.put(`/orders/${id}/status`, { status: selectedStatus });
+      // Refetch order details to update UI
+      const res = await adminAxios.get(`/orders/${id}`);
+      setOrder(res.data.order);
       setShowStatusModal(false);
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -91,6 +102,30 @@ const AdminOrderDetails = () => {
   const handleDownloadInvoice = () => {
     // Implement invoice download logic
     console.log('Downloading invoice...');
+  };
+
+  // Helper to get discount amount as a number
+  const getDiscountAmount = () => {
+    if (order.discount && typeof order.discount === 'object' && order.discount.discountAmount != null && !isNaN(order.discount.discountAmount)) {
+      return Number(order.discount.discountAmount);
+    }
+    if (typeof order.discount === 'number' && !isNaN(order.discount)) {
+      return order.discount;
+    }
+    return 0;
+  };
+
+  // Helper to get user-friendly shipping status label
+  const getShippingStatusLabel = (status) => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'confirmed': return 'Confirmed';
+      case 'processing': return 'Processing';
+      case 'shipped': return 'Shipped';
+      case 'delivered': return 'Delivered';
+      case 'cancelled': return 'Cancelled';
+      default: return status ? status.charAt(0).toUpperCase() + status.slice(1) : '-';
+    }
   };
 
   if (loading) {
@@ -176,39 +211,56 @@ const AdminOrderDetails = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {order.items.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="rounded me-3"
-                              style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                            />
-                            <div>
-                              <h6 className="mb-0">{item.name}</h6>
-                              <small className="text-muted">
-                                SKU: {item.sku}
-                              </small>
+                    {order.items.map((item, idx) => {
+                      const variant = item.productVariantId || {};
+                      const product = variant.product || {};
+                      return (
+                        <tr key={item._id || variant._id || idx}>
+                          <td>
+                            <div className="d-flex align-items-center">
+                              <img
+                                src={variant.imageUrls?.[0] || ''}
+                                alt={product.name || ''}
+                                className="rounded me-3"
+                                style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                              />
+                              <div>
+                                <h6 className="mb-0">{product.name || '-'}</h6>
+                                <small className="text-muted">
+                                  SKU: {variant.sku || '-'}
+                                </small>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>₹{item.price}</td>
-                        <td>{item.quantity}</td>
-                        <td className="text-end">
-                          ₹{(item.price * item.quantity).toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td>₹{item.price ?? '-'}</td>
+                          <td>{item.quantity ?? '-'}</td>
+                          <td className="text-end">
+                            ₹{item.price && item.quantity ? (item.price * item.quantity).toFixed(2) : '-' }
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan="3" className="text-end">
                         <strong>Subtotal</strong>
                       </td>
-                      <td className="text-end">₹{order.total.toFixed(2)}</td>
+                      <td className="text-end">₹{order.subtotal?.toFixed(2) ?? order.total?.toFixed(2) ?? '-'}</td>
                     </tr>
+                    <tr>
+                      <td colSpan="3" className="text-end">
+                        <strong>Discount</strong>
+                      </td>
+                      <td className="text-end">-₹{getDiscountAmount().toFixed(2)}</td>
+                    </tr>
+                    {order.discount && (order.discount.discountName || order.discount.code) && (
+                      <tr>
+                        <td colSpan="4" className="text-end text-muted">
+                          Discount Availed: <strong>{order.discount.discountName || order.discount.code}</strong>
+                        </td>
+                      </tr>
+                    )}
                     <tr>
                       <td colSpan="3" className="text-end">
                         <strong>Shipping</strong>
@@ -220,7 +272,7 @@ const AdminOrderDetails = () => {
                         <strong>Total</strong>
                       </td>
                       <td className="text-end">
-                        <strong>₹{order.total.toFixed(2)}</strong>
+                        <strong>₹{order.total?.toFixed(2) ?? '-'}</strong>
                       </td>
                     </tr>
                   </tfoot>
@@ -244,17 +296,23 @@ const AdminOrderDetails = () => {
                     <FaUser className="text-primary" />
                   </div>
                   <div>
-                    <h6 className="mb-0">{order.customer.name}</h6>
-                    <small className="text-muted">{order.customer.email}</small>
+                    <h6 className="mb-0">
+                      {order.user
+                        ? (order.user.firstName || order.user.lastName)
+                          ? `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim()
+                          : order.user.username || order.user.email || "-"
+                        : "-"}
+                    </h6>
+                    <small className="text-muted">{order.user?.email || ''}</small>
                   </div>
                 </div>
                 <div className="d-flex align-items-center mb-2">
                   <FaPhone className="text-muted me-2" />
-                  <span>{order.customer.phone}</span>
+                  <span>{order.user?.mobileNo || '-'}</span>
                 </div>
                 <div className="d-flex align-items-start">
                   <FaMapMarkerAlt className="text-muted me-2 mt-1" />
-                  <span>{order.customer.address}</span>
+                  <span>{order.user?.address || '-'}</span>
                 </div>
               </Card.Body>
             </Card>
@@ -270,16 +328,16 @@ const AdminOrderDetails = () => {
                     <FaCreditCard className="text-success" />
                   </div>
                   <div>
-                    <h6 className="mb-0">{order.payment.method}</h6>
+                    <h6 className="mb-0">{order.payment?.method || '-'}</h6>
                     <small className="text-muted">
-                      Transaction ID: {order.payment.transactionId}
+                      Transaction ID: {order.payment?.transactionId || '-' }
                     </small>
                   </div>
                 </div>
                 <Badge
-                  bg={order.payment.status === 'paid' ? 'success' : 'warning'}
+                  bg={order.payment?.status === 'paid' ? 'success' : 'warning'}
                 >
-                  {order.payment.status}
+                  {order.payment?.status || '-'}
                 </Badge>
               </Card.Body>
             </Card>
@@ -295,14 +353,8 @@ const AdminOrderDetails = () => {
                     <FaTruck className="text-info" />
                   </div>
                   <div>
-                    <h6 className="mb-0">{order.shipping.method}</h6>
-                    <small className="text-muted">
-                      Tracking: {order.shipping.trackingNumber}
-                    </small>
+                    <h6 className="mb-0">{getShippingStatusLabel(order.shipping?.status)}</h6>
                   </div>
-                </div>
-                <div className="text-muted">
-                  Estimated Delivery: {order.shipping.estimatedDelivery}
                 </div>
               </Card.Body>
             </Card>
