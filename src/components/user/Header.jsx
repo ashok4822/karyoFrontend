@@ -59,6 +59,11 @@ const Header = () => {
             <Link to="/products?category=daily" className="text-gray-700 hover:text-gray-900">
               Daily
             </Link>
+            {isAuthenticated && (
+              <Link to="/wallet" className="text-gray-700 hover:text-gray-900">
+                Wallet
+              </Link>
+            )}
           </nav>
 
           {/* Search Bar */}
@@ -135,6 +140,11 @@ const Header = () => {
               <Link to="/products?category=daily" className="text-gray-700 hover:text-gray-900">
                 Daily
               </Link>
+              {isAuthenticated && (
+                <Link to="/wallet" className="text-gray-700 hover:text-gray-900">
+                  Wallet
+                </Link>
+              )}
               
               {/* Mobile Search */}
               <form onSubmit={handleSearch} className="md:hidden">

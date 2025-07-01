@@ -137,6 +137,10 @@ const UserProfile = () => {
   const [returnReason, setReturnReason] = useState("");
   const [returnTarget, setReturnTarget] = useState(null); // { orderId }
 
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletError, setWalletError] = useState("");
+
   // On mount, check for tab query param
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -151,6 +155,22 @@ const UserProfile = () => {
       dispatch(fetchUserOrders());
     }
   }, [activeIndex, dispatch]);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      setWalletLoading(true);
+      setWalletError("");
+      try {
+        const res = await userAxios.get("/users/wallet");
+        setWalletBalance(res.data.balance);
+      } catch (err) {
+        setWalletError("Could not load wallet");
+      } finally {
+        setWalletLoading(false);
+      }
+    };
+    fetchWallet();
+  }, []);
 
   const handleAvatarClick = () => {
     fileInputRef.current.click();
@@ -509,6 +529,30 @@ const UserProfile = () => {
   const userDetailsContent = (
     <Card className="shadow-sm border-0">
       <Card.Body>
+        {/* Wallet UI */}
+        <div className="d-flex flex-column align-items-center mb-3">
+          <div style={{
+            background: '#f6fafd',
+            border: '2px solid #0d6efd',
+            borderRadius: 12,
+            padding: 12,
+            width: '100%',
+            maxWidth: 220,
+            marginBottom: 16,
+            textAlign: 'center',
+          }}>
+            <div style={{ fontWeight: 600, color: '#0d6efd', fontSize: 16 }}>Wallet Balance</div>
+            {walletLoading ? (
+              <div className="text-muted small">Loading...</div>
+            ) : walletError ? (
+              <div className="text-danger small">{walletError}</div>
+            ) : (
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#222' }}>₹{walletBalance?.toFixed(2) || '0.00'}</div>
+            )}
+            <a href="/wallet" style={{ fontSize: 13, color: '#0d6efd', textDecoration: 'underline', display: 'block', marginTop: 4 }}>View Wallet</a>
+          </div>
+        </div>
+        {/* Profile Image and Info */}
         <div className="d-flex flex-column align-items-center mb-4">
           <Image
             src={avatar}
