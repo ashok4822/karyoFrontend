@@ -45,6 +45,9 @@ const AdminOrders = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusUpdatingOrder, setStatusUpdatingOrder] = useState(null);
+  const [newStatus, setNewStatus] = useState('');
 
   const ordersPerPage = 10;
 
@@ -99,6 +102,14 @@ const AdminOrders = () => {
   const handleDeleteOrder = async (orderId) => {
     try {
       await adminAxios.delete(`/orders/${orderId}`);
+      // Refresh orders list after delete
+      const params = {
+        page: currentPage,
+        limit: ordersPerPage,
+        status: statusFilter || undefined,
+      };
+      const res = await adminAxios.get("/orders", { params });
+      setOrders(res.data.orders || []);
       setShowDeleteModal(false);
     } catch (error) {
       console.error('Error deleting order:', error);
@@ -338,7 +349,11 @@ const AdminOrders = () => {
                             <Button
                               variant="outline-secondary"
                               size="sm"
-                              onClick={() => navigate(`/admin/orders/${order._id || order.id}/edit`)}
+                              onClick={() => {
+                                setStatusUpdatingOrder(order);
+                                setNewStatus(order.status);
+                                setShowStatusModal(true);
+                              }}
                               className="d-flex align-items-center gap-1"
                             >
                               <FaEdit /> Edit
@@ -415,9 +430,58 @@ const AdminOrders = () => {
                 </Button>
                 <Button
                   variant="danger"
-                  onClick={() => handleDeleteOrder(selectedOrder?.id)}
+                  onClick={() => handleDeleteOrder(selectedOrder?._id || selectedOrder?.id)}
                 >
                   Delete
+                </Button>
+              </Modal.Footer>
+            </Modal>
+
+            {/* Status Update Modal */}
+            <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)}>
+              <Modal.Header closeButton>
+                <Modal.Title>Update Order Status</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <Form.Group>
+                  <Form.Label>Status</Form.Label>
+                  <Form.Select
+                    value={newStatus}
+                    onChange={e => setNewStatus(e.target.value)}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </Form.Select>
+                </Form.Group>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button variant="secondary" onClick={() => setShowStatusModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={async () => {
+                    if (!statusUpdatingOrder) return;
+                    try {
+                      await adminAxios.put(`/orders/${statusUpdatingOrder._id || statusUpdatingOrder.id}/status`, { status: newStatus });
+                      // Refresh orders list
+                      const params = {
+                        page: currentPage,
+                        limit: ordersPerPage,
+                        status: statusFilter || undefined,
+                      };
+                      const res = await adminAxios.get("/orders", { params });
+                      setOrders(res.data.orders || []);
+                      setShowStatusModal(false);
+                    } catch (err) {
+                      alert('Failed to update status');
+                    }
+                  }}
+                >
+                  Update Status
                 </Button>
               </Modal.Footer>
             </Modal>

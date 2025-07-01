@@ -132,6 +132,11 @@ const UserProfile = () => {
   // In showOrdersContent, update tbody:
   const [expandedOrderId, setExpandedOrderId] = useState(null);
 
+  // Add state for return modal
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnTarget, setReturnTarget] = useState(null); // { orderId }
+
   // On mount, check for tab query param
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1376,6 +1381,16 @@ const UserProfile = () => {
                             Cancel Order
                           </Button>
                         )}
+                        {order.status === "delivered" && (
+                          <Button
+                            variant="warning"
+                            size="sm"
+                            className="ms-2"
+                            onClick={() => handleOpenReturnModal(order._id)}
+                          >
+                            Return Order
+                          </Button>
+                        )}
                         <a
                           href={`/order-confirmation/${order._id}`}
                           className="btn btn-sm btn-outline-primary ms-2"
@@ -1533,9 +1548,11 @@ const UserProfile = () => {
                                 </span>
                               </h6>
                               {order.cancellationReason &&
-                                order.status === "cancelled" && (
+                                (order.status === "cancelled" || order.status === "returned") && (
                                   <div className="text-muted small">
-                                    Order Cancellation Reason:{" "}
+                                    {order.status === "cancelled"
+                                      ? "Order Cancellation Reason: "
+                                      : "Order Return Reason: "}
                                     {order.cancellationReason}
                                   </div>
                                 )}
@@ -1635,6 +1652,28 @@ const UserProfile = () => {
       setShowCancelModal(false);
       setCancelTarget(null);
       setCancelReason("");
+      // Optionally, show a toast or alert for success
+    } catch (err) {
+      // Optionally, show a toast or alert for error
+    }
+  };
+
+  // Add state and handler for return modal
+  const handleOpenReturnModal = (orderId) => {
+    setReturnTarget({ orderId });
+    setReturnReason("");
+    setShowReturnModal(true);
+  };
+
+  const handleSubmitReturn = async () => {
+    if (!returnTarget || !returnReason.trim()) return;
+    try {
+      await userAxios.post(`/users/orders/${returnTarget.orderId}/return`, { reason: returnReason });
+      setShowReturnModal(false);
+      setReturnTarget(null);
+      setReturnReason("");
+      // Refresh orders list
+      dispatch(fetchUserOrders());
       // Optionally, show a toast or alert for success
     } catch (err) {
       // Optionally, show a toast or alert for error
@@ -1769,6 +1808,41 @@ const UserProfile = () => {
           </Button>
           <Button variant="danger" onClick={handleSubmitCancel}>
             Confirm Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      {/* Add Return Order Modal at the end */}
+      <Modal show={showReturnModal} onHide={() => setShowReturnModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Return Order</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Reason for return <span className="text-danger">*</span></Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              value={returnReason}
+              onChange={e => setReturnReason(e.target.value)}
+              placeholder="Enter reason for return (required)"
+              required
+              isInvalid={!returnReason.trim()}
+            />
+            <Form.Control.Feedback type="invalid">
+              Reason is required.
+            </Form.Control.Feedback>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowReturnModal(false)}>
+            Close
+          </Button>
+          <Button
+            variant="warning"
+            onClick={handleSubmitReturn}
+            disabled={!returnReason.trim()}
+          >
+            Confirm Return
           </Button>
         </Modal.Footer>
       </Modal>

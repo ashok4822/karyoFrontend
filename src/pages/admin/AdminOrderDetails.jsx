@@ -37,6 +37,7 @@ const AdminOrderDetails = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showVerifyReturnModal, setShowVerifyReturnModal] = useState(false);
 
   const [order, setOrder] = useState({
     id: '',
@@ -278,6 +279,15 @@ const AdminOrderDetails = () => {
                   </tfoot>
                 </Table>
               </div>
+              {/* Show cancellation/return reason for cancelled/returned orders */}
+              {order.cancellationReason && (order.status === 'cancelled' || order.status === 'returned') && (
+                <div className="mt-3">
+                  <span className="text-muted">
+                    {order.status === 'cancelled' ? 'Order Cancellation Reason: ' : 'Order Return Reason: '}
+                    {order.cancellationReason}
+                  </span>
+                </div>
+              )}
             </Card.Body>
           </Card>
         </Col>
@@ -379,6 +389,46 @@ const AdminOrderDetails = () => {
                 >
                   <FaEdit /> Edit Order
                 </Button>
+                {order.status === 'returned' && (
+                  <>
+                    <Button
+                      variant="success"
+                      className="w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
+                      onClick={() => setShowVerifyReturnModal(true)}
+                    >
+                      <FaCheck /> Verify Return Request
+                    </Button>
+                    <Modal show={showVerifyReturnModal} onHide={() => setShowVerifyReturnModal(false)}>
+                      <Modal.Header closeButton>
+                        <Modal.Title>Confirm Return Verification</Modal.Title>
+                      </Modal.Header>
+                      <Modal.Body>
+                        Are you sure you want to verify this return request? This action cannot be undone.
+                      </Modal.Body>
+                      <Modal.Footer>
+                        <Button variant="secondary" onClick={() => setShowVerifyReturnModal(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="success"
+                          onClick={async () => {
+                            try {
+                              await adminAxios.put(`/orders/${id}/verify-return`);
+                              // Refetch order details to update UI
+                              const res = await adminAxios.get(`/orders/${id}`);
+                              setOrder(res.data.order);
+                              setShowVerifyReturnModal(false);
+                            } catch (err) {
+                              alert('Failed to verify return request');
+                            }
+                          }}
+                        >
+                          Confirm Verify
+                        </Button>
+                      </Modal.Footer>
+                    </Modal>
+                  </>
+                )}
               </Card.Body>
             </Card>
           </div>
@@ -403,6 +453,7 @@ const AdminOrderDetails = () => {
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
+              <option value="returned">Returned</option>
             </Form.Select>
           </Form.Group>
         </Modal.Body>
@@ -419,4 +470,4 @@ const AdminOrderDetails = () => {
   );
 };
 
-export default AdminOrderDetails; 
+export default AdminOrderDetails;
