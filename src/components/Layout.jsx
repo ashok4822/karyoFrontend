@@ -186,7 +186,7 @@ const Layout = () => {
                   <i className="fas fa-phone me-2"></i>(123) 456-7890
                 </li>
                 <li>
-                  <i className="fas fa-envelope me-2"></i>info@karyo.com
+                  <i className="fas fa-envelope me-2"></i>info@caryo.com
                 </li>
               </ul>
             </Col>
@@ -206,7 +206,7 @@ const Layout = () => {
           </Row>
           <hr className="border-secondary opacity-50" />
           <div className="text-center text-white-50 small">
-            &copy; 2024 KARYO. All rights reserved.
+            &copy; 2024 CARYO. All rights reserved.
           </div>
         </Container>
       </footer>

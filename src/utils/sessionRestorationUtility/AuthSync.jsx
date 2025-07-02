@@ -36,7 +36,8 @@ const AuthSync = ({ onRestored = () => {} }) => {
     let pending = 0;
 
     const restoreUser = async () => {
-      if (!userAccessToken && location.pathname.startsWith("/admin")) return;
+      // Only refresh if there is NO access token and not on admin route
+      if (userAccessToken || location.pathname.startsWith("/admin")) return;
       try {
         const { data } = await userAxios.post("/auth/refresh-token");
         if (data?.token) {
@@ -106,8 +107,8 @@ const AuthSync = ({ onRestored = () => {} }) => {
       timerRef.current = setTimeout(() => setLoading(true), 500);
       const tasks = [];
 
-      // Always restore user session if not on admin route
-      if (!location.pathname.startsWith("/admin")) tasks.push(restoreUser());
+      // Only restore user session if not on admin route and no access token
+      if (!location.pathname.startsWith("/admin") && !userAccessToken) tasks.push(restoreUser());
       if (!adminAccessToken) tasks.push(restoreAdmin());
 
       await Promise.allSettled(tasks);
