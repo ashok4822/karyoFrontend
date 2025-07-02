@@ -36,7 +36,7 @@ const sidebarItems = [
   { label: "Edit profile", icon: <FaEdit /> },
   { label: "Address Management", icon: <FaMapMarkerAlt /> },
   { label: "Show orders", icon: <FaBoxOpen /> },
-  { label: "Cancel orders", icon: <FaTimesCircle /> },
+  // { label: "Cancel orders", icon: <FaTimesCircle /> }, // Commented out as per request
   { label: "Reset password", icon: <FaKey /> },
   { label: "Edit Email", icon: <FaEdit /> },
 ];
