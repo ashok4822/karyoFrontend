@@ -7,6 +7,8 @@ import {
   fetchOrderById,
 } from "../../redux/reducers/orderSlice";
 import "./OrderConfirmation.css"; // Optional for custom styles
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const OrderConfirmation = () => {
   const { currentOrder } = useSelector((state) => state.order);
@@ -28,6 +30,112 @@ const OrderConfirmation = () => {
     }, 10000);
     return () => clearTimeout(timer);
   }, [dispatch]);
+
+  const handleDownloadInvoice = () => {
+    if (!currentOrder) return;
+    const doc = new jsPDF();
+    // Header Bar
+    doc.setFillColor(79, 70, 229); // Indigo
+    doc.rect(0, 0, 210, 22, 'F');
+    doc.setFontSize(22);
+    doc.setTextColor(255);
+    doc.setFont(undefined, 'bold');
+    doc.text('CARYO', 14, 15);
+    doc.setFontSize(12);
+    doc.setTextColor(255);
+    doc.setFont(undefined, 'normal');
+    doc.text('INVOICE', 196, 15, { align: 'right' });
+    let y = 28;
+    // Two-column Order/Shipping Info
+    doc.setFontSize(11);
+    doc.setTextColor(40, 40, 40);
+    doc.setFont(undefined, 'bold');
+    doc.text('Order Details', 14, y);
+    doc.text('Shipping Address', 120, y);
+    doc.setFont(undefined, 'normal');
+    y += 6;
+    // Left column: Order/payment info
+    let leftY = y;
+    doc.text(`Order Number: ${currentOrder.orderNumber}`, 14, leftY);
+    leftY += 5;
+    doc.text(`Order Date: ${new Date(currentOrder.createdAt).toLocaleDateString('en-IN')}`, 14, leftY);
+    leftY += 5;
+    doc.text(`Payment: ${currentOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}`, 14, leftY);
+    leftY += 5;
+    doc.text(`Payment Status: ${currentOrder.status ? currentOrder.status.charAt(0).toUpperCase() + currentOrder.status.slice(1) : 'N/A'}`, 14, leftY);
+    // Right column: Shipping info
+    let rightY = y;
+    doc.text(`${currentOrder.shippingAddress.recipientName}`, 120, rightY);
+    rightY += 5;
+    doc.text(`${currentOrder.shippingAddress.addressLine1}`, 120, rightY);
+    rightY += 5;
+    if (currentOrder.shippingAddress.addressLine2) {
+      doc.text(`${currentOrder.shippingAddress.addressLine2}`, 120, rightY);
+      rightY += 5;
+    }
+    doc.text(`${currentOrder.shippingAddress.city}, ${currentOrder.shippingAddress.state} ${currentOrder.shippingAddress.postalCode}`, 120, rightY);
+    rightY += 5;
+    doc.text(`${currentOrder.shippingAddress.country}`, 120, rightY);
+    rightY += 5;
+    doc.text(`Phone: ${currentOrder.shippingAddress.phoneNumber}`, 120, rightY);
+    y = Math.max(leftY, rightY) + 8;
+    // Order Items Table
+    autoTable(doc, {
+      startY: y,
+      head: [["#", "Product", "Variant", "Qty", "Unit Price", "Total"]],
+      body: currentOrder.items.map((item, idx) => [
+        idx + 1,
+        item.productVariantId?.product?.name || "Product",
+        `${item.productVariantId?.colour || ""}${item.productVariantId?.capacity ? ", " + item.productVariantId.capacity : ""}`,
+        item.quantity,
+        `INR ${item.price.toFixed(2)}`,
+        `INR ${(item.price * item.quantity).toFixed(2)}`
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 10 },
+      alternateRowStyles: { fillColor: [245, 245, 255] },
+      styles: { cellPadding: 2 },
+      margin: { left: 14, right: 14 },
+      didDrawCell: function (data) {
+        // Highlight total row
+        if (data.row.index === currentOrder.items.length - 1 && data.column.index === 0) {
+          doc.setFillColor(232, 240, 254);
+        }
+      },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+    // Price Breakdown
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Price Breakdown', 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 6;
+    doc.setFontSize(10);
+    doc.text(`Subtotal: INR ${currentOrder.subtotal.toFixed(2)}`, 14, y);
+    y += 5;
+    if (currentOrder.discount) {
+      doc.text(`Discount: -INR ${currentOrder.discount.discountAmount.toFixed(2)}`, 14, y);
+      y += 5;
+    }
+    doc.text(`Shipping: ${currentOrder.shipping === 0 ? 'Free' : `INR ${currentOrder.shipping.toFixed(2)}`}`, 14, y);
+    y += 5;
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(79, 70, 229);
+    doc.text(`Total: INR ${currentOrder.total.toFixed(2)}`, 14, y);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(40, 40, 40);
+    y += 12;
+    // Footer
+    doc.setDrawColor(220);
+    doc.line(14, y, 196, y);
+    y += 7;
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text('Thank you for shopping with CARYO!', 14, y);
+    doc.text('Contact: support@caryo.com', 196, y, { align: 'right' });
+    doc.save(`Invoice_Order_${currentOrder.orderNumber}.pdf`);
+  };
 
   if (!currentOrder) {
     return (
@@ -85,7 +193,7 @@ const OrderConfirmation = () => {
                   <h5 className="fw-semibold mb-3">Order Information</h5>
                   <ul className="list-unstyled text-muted small mb-0">
                     <li className="mb-2 d-flex justify-content-between"><span>Order Date:</span><span className="fw-semibold text-dark">{new Date(currentOrder.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span></li>
-                    <li className="mb-2 d-flex justify-content-between"><span>Total Amount:</span><span className="fw-bold text-dark">₹{currentOrder.total.toFixed(2)}</span></li>
+                    <li className="mb-2 d-flex justify-content-between"><span>Total Amount:</span><span className="fw-bold text-dark">INR {currentOrder.total.toFixed(2)}</span></li>
                   </ul>
                 </div>
                 <div className="col-md-6">
@@ -124,7 +232,7 @@ const OrderConfirmation = () => {
                         </div>
                       </Link>
                       <div className="text-end ms-3">
-                        <div className="fw-bold text-dark">₹{(item.price * item.quantity).toFixed(2)}</div>
+                        <div className="fw-bold text-dark">INR {(item.price * item.quantity).toFixed(2)}</div>
                         <div className="text-muted small">Qty: {item.quantity}</div>
                       </div>
                     </li>
@@ -135,12 +243,12 @@ const OrderConfirmation = () => {
               <div className="mb-4">
                 <h5 className="fw-semibold mb-3">Price Breakdown</h5>
                 <ul className="list-unstyled small mb-0">
-                  <li className="d-flex justify-content-between mb-1"><span>Subtotal:</span><span>₹{currentOrder.subtotal.toFixed(2)}</span></li>
+                  <li className="d-flex justify-content-between mb-1"><span>Subtotal:</span><span>INR {currentOrder.subtotal.toFixed(2)}</span></li>
                   {currentOrder.discount && (
-                    <li className="d-flex justify-content-between mb-1"><span>Discount:</span><span className="text-success">-₹{currentOrder.discount.discountAmount.toFixed(2)}</span></li>
+                    <li className="d-flex justify-content-between mb-1"><span>Discount:</span><span className="text-success">-INR {currentOrder.discount.discountAmount.toFixed(2)}</span></li>
                   )}
-                  <li className="d-flex justify-content-between mb-1"><span>Shipping:</span><span>{currentOrder.shipping === 0 ? "Free" : `₹${currentOrder.shipping.toFixed(2)}`}</span></li>
-                  <li className="d-flex justify-content-between border-top pt-2 mt-2 fw-bold text-dark"><span>Total:</span><span>₹{currentOrder.total.toFixed(2)}</span></li>
+                  <li className="d-flex justify-content-between mb-1"><span>Shipping:</span><span>{currentOrder.shipping === 0 ? "Free" : `INR ${currentOrder.shipping.toFixed(2)}`}</span></li>
+                  <li className="d-flex justify-content-between border-top pt-2 mt-2 fw-bold text-dark"><span>Total:</span><span>INR {currentOrder.total.toFixed(2)}</span></li>
                 </ul>
               </div>
 
@@ -156,6 +264,12 @@ const OrderConfirmation = () => {
                   className="btn btn-outline-secondary btn-lg px-4 fw-semibold shadow-sm"
                 >
                   View My Orders
+                </button>
+                <button
+                  onClick={handleDownloadInvoice}
+                  className="btn btn-success btn-lg px-4 fw-semibold shadow-sm"
+                >
+                  Download Invoice (PDF)
                 </button>
               </div>
             </div>
