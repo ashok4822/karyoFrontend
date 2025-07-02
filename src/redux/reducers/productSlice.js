@@ -24,7 +24,6 @@ export const fetchProductsFromBackend = createAsyncThunk(
   'products/fetchProductsFromBackend',
   async (params = {}, { rejectWithValue }) => {
     try {
-      console.log('fetchProductsFromBackend called with params:', params);
       const { page = 1, limit = 5, search = '', status, category, brand, variantColour, variantCapacity, minPrice, maxPrice, sort } = params;
       
       // Build query parameters, handling arrays properly
@@ -74,13 +73,9 @@ export const fetchProductsFromBackend = createAsyncThunk(
         }
       }
       
-      console.log('fetchProductsFromBackend - final query params:', queryParams);
-      
       const response = await userAxios.get('/products', {
         params: queryParams,
       });
-      
-      console.log('fetchProductsFromBackend response:', response.data);
       
       return {
         products: response.data.products,
@@ -92,7 +87,6 @@ export const fetchProductsFromBackend = createAsyncThunk(
         },
       };
     } catch (err) {
-      console.error('fetchProductsFromBackend error:', err);
       return rejectWithValue(err.response?.data?.message || 'Failed to fetch products');
     }
   }

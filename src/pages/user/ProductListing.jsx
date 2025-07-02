@@ -125,7 +125,6 @@ const ProductListing = () => {
       params.maxPrice = currentFilters.priceRange[1];
     }
 
-    console.log('buildFilterParams - final params:', params);
     return params;
   };
 
