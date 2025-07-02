@@ -156,6 +156,20 @@ const UserProfile = () => {
     }
   }, [activeIndex, dispatch]);
 
+  // Keyboard shortcut for clearing filters (Escape key)
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && activeIndex === 3) {
+        clearFilters();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeIndex]);
+
   useEffect(() => {
     const fetchWallet = async () => {
       setWalletLoading(true);
@@ -211,6 +225,54 @@ const UserProfile = () => {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  // Helper function to get status display info
+  const getStatusInfo = (status) => {
+    switch (status) {
+      case "return_verified":
+        return {
+          text: "Return Verified",
+          color: "success",
+          message: "Your return has been verified and processed"
+        };
+      case "rejected":
+        return {
+          text: "Return Rejected",
+          color: "danger",
+          message: "Your return request has been rejected"
+        };
+      case "returned":
+        return {
+          text: "Return Requested",
+          color: "warning",
+          message: "Return request submitted and under review"
+        };
+      case "delivered":
+        return {
+          text: "Delivered",
+          color: "success",
+          message: "Order has been delivered successfully"
+        };
+      case "cancelled":
+        return {
+          text: "Cancelled",
+          color: "danger",
+          message: "Order has been cancelled"
+        };
+      case "pending":
+        return {
+          text: "Pending",
+          color: "info",
+          message: "Order is pending processing"
+        };
+      default:
+        return {
+          text: status.charAt(0).toUpperCase() + status.slice(1),
+          color: "info",
+          message: "Order status updated"
+        };
+    }
   };
 
   // Edit Profile submit
@@ -1310,32 +1372,446 @@ const UserProfile = () => {
 
   // Show Orders content
   const [orderSearch, setOrderSearch] = useState("");
+  const [orderFilters, setOrderFilters] = useState({
+    status: "",
+    dateFrom: "",
+    dateTo: "",
+    priceMin: "",
+    priceMax: "",
+    paymentMethod: "",
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState("date");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 5;
+
+  // Filter orders based on search and filters
+  const filteredOrders = orders.filter(order => {
+    // Search filter
+    const search = orderSearch.toLowerCase();
+    const orderNumber = order.orderNumber?.toString().toLowerCase() || "";
+    const status = order.status?.toLowerCase() || "";
+    const productNames = order.items
+      .map(item => item.productVariantId?.product?.name?.toLowerCase() || "")
+      .join(" ");
+    
+    const matchesSearch = 
+      orderNumber.includes(search) ||
+      status.includes(search) ||
+      productNames.includes(search);
+
+    if (!matchesSearch) return false;
+
+    // Status filter
+    if (orderFilters.status) {
+      if (orderFilters.status === "returned") {
+        // For "returned" filter, include all return-related statuses
+        const returnStatuses = ["returned", "return_verified", "rejected"];
+        if (!returnStatuses.includes(order.status)) {
+          return false;
+        }
+      } else if (order.status !== orderFilters.status) {
+        return false;
+      }
+    }
+
+    // Date range filter
+    if (orderFilters.dateFrom) {
+      const orderDate = new Date(order.createdAt);
+      const fromDate = new Date(orderFilters.dateFrom);
+      if (orderDate < fromDate) return false;
+    }
+
+    if (orderFilters.dateTo) {
+      const orderDate = new Date(order.createdAt);
+      const toDate = new Date(orderFilters.dateTo);
+      toDate.setHours(23, 59, 59, 999); // End of day
+      if (orderDate > toDate) return false;
+    }
+
+    // Price range filter
+    if (orderFilters.priceMin && order.total < parseFloat(orderFilters.priceMin)) {
+      return false;
+    }
+
+    if (orderFilters.priceMax && order.total > parseFloat(orderFilters.priceMax)) {
+      return false;
+    }
+
+    // Payment method filter
+    if (orderFilters.paymentMethod && order.paymentMethod !== orderFilters.paymentMethod) {
+      return false;
+    }
+
+    return true;
+  }).sort((a, b) => {
+    let aValue, bValue;
+    
+    switch (sortBy) {
+      case "date":
+        aValue = new Date(a.createdAt);
+        bValue = new Date(b.createdAt);
+        break;
+      case "orderNumber":
+        aValue = a.orderNumber;
+        bValue = b.orderNumber;
+        break;
+      case "total":
+        aValue = a.total || 0;
+        bValue = b.total || 0;
+        break;
+      case "status":
+        aValue = a.status;
+        bValue = b.status;
+        break;
+      default:
+        aValue = new Date(a.createdAt);
+        bValue = new Date(b.createdAt);
+    }
+    
+    if (sortOrder === "asc") {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  const startIndex = (currentPage - 1) * ordersPerPage;
+  const endIndex = startIndex + ordersPerPage;
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [orderSearch, orderFilters, sortBy, sortOrder]);
+
+  const clearFilters = () => {
+    setOrderFilters({
+      status: "",
+      dateFrom: "",
+      dateTo: "",
+      priceMin: "",
+      priceMax: "",
+      paymentMethod: "",
+    });
+    setOrderSearch("");
+    setSortBy("date");
+    setSortOrder("desc");
+    setCurrentPage(1);
+  };
+
   const showOrdersContent = (
     <Card className="shadow-sm border-0">
       <Card.Body>
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5 className="fw-bold mb-3">My Orders</h5>
-          <Form.Control
-            type="text"
-            placeholder="Search orders (order #, product, status)..."
-            value={orderSearch}
-            onChange={e => setOrderSearch(e.target.value)}
-            style={{ maxWidth: 300 }}
-          />
+          <div className="d-flex gap-2">
+            <Button
+              variant={Object.values(orderFilters).some(val => val !== "") || orderSearch ? "outline-warning" : "outline-secondary"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              {showFilters ? "Hide Filters" : "Show Filters"}
+              {(Object.values(orderFilters).some(val => val !== "") || orderSearch) && (
+                <span className="badge bg-warning text-dark ms-1">
+                  {Object.values(orderFilters).filter(val => val !== "").length + (orderSearch ? 1 : 0)}
+                </span>
+              )}
+            </Button>
+            <Form.Control
+              type="text"
+              placeholder="Search orders (order #, product, status)..."
+              value={orderSearch}
+              onChange={e => setOrderSearch(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+            {(orderSearch || Object.values(orderFilters).some(val => val !== "")) && (
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={clearFilters}
+                title="Clear all filters and search"
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Quick Filter Buttons */}
+        <div className="mb-3">
+          <div className="d-flex gap-2 flex-wrap">
+            <Button
+              variant={orderFilters.status === "" ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={() => setOrderFilters(prev => ({ ...prev, status: "" }))}
+            >
+              All ({orders.length})
+            </Button>
+            <Button
+              variant={orderFilters.status === "pending" ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={() => setOrderFilters(prev => ({ ...prev, status: "pending" }))}
+            >
+              Pending ({orders.filter(o => o.status === "pending").length})
+            </Button>
+            <Button
+              variant={orderFilters.status === "delivered" ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={() => setOrderFilters(prev => ({ ...prev, status: "delivered" }))}
+            >
+              Delivered ({orders.filter(o => o.status === "delivered").length})
+            </Button>
+            <Button
+              variant={orderFilters.status === "cancelled" ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={() => setOrderFilters(prev => ({ ...prev, status: "cancelled" }))}
+            >
+              Cancelled ({orders.filter(o => o.status === "cancelled").length})
+            </Button>
+            <Button
+              variant={orderFilters.status === "returned" ? "primary" : "outline-primary"}
+              size="sm"
+              onClick={() => setOrderFilters(prev => ({ ...prev, status: "returned" }))}
+            >
+              Returned ({orders.filter(o => o.status === "returned" || o.status === "return_verified" || o.status === "rejected").length})
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                setOrderFilters(prev => ({
+                  ...prev,
+                  dateFrom: thirtyDaysAgo.toISOString().split('T')[0],
+                  dateTo: new Date().toISOString().split('T')[0]
+                }));
+              }}
+            >
+              Last 30 Days
+            </Button>
+            {(orderSearch || Object.values(orderFilters).some(val => val !== "")) && (
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={clearFilters}
+                title="Clear all filters and search"
+              >
+                ✕ Clear All
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Active Filters Summary */}
+        {(orderSearch || Object.values(orderFilters).some(val => val !== "")) && (
+          <div className="mb-3">
+            <div className="d-flex gap-2 flex-wrap align-items-center">
+              <span className="text-muted small">Active filters:</span>
+              {orderSearch && (
+                <span className="badge bg-primary">
+                  Search: "{orderSearch}"
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-2"
+                    style={{ fontSize: '0.5rem' }}
+                    onClick={() => setOrderSearch("")}
+                  ></button>
+                </span>
+              )}
+              {orderFilters.status && (
+                <span className="badge bg-info">
+                  Status: {orderFilters.status === "returned" ? "Return Related" : orderFilters.status}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-2"
+                    style={{ fontSize: '0.5rem' }}
+                    onClick={() => setOrderFilters(prev => ({ ...prev, status: "" }))}
+                  ></button>
+                </span>
+              )}
+              {orderFilters.paymentMethod && (
+                <span className="badge bg-warning">
+                  Payment: {orderFilters.paymentMethod}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-2"
+                    style={{ fontSize: '0.5rem' }}
+                    onClick={() => setOrderFilters(prev => ({ ...prev, paymentMethod: "" }))}
+                  ></button>
+                </span>
+              )}
+              {(orderFilters.dateFrom || orderFilters.dateTo) && (
+                <span className="badge bg-secondary">
+                  Date: {orderFilters.dateFrom || "Any"} - {orderFilters.dateTo || "Any"}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-2"
+                    style={{ fontSize: '0.5rem' }}
+                    onClick={() => setOrderFilters(prev => ({ ...prev, dateFrom: "", dateTo: "" }))}
+                  ></button>
+                </span>
+              )}
+              {(orderFilters.priceMin || orderFilters.priceMax) && (
+                <span className="badge bg-success">
+                  Price: ₹{orderFilters.priceMin || "0"} - ₹{orderFilters.priceMax || "∞"}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-2"
+                    style={{ fontSize: '0.5rem' }}
+                    onClick={() => setOrderFilters(prev => ({ ...prev, priceMin: "", priceMax: "" }))}
+                  ></button>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Filters Section */}
+        {showFilters && (
+          <Card className="mb-3 border-secondary">
+            <Card.Body>
+              <div className="row g-3">
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Order Status</Form.Label>
+                  <Form.Select
+                    value={orderFilters.status}
+                    onChange={(e) => setOrderFilters(prev => ({ ...prev, status: e.target.value }))}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="returned">Return Related (All)</option>
+                    <option value="return_verified">Return Verified</option>
+                    <option value="rejected">Return Rejected</option>
+                  </Form.Select>
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Payment Method</Form.Label>
+                  <Form.Select
+                    value={orderFilters.paymentMethod}
+                    onChange={(e) => setOrderFilters(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                  >
+                    <option value="">All Methods</option>
+                    <option value="cod">Cash on Delivery</option>
+                    <option value="online">Online Payment</option>
+                    <option value="wallet">Wallet</option>
+                  </Form.Select>
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Date From</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={orderFilters.dateFrom}
+                    onChange={(e) => setOrderFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Date To</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={orderFilters.dateTo}
+                    onChange={(e) => setOrderFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Min Price (₹)</Form.Label>
+                  <Form.Control
+                    type="number"
+                    placeholder="0"
+                    value={orderFilters.priceMin}
+                    onChange={(e) => setOrderFilters(prev => ({ ...prev, priceMin: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Max Price (₹)</Form.Label>
+                  <Form.Control
+                    type="number"
+                    placeholder="10000"
+                    value={orderFilters.priceMax}
+                    onChange={(e) => setOrderFilters(prev => ({ ...prev, priceMax: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Sort By</Form.Label>
+                  <Form.Select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="date">Order Date</option>
+                    <option value="orderNumber">Order Number</option>
+                    <option value="total">Total Amount</option>
+                    <option value="status">Status</option>
+                  </Form.Select>
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="fw-semibold">Sort Order</Form.Label>
+                  <Form.Select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                  >
+                    <option value="desc">Newest First</option>
+                    <option value="asc">Oldest First</option>
+                  </Form.Select>
+                </div>
+                <div className="col-12">
+                  <div className="d-flex gap-2 align-items-center">
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={clearFilters}
+                    >
+                      ✕ Clear All Filters
+                    </Button>
+                    <div className="text-muted small d-flex align-items-center">
+                      {filteredOrders.length} of {orders.length} orders
+                    </div>
+                    <div className="text-muted small d-flex align-items-center ms-auto">
+                      <span className="badge bg-light text-dark me-2">
+                        {Object.values(orderFilters).filter(val => val !== "").length + (orderSearch ? 1 : 0)} active filters
+                      </span>
+                      {totalPages > 1 && (
+                        <span className="badge bg-info text-white">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
         {ordersLoading ? (
           <div className="text-center py-5">
             <Spinner animation="border" />
           </div>
         ) : ordersError ? (
           <Alert variant="danger">{ordersError}</Alert>
-        ) : orders.length === 0 ? (
+        ) : filteredOrders.length === 0 ? (
           <div className="text-center py-5">
             <FaBoxOpen size={48} className="text-muted mb-3" />
-            <h6 className="text-muted">No orders found</h6>
+            <h6 className="text-muted">
+              {orders.length === 0 ? "No orders found" : "No orders match your filters"}
+            </h6>
             <p className="text-muted small">
-              You have not placed any orders yet.
+              {orders.length === 0 
+                ? "You have not placed any orders yet."
+                : "Try adjusting your search criteria or filters."
+              }
             </p>
+            {orders.length > 0 && (
+              <Button variant="outline-primary" size="sm" onClick={clearFilters}>
+                Clear All Filters
+              </Button>
+            )}
           </div>
         ) : (
           <div className="table-responsive">
@@ -1347,23 +1823,12 @@ const UserProfile = () => {
                   <th>Status</th>
                   <th>Total</th>
                   <th>Items</th>
+                  <th>Payment</th>
                   <th>Order Details</th>
                 </tr>
               </thead>
               <tbody>
-                {(orders.filter(order => {
-                  const search = orderSearch.toLowerCase();
-                  const orderNumber = order.orderNumber?.toString().toLowerCase() || "";
-                  const status = order.status?.toLowerCase() || "";
-                  const productNames = order.items
-                    .map(item => item.productVariantId?.product?.name?.toLowerCase() || "")
-                    .join(" ");
-                  return (
-                    orderNumber.includes(search) ||
-                    status.includes(search) ||
-                    productNames.includes(search)
-                  );
-                })).map((order) => {
+                {currentOrders.map((order) => {
                   const rows = [
                     <tr
                       key={order._id}
@@ -1391,29 +1856,37 @@ const UserProfile = () => {
                       </td>
                       <td className="fw-semibold">{order.orderNumber}</td>
                       <td>
-                        <span
-                          className={`badge bg-${
-                            order.status === "delivered"
-                              ? "success"
-                              : order.status === "cancelled"
-                              ? "danger"
-                              : "info"
-                          } bg-opacity-25 text-${
-                            order.status === "delivered"
-                              ? "success"
-                              : order.status === "cancelled"
-                              ? "danger"
-                              : "info"
-                          }`}
-                        >
-                          {order.status.charAt(0).toUpperCase() +
-                            order.status.slice(1)}
-                        </span>
+                        {(() => {
+                          const statusInfo = getStatusInfo(order.status);
+                          return (
+                            <span
+                              className={`badge bg-${statusInfo.color} bg-opacity-25 text-${statusInfo.color}`}
+                              title={statusInfo.message}
+                            >
+                              {statusInfo.text}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="fw-bold">
                         ₹{(order.total ?? 0).toFixed(2)}
                       </td>
                       <td>{order.items.length}</td>
+                      <td>
+                        <span className={`badge bg-${
+                          order.paymentMethod === "cod" ? "warning" :
+                          order.paymentMethod === "online" ? "success" :
+                          order.paymentMethod === "wallet" ? "info" : "secondary"
+                        } bg-opacity-25 text-${
+                          order.paymentMethod === "cod" ? "warning" :
+                          order.paymentMethod === "online" ? "success" :
+                          order.paymentMethod === "wallet" ? "info" : "secondary"
+                        }`}>
+                          {order.paymentMethod === "cod" ? "COD" :
+                           order.paymentMethod === "online" ? "Online" :
+                           order.paymentMethod === "wallet" ? "Wallet" : "N/A"}
+                        </span>
+                      </td>
                       <td>
                         {order.status === "pending" && (
                           <Button
@@ -1447,7 +1920,7 @@ const UserProfile = () => {
                   if (expandedOrderId === order._id) {
                     rows.push(
                       <tr key={order._id + "-expanded"}>
-                        <td colSpan={7} style={{ background: "#f8f9fa" }}>
+                        <td colSpan={8} style={{ background: "#f8f9fa" }}>
                           <div className="p-3">
                             <h6 className="fw-bold mb-3">Order Items</h6>
                             <div className="row g-3">
@@ -1572,37 +2045,30 @@ const UserProfile = () => {
                             <div className="mt-4">
                               <h6 className="fw-bold mb-2">
                                 Order Status:{" "}
-                                <span
-                                  className={`badge bg-${
-                                    order.status === "delivered"
-                                      ? "success"
-                                      : order.status === "cancelled"
-                                      ? "danger"
-                                      : order.status === "return_verified"
-                                      ? "success"
-                                      : order.status === "rejected"
-                                      ? "danger"
-                                      : "info"
-                                  } bg-opacity-25 text-${
-                                    order.status === "delivered"
-                                      ? "success"
-                                      : order.status === "cancelled"
-                                      ? "danger"
-                                      : order.status === "return_verified"
-                                      ? "success"
-                                      : order.status === "rejected"
-                                      ? "danger"
-                                      : "info"
-                                  }`}
-                                >
-                                  {order.status === "return_verified"
-                                    ? "Return Verified"
-                                    : order.status === "rejected"
-                                    ? "Return Rejected"
-                                    : order.status.charAt(0).toUpperCase() +
-                                      order.status.slice(1)}
-                                </span>
+                                {(() => {
+                                  const statusInfo = getStatusInfo(order.status);
+                                  return (
+                                    <span
+                                      className={`badge bg-${statusInfo.color} bg-opacity-25 text-${statusInfo.color}`}
+                                      title={statusInfo.message}
+                                    >
+                                      {statusInfo.text}
+                                    </span>
+                                  );
+                                })()}
                               </h6>
+                              {/* Status-specific messages */}
+                              {(() => {
+                                const statusInfo = getStatusInfo(order.status);
+                                if (statusInfo.message && (order.status === "return_verified" || order.status === "rejected" || order.status === "returned")) {
+                                  return (
+                                    <div className={`text-${statusInfo.color} small mb-2`}>
+                                      <strong>{statusInfo.text}:</strong> {statusInfo.message}
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {order.cancellationReason &&
                                 (order.status === "cancelled" || order.status === "returned" || order.status === "return_verified" || order.status === "rejected") && (
                                   <div className="text-muted small">
@@ -1675,6 +2141,72 @@ const UserProfile = () => {
                 })}
               </tbody>
             </table>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="d-flex justify-content-between align-items-center mt-3">
+                <div className="text-muted small">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+                </div>
+                <nav aria-label="Orders pagination">
+                  <ul className="pagination pagination-sm mb-0">
+                    {/* Previous Button */}
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button
+                        className="page-link"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </button>
+                    </li>
+                    
+                    {/* Page Numbers */}
+                    {Array.from({ length: totalPages }, (_, index) => {
+                      const pageNumber = index + 1;
+                      // Show first page, last page, current page, and pages around current page
+                      if (
+                        pageNumber === 1 ||
+                        pageNumber === totalPages ||
+                        (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                      ) {
+                        return (
+                          <li key={pageNumber} className={`page-item ${pageNumber === currentPage ? 'active' : ''}`}>
+                            <button
+                              className="page-link"
+                              onClick={() => setCurrentPage(pageNumber)}
+                            >
+                              {pageNumber}
+                            </button>
+                          </li>
+                        );
+                      } else if (
+                        pageNumber === currentPage - 2 ||
+                        pageNumber === currentPage + 2
+                      ) {
+                        return (
+                          <li key={pageNumber} className="page-item disabled">
+                            <span className="page-link">...</span>
+                          </li>
+                        );
+                      }
+                      return null;
+                    })}
+                    
+                    {/* Next Button */}
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <button
+                        className="page-link"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            )}
           </div>
         )}
       </Card.Body>
