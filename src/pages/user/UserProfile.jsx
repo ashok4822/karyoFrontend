@@ -1578,28 +1578,71 @@ const UserProfile = () => {
                                       ? "success"
                                       : order.status === "cancelled"
                                       ? "danger"
+                                      : order.status === "return_verified"
+                                      ? "success"
+                                      : order.status === "rejected"
+                                      ? "danger"
                                       : "info"
                                   } bg-opacity-25 text-${
                                     order.status === "delivered"
                                       ? "success"
                                       : order.status === "cancelled"
                                       ? "danger"
+                                      : order.status === "return_verified"
+                                      ? "success"
+                                      : order.status === "rejected"
+                                      ? "danger"
                                       : "info"
                                   }`}
                                 >
-                                  {order.status.charAt(0).toUpperCase() +
-                                    order.status.slice(1)}
+                                  {order.status === "return_verified"
+                                    ? "Return Verified"
+                                    : order.status === "rejected"
+                                    ? "Return Rejected"
+                                    : order.status.charAt(0).toUpperCase() +
+                                      order.status.slice(1)}
                                 </span>
                               </h6>
                               {order.cancellationReason &&
-                                (order.status === "cancelled" || order.status === "returned") && (
+                                (order.status === "cancelled" || order.status === "returned" || order.status === "return_verified" || order.status === "rejected") && (
                                   <div className="text-muted small">
                                     {order.status === "cancelled"
                                       ? "Order Cancellation Reason: "
+                                      : order.status === "rejected"
+                                      ? "Return Rejection Reason: "
                                       : "Order Return Reason: "}
                                     {order.cancellationReason}
                                   </div>
                                 )}
+                              {order.status === "return_verified" && (
+                                <div className="text-success small">
+                                  <strong>Return Verified:</strong> Your return request has been verified by admin.
+                                  {order.paymentStatus === "refunded" && (
+                                    <div>
+                                      <strong>Refund Processed:</strong> ₹{order.total?.toFixed(2)} has been refunded to your wallet.
+                                      {order.paymentMethod === "cod" && (
+                                        <div className="text-muted">
+                                          <em>This refund was provided as a goodwill gesture for your COD order.</em>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {order.paymentStatus !== "refunded" && (
+                                    <div>
+                                      <strong>No Refund:</strong> This return was verified without processing a refund.
+                                      <div className="text-muted">
+                                        <em>This typically occurs when the product was not accepted during delivery.</em>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {order.status === "rejected" && (
+                                <div className="text-danger small">
+                                  <strong>Return Rejected:</strong> Your return request has been rejected by admin.
+                                </div>
+                              )}
                               <div className="text-muted small">
                                 Order Date:{" "}
                                 {(() => {

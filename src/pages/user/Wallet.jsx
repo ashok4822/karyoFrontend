@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from "react";
 import userAxios from "../../lib/userAxios";
 import { Modal, Button, Toast, ToastContainer, Spinner } from "react-bootstrap";
-import { FaWallet, FaPlusCircle, FaMinusCircle, FaRupeeSign, FaArrowDown, FaArrowUp, FaArrowLeft } from "react-icons/fa";
+import {
+  FaWallet,
+  FaPlusCircle,
+  FaMinusCircle,
+  FaRupeeSign,
+  FaArrowDown,
+  FaArrowUp,
+  FaArrowLeft,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const Wallet = () => {
@@ -57,11 +65,17 @@ const Wallet = () => {
     setLoading(true);
     try {
       if (type === "add") {
-        await userAxios.post("/users/wallet/add", { amount: numAmount, description });
+        await userAxios.post("/users/wallet/add", {
+          amount: numAmount,
+          description,
+        });
         setToastMsg("Funds added successfully");
         setToastVariant("success");
       } else {
-        await userAxios.post("/users/wallet/deduct", { amount: numAmount, description });
+        await userAxios.post("/users/wallet/deduct", {
+          amount: numAmount,
+          description,
+        });
         setToastMsg("Funds deducted successfully");
         setToastVariant("success");
       }
@@ -82,17 +96,24 @@ const Wallet = () => {
 
   const formatDate = (date) => {
     const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
-    const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const time = d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     return `${day}/${month}/${year}, ${time}`;
   };
 
   return (
     <div className="container py-4" style={{ maxWidth: 700 }}>
       <div className="mb-3">
-        <Button variant="outline-secondary" onClick={() => navigate('/profile')} className="d-flex align-items-center gap-2">
+        <Button
+          variant="outline-secondary"
+          onClick={() => navigate("/profile")}
+          className="d-flex align-items-center gap-2"
+        >
           <FaArrowLeft /> Back to Profile
         </Button>
       </div>
@@ -103,7 +124,9 @@ const Wallet = () => {
       <div className="card shadow-sm mb-4" style={{ borderRadius: 16 }}>
         <div className="card-body d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
           <div className="d-flex align-items-center gap-3">
-            <div style={{ background: "#e9f5ff", borderRadius: 12, padding: 16 }}>
+            <div
+              style={{ background: "#e9f5ff", borderRadius: 12, padding: 16 }}
+            >
               <FaRupeeSign size={32} style={{ color: "#0d6efd" }} />
             </div>
             <div>
@@ -122,14 +145,14 @@ const Wallet = () => {
             >
               <FaPlusCircle /> Add Funds
             </Button>
-            <Button
+            {/* <Button
               variant="danger"
               className="d-flex align-items-center gap-2"
               onClick={() => setModalType("deduct")}
               disabled={loading}
             >
               <FaMinusCircle /> Deduct Funds
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>
@@ -139,7 +162,9 @@ const Wallet = () => {
         <div className="card-body">
           <h5 className="mb-3">Transaction History</h5>
           {transactions.length === 0 ? (
-            <div className="text-muted text-center py-4">No transactions yet.</div>
+            <div className="text-muted text-center py-4">
+              No transactions yet.
+            </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table className="table table-hover align-middle mb-0">
@@ -166,8 +191,14 @@ const Wallet = () => {
                           </span>
                         )}
                       </td>
-                      <td style={{ fontWeight: 600, color: txn.type === "credit" ? "#198754" : "#dc3545" }}>
-                        {txn.type === "debit" ? "-" : "+"}₹{txn.amount.toFixed(2)}
+                      <td
+                        style={{
+                          fontWeight: 600,
+                          color: txn.type === "credit" ? "#198754" : "#dc3545",
+                        }}
+                      >
+                        {txn.type === "debit" ? "-" : "+"}₹
+                        {txn.amount.toFixed(2)}
                       </td>
                       <td>{txn.description}</td>
                     </tr>
@@ -184,15 +215,19 @@ const Wallet = () => {
         <Modal.Header closeButton>
           <Modal.Title>
             {modalType === "add" ? (
-              <span className="text-success"><FaPlusCircle /> Add Funds</span>
+              <span className="text-success">
+                <FaPlusCircle /> Add Funds
+              </span>
             ) : (
-              <span className="text-danger"><FaMinusCircle /> Deduct Funds</span>
+              <span className="text-danger">
+                <FaMinusCircle /> Deduct Funds
+              </span>
             )}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <form
-            onSubmit={e => {
+            onSubmit={(e) => {
               e.preventDefault();
               handleFunds(modalType);
             }}
@@ -203,7 +238,7 @@ const Wallet = () => {
                 type="number"
                 className="form-control"
                 value={amount}
-                onChange={e => setAmount(e.target.value)}
+                onChange={(e) => setAmount(e.target.value)}
                 placeholder="Enter amount"
                 min={1}
                 required
@@ -215,7 +250,7 @@ const Wallet = () => {
                 type="text"
                 className="form-control"
                 value={description}
-                onChange={e => setDescription(e.target.value)}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Description"
               />
             </div>
@@ -225,7 +260,8 @@ const Wallet = () => {
                 type="submit"
                 disabled={loading}
               >
-                {loading && <Spinner size="sm" className="me-2" />} {modalType === "add" ? "Add" : "Deduct"}
+                {loading && <Spinner size="sm" className="me-2" />}{" "}
+                {modalType === "add" ? "Add" : "Deduct"}
               </Button>
             </div>
           </form>
@@ -233,7 +269,11 @@ const Wallet = () => {
       </Modal>
 
       {/* Toast Feedback */}
-      <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }}>
+      <ToastContainer
+        position="top-end"
+        className="p-3"
+        style={{ zIndex: 9999 }}
+      >
         <Toast
           onClose={() => setShowToast(false)}
           show={showToast}
@@ -248,4 +288,4 @@ const Wallet = () => {
   );
 };
 
-export default Wallet; 
+export default Wallet;
