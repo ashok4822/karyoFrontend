@@ -131,7 +131,11 @@ const AdminDiscounts = () => {
     setShowModal(true);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = (force = false) => {
+    if (force) {
+      closeModal();
+      return;
+    }
     // Check if there are unsaved changes
     const hasChanges = formData.name || formData.description || formData.discountValue || 
                       formData.minimumAmount || formData.maximumDiscount || formData.validFrom || formData.validTo;
@@ -202,7 +206,7 @@ const AdminDiscounts = () => {
             icon: 'success',
             confirmButtonColor: '#28a745'
           });
-          handleCloseModal();
+          handleCloseModal(true);
         })
         .catch((error) => {
           Swal.fire({
@@ -222,7 +226,7 @@ const AdminDiscounts = () => {
             icon: 'success',
             confirmButtonColor: '#28a745'
           });
-          handleCloseModal();
+          handleCloseModal(true);
         })
         .catch((error) => {
           Swal.fire({

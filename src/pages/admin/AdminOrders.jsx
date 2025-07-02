@@ -48,6 +48,7 @@ const AdminOrders = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusUpdatingOrder, setStatusUpdatingOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
+  const [total, setTotal] = useState(0);
 
   const ordersPerPage = 10;
 
@@ -64,6 +65,7 @@ const AdminOrders = () => {
         const res = await adminAxios.get("/orders", { params });
         setOrders(res.data.orders || []);
         setTotalPages(res.data.totalPages || 1);
+        setTotal(res.data.total || 0);
       } catch (err) {
         setError(
           err.response?.data?.message || "Failed to fetch orders from server"
@@ -116,35 +118,6 @@ const AdminOrders = () => {
     }
   };
 
-  const filteredOrders = orders
-    .filter((order) => {
-      const matchesSearch =
-        (order.orderNumber?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (order.user && (
-          (order.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
-        )));
-
-      const matchesStatus = statusFilter ? order.status === statusFilter : true;
-      const matchesDate = dateFilter ? (order.date || order.createdAt || "").includes(dateFilter) : true;
-
-      return matchesSearch && matchesStatus && matchesDate;
-    })
-    .sort((a, b) => {
-      const direction = sortDirection === 'asc' ? 1 : -1;
-      if (sortField === 'date') {
-        return direction * (new Date(a.date || a.createdAt) - new Date(b.date || b.createdAt));
-      }
-      if (sortField === 'total') {
-        return direction * (a.total - b.total);
-      }
-      return direction * (a[sortField]?.localeCompare(b[sortField]) || 0);
-    });
-
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
-
   const getStatusBadge = (status) => {
     const variants = {
       pending: 'warning',
@@ -160,6 +133,10 @@ const AdminOrders = () => {
     if (sortField !== field) return <FaSort className="text-muted" />;
     return sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />;
   };
+
+  // Calculate correct start and end indices for the current page
+  const startOrder = (orders.length === 0) ? 0 : (currentPage - 1) * ordersPerPage + 1;
+  const endOrder = (orders.length === 0) ? 0 : Math.min(currentPage * ordersPerPage, total);
 
   if (loading) {
     return (
@@ -309,7 +286,7 @@ const AdminOrders = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentOrders.map((order) => (
+                    {orders.map((order) => (
                       <tr key={order._id || order.id}>
                         <td>
                           <div className="fw-medium">#{order.orderNumber}</div>
@@ -377,7 +354,7 @@ const AdminOrders = () => {
                 </Table>
               </div>
 
-              {currentOrders.length === 0 && (
+              {orders.length === 0 && (
                 <div className="text-center py-5">
                   <p className="text-muted mb-0">No orders found</p>
                 </div>
@@ -387,9 +364,7 @@ const AdminOrders = () => {
                 <Card.Footer className="bg-transparent border-0">
                   <div className="d-flex justify-content-between align-items-center">
                     <div className="text-muted">
-                      Showing {indexOfFirstOrder + 1} to{' '}
-                      {Math.min(indexOfLastOrder, filteredOrders.length)} of{' '}
-                      {filteredOrders.length} orders
+                      Showing {startOrder} to {endOrder} of {total} orders
                     </div>
                     <Pagination className="mb-0">
                       <Pagination.Prev

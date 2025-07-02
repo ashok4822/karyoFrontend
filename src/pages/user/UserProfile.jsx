@@ -150,11 +150,32 @@ const UserProfile = () => {
     }
   }, [location.search]);
 
+  // Add state for backend pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [ordersPerPage] = useState(5);
+  const [total, setTotal] = useState(0);
+
+  // Fetch paginated orders from backend
   useEffect(() => {
     if (activeIndex === 3) {
-      dispatch(fetchUserOrders());
+      const fetchOrders = async () => {
+        try {
+          const params = { page: currentPage, limit: ordersPerPage };
+          const res = await userAxios.get('/orders', { params });
+          dispatch({ type: 'order/fetchUserOrders/fulfilled', payload: { orders: res.data.orders } });
+          setTotal(res.data.total || 0);
+        } catch (err) {
+          // handle error if needed
+        }
+      };
+      fetchOrders();
     }
-  }, [activeIndex, dispatch]);
+  }, [activeIndex, currentPage, ordersPerPage, dispatch]);
+
+  // Calculate correct start and end indices for the current page
+  const startOrder = (orders.length === 0) ? 0 : (currentPage - 1) * ordersPerPage + 1;
+  const endOrder = (orders.length === 0) ? 0 : Math.min(currentPage * ordersPerPage, total);
+  const totalPages = Math.ceil(total / ordersPerPage);
 
   // Keyboard shortcut for clearing filters (Escape key)
   useEffect(() => {
@@ -1383,8 +1404,6 @@ const UserProfile = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 5;
 
   // Filter orders based on search and filters
   const filteredOrders = orders.filter(order => {
@@ -1476,32 +1495,6 @@ const UserProfile = () => {
       return aValue < bValue ? 1 : -1;
     }
   });
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-  const startIndex = (currentPage - 1) * ordersPerPage;
-  const endIndex = startIndex + ordersPerPage;
-  const currentOrders = filteredOrders.slice(startIndex, endIndex);
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [orderSearch, orderFilters, sortBy, sortOrder]);
-
-  const clearFilters = () => {
-    setOrderFilters({
-      status: "",
-      dateFrom: "",
-      dateTo: "",
-      priceMin: "",
-      priceMax: "",
-      paymentMethod: "",
-    });
-    setOrderSearch("");
-    setSortBy("date");
-    setSortOrder("desc");
-    setCurrentPage(1);
-  };
 
   const showOrdersContent = (
     <Card className="shadow-sm border-0">
@@ -1828,7 +1821,7 @@ const UserProfile = () => {
                 </tr>
               </thead>
               <tbody>
-                {currentOrders.map((order) => {
+                {filteredOrders.map((order) => {
                   const rows = [
                     <tr
                       key={order._id}
@@ -2146,7 +2139,7 @@ const UserProfile = () => {
             {totalPages > 1 && (
               <div className="d-flex justify-content-between align-items-center mt-3">
                 <div className="text-muted small">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+                  Showing {startOrder} to {endOrder} of {total} orders
                 </div>
                 <nav aria-label="Orders pagination">
                   <ul className="pagination pagination-sm mb-0">
