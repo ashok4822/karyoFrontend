@@ -212,8 +212,6 @@ const ProductManagement = () => {
   };
 
   const handleViewVariant = (product, variant) => {
-    console.log("Viewing variant:", variant);
-    console.log("Product:", product);
     setSelectedProduct(product);
     setSelectedVariant(variant);
     setShowViewVariantModal(true);
@@ -231,10 +229,6 @@ const ProductManagement = () => {
   };
 
   const handleDeleteVariant = async (productId, variantId) => {
-    console.log("handleDeleteVariant called with:", { productId, variantId });
-    console.log("variantId type:", typeof variantId);
-    console.log("variantId value:", variantId);
-
     if (!variantId || variantId === "undefined") {
       console.error("Invalid variant ID:", variantId);
       return;
@@ -472,12 +466,6 @@ const ProductManagement = () => {
                       <td>{formatDate(product.createdAt)}</td>
                       <td>
                         {(() => {
-                          console.log("Product variants:", product.variants);
-                          console.log(
-                            "Product variantDetails:",
-                            product.variantDetails
-                          );
-
                           const variants =
                             product.variantDetails &&
                             product.variantDetails.length > 0
@@ -486,11 +474,6 @@ const ProductManagement = () => {
                               ? product.variants
                               : [];
 
-                          console.log(
-                            "Final variants array to display:",
-                            variants
-                          );
-
                           if (variants.length === 0) {
                             return (
                               <span className="text-muted">No variants</span>
@@ -498,10 +481,6 @@ const ProductManagement = () => {
                           }
 
                           return variants.map((variant, idx) => {
-                            console.log(`Variant ${idx + 1} object:`, variant);
-                            console.log(`Variant ${idx + 1} _id:`, variant._id);
-                            console.log(`Variant ${idx + 1} id:`, variant.id);
-
                             return (
                               <div
                                 key={variant._id || idx}
@@ -545,16 +524,8 @@ const ProductManagement = () => {
                                     <button
                                       className="btn btn-outline-danger btn-sm"
                                       onClick={() => {
-                                        console.log(
-                                          "Variant object for delete:",
-                                          variant
-                                        );
                                         const variantId =
                                           variant._id || variant.id;
-                                        console.log(
-                                          "Using variant ID for delete:",
-                                          variantId
-                                        );
                                         handleDeleteVariant(
                                           product._id,
                                           variantId

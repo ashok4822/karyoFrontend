@@ -2,8 +2,6 @@ import React from "react";
 import { Modal, Button, Row, Col, Badge } from "react-bootstrap";
 
 const ViewVariantModal = ({ show, onHide, variant, product }) => {
-  console.log('ViewVariantModal props:', { show, variant, product });
-  
   if (!show || !variant || !product) return null;
 
   const formatDate = (dateString) => {

@@ -111,12 +111,12 @@ const Index = () => {
                 price: "39.99",
               },
             ];
-            const cards = [];
-            for (let i = 0; i < 4; i++) {
+            
+            return Array.from({ length: 4 }, (_, i) => {
               if (featured[i]) {
                 const product = featured[i];
-                cards.push(
-                  <Col key={product.id}>
+                return (
+                  <Col key={`product-${product.id || i}`}>
                     <Card className="h-100 shadow-sm hover-shadow">
                       <Card.Img
                         variant="top"
@@ -149,8 +149,8 @@ const Index = () => {
                 );
               } else {
                 const ph = placeholders[i];
-                cards.push(
-                  <Col key={ph.id}>
+                return (
+                  <Col key={`placeholder-${ph.id || i}`}>
                     <Card className="h-100 shadow-sm hover-shadow">
                       <Card.Img
                         variant="top"
@@ -175,8 +175,7 @@ const Index = () => {
                   </Col>
                 );
               }
-            }
-            return cards;
+            });
           })()}
         </Row>
       </Container>
