@@ -155,12 +155,21 @@ const UserProfile = () => {
   const [ordersPerPage] = useState(5);
   const [total, setTotal] = useState(0);
 
+  // Add state for search
+  const [orderSearch, setOrderSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+
+  // Add state for status filter
+  const [orderStatus, setOrderStatus] = useState("all");
+
   // Fetch paginated orders from backend
   useEffect(() => {
     if (activeIndex === 3) {
       const fetchOrders = async () => {
         try {
           const params = { page: currentPage, limit: ordersPerPage };
+          if (orderSearch.trim() !== "") params.search = orderSearch.trim();
+          if (orderStatus && orderStatus !== "all") params.status = orderStatus;
           const res = await userAxios.get('/orders', { params });
           dispatch({ type: 'order/fetchUserOrders/fulfilled', payload: { orders: res.data.orders } });
           setTotal(res.data.total || 0);
@@ -170,7 +179,7 @@ const UserProfile = () => {
       };
       fetchOrders();
     }
-  }, [activeIndex, currentPage, ordersPerPage, dispatch]);
+  }, [activeIndex, currentPage, ordersPerPage, orderSearch, orderStatus, dispatch]);
 
   // Calculate correct start and end indices for the current page
   const startOrder = (orders.length === 0) ? 0 : (currentPage - 1) * ordersPerPage + 1;
@@ -1392,419 +1401,75 @@ const UserProfile = () => {
   );
 
   // Show Orders content
-  const [orderSearch, setOrderSearch] = useState("");
-  const [orderFilters, setOrderFilters] = useState({
-    status: "",
-    dateFrom: "",
-    dateTo: "",
-    priceMin: "",
-    priceMax: "",
-    paymentMethod: "",
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState("date");
-  const [sortOrder, setSortOrder] = useState("desc");
-
-  // Filter orders based on search and filters
-  const filteredOrders = orders.filter(order => {
-    // Search filter
-    const search = orderSearch.toLowerCase();
-    const orderNumber = order.orderNumber?.toString().toLowerCase() || "";
-    const status = order.status?.toLowerCase() || "";
-    const productNames = order.items
-      .map(item => item.productVariantId?.product?.name?.toLowerCase() || "")
-      .join(" ");
-    
-    const matchesSearch = 
-      orderNumber.includes(search) ||
-      status.includes(search) ||
-      productNames.includes(search);
-
-    if (!matchesSearch) return false;
-
-    // Status filter
-    if (orderFilters.status) {
-      if (orderFilters.status === "returned") {
-        // For "returned" filter, include all return-related statuses
-        const returnStatuses = ["returned", "return_verified", "rejected"];
-        if (!returnStatuses.includes(order.status)) {
-          return false;
-        }
-      } else if (order.status !== orderFilters.status) {
-        return false;
-      }
-    }
-
-    // Date range filter
-    if (orderFilters.dateFrom) {
-      const orderDate = new Date(order.createdAt);
-      const fromDate = new Date(orderFilters.dateFrom);
-      if (orderDate < fromDate) return false;
-    }
-
-    if (orderFilters.dateTo) {
-      const orderDate = new Date(order.createdAt);
-      const toDate = new Date(orderFilters.dateTo);
-      toDate.setHours(23, 59, 59, 999); // End of day
-      if (orderDate > toDate) return false;
-    }
-
-    // Price range filter
-    if (orderFilters.priceMin && order.total < parseFloat(orderFilters.priceMin)) {
-      return false;
-    }
-
-    if (orderFilters.priceMax && order.total > parseFloat(orderFilters.priceMax)) {
-      return false;
-    }
-
-    // Payment method filter
-    if (orderFilters.paymentMethod && order.paymentMethod !== orderFilters.paymentMethod) {
-      return false;
-    }
-
-    return true;
-  }).sort((a, b) => {
-    let aValue, bValue;
-    
-    switch (sortBy) {
-      case "date":
-        aValue = new Date(a.createdAt);
-        bValue = new Date(b.createdAt);
-        break;
-      case "orderNumber":
-        aValue = a.orderNumber;
-        bValue = b.orderNumber;
-        break;
-      case "total":
-        aValue = a.total || 0;
-        bValue = b.total || 0;
-        break;
-      case "status":
-        aValue = a.status;
-        bValue = b.status;
-        break;
-      default:
-        aValue = new Date(a.createdAt);
-        bValue = new Date(b.createdAt);
-    }
-    
-    if (sortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
-
   const showOrdersContent = (
     <Card className="shadow-sm border-0">
       <Card.Body>
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5 className="fw-bold mb-3">My Orders</h5>
-          <div className="d-flex gap-2">
-            <Button
-              variant={Object.values(orderFilters).some(val => val !== "") || orderSearch ? "outline-warning" : "outline-secondary"}
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
+          <div className="d-flex align-items-center">
+            <form
+              className="d-flex align-items-center me-3"
+              onSubmit={e => {
+                e.preventDefault();
+                setOrderSearch(searchInput);
+              }}
+              style={{ minWidth: 260 }}
             >
-              {showFilters ? "Hide Filters" : "Show Filters"}
-              {(Object.values(orderFilters).some(val => val !== "") || orderSearch) && (
-                <span className="badge bg-warning text-dark ms-1">
-                  {Object.values(orderFilters).filter(val => val !== "").length + (orderSearch ? 1 : 0)}
-                </span>
+              <input
+                type="text"
+                className="form-control me-2"
+                placeholder="Search orders..."
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                style={{ maxWidth: 180 }}
+              />
+              <button type="submit" className="btn btn-primary btn-sm me-2">Search</button>
+              {orderSearch && (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => {
+                    setOrderSearch("");
+                    setSearchInput("");
+                  }}
+                >
+                  Clear
+                </button>
               )}
-            </Button>
-            <Form.Control
-              type="text"
-              placeholder="Search orders (order #, product, status)..."
-              value={orderSearch}
-              onChange={e => setOrderSearch(e.target.value)}
-              style={{ maxWidth: 300 }}
-            />
-            {(orderSearch || Object.values(orderFilters).some(val => val !== "")) && (
-              <Button
-                variant="outline-danger"
-                size="sm"
-                onClick={clearFilters}
-                title="Clear all filters and search"
-              >
-                Clear All
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Filter Buttons */}
-        <div className="mb-3">
-          <div className="d-flex gap-2 flex-wrap">
-            <Button
-              variant={orderFilters.status === "" ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={() => setOrderFilters(prev => ({ ...prev, status: "" }))}
-            >
-              All ({orders.length})
-            </Button>
-            <Button
-              variant={orderFilters.status === "pending" ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={() => setOrderFilters(prev => ({ ...prev, status: "pending" }))}
-            >
-              Pending ({orders.filter(o => o.status === "pending").length})
-            </Button>
-            <Button
-              variant={orderFilters.status === "delivered" ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={() => setOrderFilters(prev => ({ ...prev, status: "delivered" }))}
-            >
-              Delivered ({orders.filter(o => o.status === "delivered").length})
-            </Button>
-            <Button
-              variant={orderFilters.status === "cancelled" ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={() => setOrderFilters(prev => ({ ...prev, status: "cancelled" }))}
-            >
-              Cancelled ({orders.filter(o => o.status === "cancelled").length})
-            </Button>
-            <Button
-              variant={orderFilters.status === "returned" ? "primary" : "outline-primary"}
-              size="sm"
-              onClick={() => setOrderFilters(prev => ({ ...prev, status: "returned" }))}
-            >
-              Returned ({orders.filter(o => o.status === "returned" || o.status === "return_verified" || o.status === "rejected").length})
-            </Button>
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => {
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                setOrderFilters(prev => ({
-                  ...prev,
-                  dateFrom: thirtyDaysAgo.toISOString().split('T')[0],
-                  dateTo: new Date().toISOString().split('T')[0]
-                }));
+            </form>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 170 }}
+              value={orderStatus}
+              onChange={e => {
+                setOrderStatus(e.target.value);
+                setCurrentPage(1);
               }}
             >
-              Last 30 Days
-            </Button>
-            {(orderSearch || Object.values(orderFilters).some(val => val !== "")) && (
-              <Button
-                variant="outline-danger"
-                size="sm"
-                onClick={clearFilters}
-                title="Clear all filters and search"
-              >
-                ✕ Clear All
-              </Button>
-            )}
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="processing">Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="returned">Returned</option>
+              <option value="return_verified">Return Verified</option>
+              <option value="rejected">Rejected</option>
+            </select>
           </div>
         </div>
-
-        {/* Active Filters Summary */}
-        {(orderSearch || Object.values(orderFilters).some(val => val !== "")) && (
-          <div className="mb-3">
-            <div className="d-flex gap-2 flex-wrap align-items-center">
-              <span className="text-muted small">Active filters:</span>
-              {orderSearch && (
-                <span className="badge bg-primary">
-                  Search: "{orderSearch}"
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white ms-2"
-                    style={{ fontSize: '0.5rem' }}
-                    onClick={() => setOrderSearch("")}
-                  ></button>
-                </span>
-              )}
-              {orderFilters.status && (
-                <span className="badge bg-info">
-                  Status: {orderFilters.status === "returned" ? "Return Related" : orderFilters.status}
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white ms-2"
-                    style={{ fontSize: '0.5rem' }}
-                    onClick={() => setOrderFilters(prev => ({ ...prev, status: "" }))}
-                  ></button>
-                </span>
-              )}
-              {orderFilters.paymentMethod && (
-                <span className="badge bg-warning">
-                  Payment: {orderFilters.paymentMethod}
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white ms-2"
-                    style={{ fontSize: '0.5rem' }}
-                    onClick={() => setOrderFilters(prev => ({ ...prev, paymentMethod: "" }))}
-                  ></button>
-                </span>
-              )}
-              {(orderFilters.dateFrom || orderFilters.dateTo) && (
-                <span className="badge bg-secondary">
-                  Date: {orderFilters.dateFrom || "Any"} - {orderFilters.dateTo || "Any"}
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white ms-2"
-                    style={{ fontSize: '0.5rem' }}
-                    onClick={() => setOrderFilters(prev => ({ ...prev, dateFrom: "", dateTo: "" }))}
-                  ></button>
-                </span>
-              )}
-              {(orderFilters.priceMin || orderFilters.priceMax) && (
-                <span className="badge bg-success">
-                  Price: ₹{orderFilters.priceMin || "0"} - ₹{orderFilters.priceMax || "∞"}
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white ms-2"
-                    style={{ fontSize: '0.5rem' }}
-                    onClick={() => setOrderFilters(prev => ({ ...prev, priceMin: "", priceMax: "" }))}
-                  ></button>
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Filters Section */}
-        {showFilters && (
-          <Card className="mb-3 border-secondary">
-            <Card.Body>
-              <div className="row g-3">
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Order Status</Form.Label>
-                  <Form.Select
-                    value={orderFilters.status}
-                    onChange={(e) => setOrderFilters(prev => ({ ...prev, status: e.target.value }))}
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="returned">Return Related (All)</option>
-                    <option value="return_verified">Return Verified</option>
-                    <option value="rejected">Return Rejected</option>
-                  </Form.Select>
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Payment Method</Form.Label>
-                  <Form.Select
-                    value={orderFilters.paymentMethod}
-                    onChange={(e) => setOrderFilters(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                  >
-                    <option value="">All Methods</option>
-                    <option value="cod">Cash on Delivery</option>
-                    <option value="online">Online Payment</option>
-                    <option value="wallet">Wallet</option>
-                  </Form.Select>
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Date From</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={orderFilters.dateFrom}
-                    onChange={(e) => setOrderFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Date To</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={orderFilters.dateTo}
-                    onChange={(e) => setOrderFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Min Price (₹)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    placeholder="0"
-                    value={orderFilters.priceMin}
-                    onChange={(e) => setOrderFilters(prev => ({ ...prev, priceMin: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Max Price (₹)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    placeholder="10000"
-                    value={orderFilters.priceMax}
-                    onChange={(e) => setOrderFilters(prev => ({ ...prev, priceMax: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Sort By</Form.Label>
-                  <Form.Select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                  >
-                    <option value="date">Order Date</option>
-                    <option value="orderNumber">Order Number</option>
-                    <option value="total">Total Amount</option>
-                    <option value="status">Status</option>
-                  </Form.Select>
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="fw-semibold">Sort Order</Form.Label>
-                  <Form.Select
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value)}
-                  >
-                    <option value="desc">Newest First</option>
-                    <option value="asc">Oldest First</option>
-                  </Form.Select>
-                </div>
-                <div className="col-12">
-                  <div className="d-flex gap-2 align-items-center">
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={clearFilters}
-                    >
-                      ✕ Clear All Filters
-                    </Button>
-                    <div className="text-muted small d-flex align-items-center">
-                      {filteredOrders.length} of {orders.length} orders
-                    </div>
-                    <div className="text-muted small d-flex align-items-center ms-auto">
-                      <span className="badge bg-light text-dark me-2">
-                        {Object.values(orderFilters).filter(val => val !== "").length + (orderSearch ? 1 : 0)} active filters
-                      </span>
-                      {totalPages > 1 && (
-                        <span className="badge bg-info text-white">
-                          Page {currentPage} of {totalPages}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        )}
         {ordersLoading ? (
           <div className="text-center py-5">
             <Spinner animation="border" />
           </div>
         ) : ordersError ? (
           <Alert variant="danger">{ordersError}</Alert>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div className="text-center py-5">
             <FaBoxOpen size={48} className="text-muted mb-3" />
-            <h6 className="text-muted">
-              {orders.length === 0 ? "No orders found" : "No orders match your filters"}
-            </h6>
-            <p className="text-muted small">
-              {orders.length === 0 
-                ? "You have not placed any orders yet."
-                : "Try adjusting your search criteria or filters."
-              }
-            </p>
-            {orders.length > 0 && (
-              <Button variant="outline-primary" size="sm" onClick={clearFilters}>
-                Clear All Filters
-              </Button>
-            )}
+            <h6 className="text-muted">No orders found</h6>
+            <p className="text-muted small">You have not placed any orders yet.</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -1821,7 +1486,7 @@ const UserProfile = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => {
+                {orders.map((order) => {
                   const rows = [
                     <tr
                       key={order._id}
@@ -2134,72 +1799,46 @@ const UserProfile = () => {
                 })}
               </tbody>
             </table>
-            
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="d-flex justify-content-between align-items-center mt-3">
-                <div className="text-muted small">
-                  Showing {startOrder} to {endOrder} of {total} orders
-                </div>
-                <nav aria-label="Orders pagination">
-                  <ul className="pagination pagination-sm mb-0">
-                    {/* Previous Button */}
-                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                      <button
-                        className="page-link"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </button>
-                    </li>
-                    
-                    {/* Page Numbers */}
-                    {Array.from({ length: totalPages }, (_, index) => {
-                      const pageNumber = index + 1;
-                      // Show first page, last page, current page, and pages around current page
-                      if (
-                        pageNumber === 1 ||
-                        pageNumber === totalPages ||
-                        (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                      ) {
-                        return (
-                          <li key={pageNumber} className={`page-item ${pageNumber === currentPage ? 'active' : ''}`}>
-                            <button
-                              className="page-link"
-                              onClick={() => setCurrentPage(pageNumber)}
-                            >
-                              {pageNumber}
-                            </button>
-                          </li>
-                        );
-                      } else if (
-                        pageNumber === currentPage - 2 ||
-                        pageNumber === currentPage + 2
-                      ) {
-                        return (
-                          <li key={pageNumber} className="page-item disabled">
-                            <span className="page-link">...</span>
-                          </li>
-                        );
-                      }
-                      return null;
-                    })}
-                    
-                    {/* Next Button */}
-                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                      <button
-                        className="page-link"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                      </button>
-                    </li>
-                  </ul>
-                </nav>
-              </div>
-            )}
+          </div>
+        )}
+        {orders.length > 0 && totalPages > 1 && (
+          <div className="d-flex justify-content-center align-items-center mt-4">
+            <nav>
+              <ul className="pagination mb-0">
+                <li className={`page-item${currentPage === 1 ? " disabled" : ""}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                </li>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <li
+                    key={page}
+                    className={`page-item${currentPage === page ? " active" : ""}`}
+                  >
+                    <button
+                      className="page-link"
+                      onClick={() => setCurrentPage(page)}
+                      disabled={currentPage === page}
+                    >
+                      {page}
+                    </button>
+                  </li>
+                ))}
+                <li className={`page-item${currentPage === totalPages ? " disabled" : ""}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
+                </li>
+              </ul>
+            </nav>
           </div>
         )}
       </Card.Body>
