@@ -53,6 +53,7 @@ import AdminDiscountUsage from "../../pages/admin/AdminDiscountUsage";
 import AdminOrders from "../../pages/admin/AdminOrders";
 import AdminOrderDetails from "../../pages/admin/AdminOrderDetails";
 import Wallet from "../../pages/user/Wallet";
+import Contact from "../../pages/user/Contact";
 import About from "../../pages/About";
 
 const queryClient = new QueryClient();
@@ -225,6 +226,7 @@ const AppRoutes = () => {
             />
             <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
             <Route path="/wallet" element={<Wallet />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<NotFound />} />
           </Route>
