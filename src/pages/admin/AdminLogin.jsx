@@ -47,11 +47,8 @@ const AdminLogin = () => {
   };
 
   const handleSubmit = async (e) => {
-    console.log("inside handle sbmit1");
     e.preventDefault();
     const form = e.currentTarget;
-
-    console.log("inside handle sbmit2");
 
     if (form.checkValidity() === false) {
       e.stopPropagation();
@@ -59,17 +56,11 @@ const AdminLogin = () => {
       return;
     }
 
-    console.log("inside handle sbmit3");
-
     setLoading(true);
     setError("");
 
-    console.log("inside handle sbmit4");
-
     try {
-      console.log("Form Data Submitted:", formData);
       const { data } = await adminAxios.post("/login", formData);
-      console.log("after adminAxios; data: ", data);
       localStorage.setItem("adminAccessToken", data.token);
 
       // Dispatch admin login

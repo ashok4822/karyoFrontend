@@ -31,6 +31,8 @@ import {
 } from "react-icons/fa";
 import ProductFilters from "../../components/ProductFilters";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
+import { addToCart } from "../../redux/reducers/cartSlice";
+import { toast } from "react-toastify";
 
 const ProductListing = () => {
   const dispatch = useDispatch();
@@ -186,14 +188,26 @@ const ProductListing = () => {
     dispatch(fetchProductsFromBackend(params));
   };
 
-  const handleAddToCart = (product) => {
-    dispatch({
-      type: "ADD_TO_CART",
-      payload: {
-        productId: product.id,
-        quantity: 1,
-      },
-    });
+  const handleAddToCart = async (product) => {
+    const variant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
+    const variantId = variant?._id || variant?.id;
+    if (!variantId) {
+      toast.error("This product does not have a valid variant to add to cart.");
+      return;
+    }
+    try {
+      await dispatch(addToCart({ productVariantId: variantId, quantity: 1 })).unwrap();
+      toast.success(`${product.name} has been added to your cart!`);
+    } catch (err) {
+      let errorMsg = "Failed to add to cart.";
+      if (err && typeof err === "object" && err.error) errorMsg = err.error;
+      else if (typeof err === "string") errorMsg = err;
+      if (errorMsg.toLowerCase().includes("stock") || errorMsg.toLowerCase().includes("sold")) {
+        toast.error(errorMsg);
+      } else {
+        toast.error(errorMsg);
+      }
+    }
   };
 
   const handleAddToWishlist = (product) => {
