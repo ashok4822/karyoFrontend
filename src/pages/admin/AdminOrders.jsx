@@ -37,6 +37,7 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [sortField, setSortField] = useState("date");
@@ -61,6 +62,8 @@ const AdminOrders = () => {
           page: currentPage,
           limit: ordersPerPage,
           status: statusFilter || undefined,
+          search: searchTerm || undefined,
+          date: dateFilter || undefined,
         };
         const res = await adminAxios.get("/orders", { params });
         setOrders(res.data.orders || []);
@@ -75,10 +78,21 @@ const AdminOrders = () => {
       }
     };
     fetchOrders();
-  }, [currentPage, statusFilter]);
+  }, [currentPage, statusFilter, searchTerm, dateFilter]);
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+  const handleSearchInputChange = (e) => {
+    setSearchInput(e.target.value);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setSearchTerm(searchInput);
+    setCurrentPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setSearchTerm("");
     setCurrentPage(1);
   };
 
@@ -109,6 +123,8 @@ const AdminOrders = () => {
         page: currentPage,
         limit: ordersPerPage,
         status: statusFilter || undefined,
+        search: searchTerm || undefined,
+        date: dateFilter || undefined,
       };
       const res = await adminAxios.get("/orders", { params });
       setOrders(res.data.orders || []);
@@ -140,6 +156,14 @@ const AdminOrders = () => {
   const endOrder =
     orders.length === 0 ? 0 : Math.min(currentPage * ordersPerPage, total);
 
+  const handleClearAll = () => {
+    setSearchInput("");
+    setSearchTerm("");
+    setStatusFilter("");
+    setDateFilter("");
+    setCurrentPage(1);
+  };
+
   if (loading) {
     return (
       <Container className="py-5 text-center">
@@ -162,15 +186,6 @@ const AdminOrders = () => {
               <Col>
                 <h2 className="mb-0">Orders</h2>
               </Col>
-              <Col xs="auto">
-                <Button
-                  variant="primary"
-                  onClick={() => navigate("/admin/orders/new")}
-                  className="d-flex align-items-center gap-2"
-                >
-                  Create Order
-                </Button>
-              </Col>
             </Row>
 
             {error && (
@@ -182,19 +197,24 @@ const AdminOrders = () => {
 
             <Card className="border-0 shadow-sm mb-4">
               <Card.Body>
-                <Row className="g-3">
+                <Row className="g-3 align-items-center">
                   <Col md={4}>
-                    <InputGroup>
-                      <InputGroup.Text>
-                        <FaSearch />
-                      </InputGroup.Text>
-                      <Form.Control
-                        type="text"
-                        placeholder="Search orders..."
-                        value={searchTerm}
-                        onChange={handleSearch}
-                      />
-                    </InputGroup>
+                    <Form onSubmit={handleSearchSubmit}>
+                      <InputGroup>
+                        <InputGroup.Text>
+                          <FaSearch />
+                        </InputGroup.Text>
+                        <Form.Control
+                          type="text"
+                          placeholder="Search orders..."
+                          value={searchInput}
+                          onChange={handleSearchInputChange}
+                        />
+                        <Button type="submit" variant="outline-primary">
+                          <FaSearch />
+                        </Button>
+                      </InputGroup>
+                    </Form>
                   </Col>
                   <Col md={3}>
                     <Form.Select
@@ -218,17 +238,15 @@ const AdminOrders = () => {
                     />
                   </Col>
                   <Col md={2}>
-                    <Button
-                      variant="outline-secondary"
-                      className="w-100 d-flex align-items-center justify-content-center gap-2"
-                      onClick={() => {
-                        setSearchTerm("");
-                        setStatusFilter("");
-                        setDateFilter("");
-                      }}
-                    >
-                      <FaFilter /> Clear
-                    </Button>
+                    {(searchInput || searchTerm || statusFilter || dateFilter) && (
+                      <Button
+                        variant="outline-secondary"
+                        className="w-100 d-flex align-items-center justify-content-center gap-2"
+                        onClick={handleClearAll}
+                      >
+                        <FaFilter /> Clear
+                      </Button>
+                    )}
                   </Col>
                 </Row>
               </Card.Body>
@@ -483,6 +501,8 @@ const AdminOrders = () => {
                         page: currentPage,
                         limit: ordersPerPage,
                         status: statusFilter || undefined,
+                        search: searchTerm || undefined,
+                        date: dateFilter || undefined,
                       };
                       const res = await adminAxios.get("/orders", { params });
                       setOrders(res.data.orders || []);
