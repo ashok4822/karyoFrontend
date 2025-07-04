@@ -581,7 +581,7 @@ const ProductManagement = () => {
                                       className="badge bg-info text-white"
                                       style={{ fontSize: "0.7rem" }}
                                     >
-                                      ${variant.price || 0}
+                                      ₹{variant.price || 0}
                                     </span>
                                   </div>
                                   <div className="col-3">

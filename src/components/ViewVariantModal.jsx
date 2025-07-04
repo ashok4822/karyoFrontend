@@ -74,7 +74,7 @@ const ViewVariantModal = ({ show, onHide, variant, product }) => {
           <Col md={6}>
             <div className="mb-3">
               <strong>Price:</strong>
-              <p className="text-primary fs-5">${variant.price || "N/A"}</p>
+              <p className="text-primary fs-5">₹{variant.price || "N/A"}</p>
             </div>
           </Col>
           <Col md={6}>

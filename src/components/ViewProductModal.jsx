@@ -171,7 +171,7 @@ const ViewProductModal = ({ show, onHide, product }) => {
                         <tr key={index}>
                           <td>{variant.colour || "N/A"}</td>
                           <td>{variant.capacity || "N/A"}</td>
-                          <td className="text-primary fw-bold">${variant.price}</td>
+                          <td className="text-primary fw-bold">₹{variant.price}</td>
                           <td>
                             <span className={`badge ${variant.stock > 0 ? 'bg-success' : 'bg-danger'}`}>
                               {variant.stock || 0}

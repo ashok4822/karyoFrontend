@@ -124,7 +124,7 @@ const AdminDashboard = () => {
                       <div>
                         <h6 className="text-muted mb-1">Total Sales</h6>
                         <h3 className="mb-0">
-                          ${stats.totalSales.toLocaleString()}
+                          ₹{stats.totalSales.toLocaleString()}
                         </h3>
                       </div>
                       <div className="bg-primary bg-opacity-10 p-3 rounded">
@@ -243,7 +243,7 @@ const AdminDashboard = () => {
                             <tr key={order.id}>
                               <td>#{order.id}</td>
                               <td>{order.customer}</td>
-                              <td>${order.amount}</td>
+                              <td>₹{order.amount}</td>
                               <td>
                                 <Badge
                                   bg={
