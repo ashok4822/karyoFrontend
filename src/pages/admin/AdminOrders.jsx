@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Container,
   Row,
@@ -15,7 +15,7 @@ import {
   Pagination,
   Dropdown,
   Modal,
-} from 'react-bootstrap';
+} from "react-bootstrap";
 import {
   FaSearch,
   FaFilter,
@@ -27,7 +27,7 @@ import {
   FaSort,
   FaSortUp,
   FaSortDown,
-} from 'react-icons/fa';
+} from "react-icons/fa";
 import AdminLeftbar from "../../components/AdminLeftbar";
 import adminAxios from "../../lib/adminAxios";
 
@@ -36,18 +36,18 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-  const [sortField, setSortField] = useState('date');
-  const [sortDirection, setSortDirection] = useState('desc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [sortField, setSortField] = useState("date");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusUpdatingOrder, setStatusUpdatingOrder] = useState(null);
-  const [newStatus, setNewStatus] = useState('');
+  const [newStatus, setNewStatus] = useState("");
   const [total, setTotal] = useState(0);
 
   const ordersPerPage = 10;
@@ -94,10 +94,10 @@ const AdminOrders = () => {
 
   const handleSort = (field) => {
     if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -114,29 +114,31 @@ const AdminOrders = () => {
       setOrders(res.data.orders || []);
       setShowDeleteModal(false);
     } catch (error) {
-      console.error('Error deleting order:', error);
+      console.error("Error deleting order:", error);
     }
   };
 
   const getStatusBadge = (status) => {
     const variants = {
-      pending: 'warning',
-      processing: 'primary',
-      shipped: 'info',
-      delivered: 'success',
-      cancelled: 'danger',
+      pending: "warning",
+      processing: "primary",
+      shipped: "info",
+      delivered: "success",
+      cancelled: "danger",
     };
-    return <Badge bg={variants[status] || 'secondary'}>{status}</Badge>;
+    return <Badge bg={variants[status] || "secondary"}>{status}</Badge>;
   };
 
   const SortIcon = ({ field }) => {
     if (sortField !== field) return <FaSort className="text-muted" />;
-    return sortDirection === 'asc' ? <FaSortUp /> : <FaSortDown />;
+    return sortDirection === "asc" ? <FaSortUp /> : <FaSortDown />;
   };
 
   // Calculate correct start and end indices for the current page
-  const startOrder = (orders.length === 0) ? 0 : (currentPage - 1) * ordersPerPage + 1;
-  const endOrder = (orders.length === 0) ? 0 : Math.min(currentPage * ordersPerPage, total);
+  const startOrder =
+    orders.length === 0 ? 0 : (currentPage - 1) * ordersPerPage + 1;
+  const endOrder =
+    orders.length === 0 ? 0 : Math.min(currentPage * ordersPerPage, total);
 
   if (loading) {
     return (
@@ -163,7 +165,7 @@ const AdminOrders = () => {
               <Col xs="auto">
                 <Button
                   variant="primary"
-                  onClick={() => navigate('/admin/orders/new')}
+                  onClick={() => navigate("/admin/orders/new")}
                   className="d-flex align-items-center gap-2"
                 >
                   Create Order
@@ -220,9 +222,9 @@ const AdminOrders = () => {
                       variant="outline-secondary"
                       className="w-100 d-flex align-items-center justify-content-center gap-2"
                       onClick={() => {
-                        setSearchTerm('');
-                        setStatusFilter('');
-                        setDateFilter('');
+                        setSearchTerm("");
+                        setStatusFilter("");
+                        setDateFilter("");
                       }}
                     >
                       <FaFilter /> Clear
@@ -239,7 +241,7 @@ const AdminOrders = () => {
                     <tr>
                       <th
                         className="cursor-pointer"
-                        onClick={() => handleSort('orderNumber')}
+                        onClick={() => handleSort("orderNumber")}
                       >
                         <div className="d-flex align-items-center gap-2">
                           Order ID
@@ -248,7 +250,7 @@ const AdminOrders = () => {
                       </th>
                       <th
                         className="cursor-pointer"
-                        onClick={() => handleSort('date')}
+                        onClick={() => handleSort("date")}
                       >
                         <div className="d-flex align-items-center gap-2">
                           Date
@@ -257,7 +259,7 @@ const AdminOrders = () => {
                       </th>
                       <th
                         className="cursor-pointer"
-                        onClick={() => handleSort('customer.name')}
+                        onClick={() => handleSort("customer.name")}
                       >
                         <div className="d-flex align-items-center gap-2">
                           Customer
@@ -266,7 +268,7 @@ const AdminOrders = () => {
                       </th>
                       <th
                         className="cursor-pointer"
-                        onClick={() => handleSort('total')}
+                        onClick={() => handleSort("total")}
                       >
                         <div className="d-flex align-items-center gap-2">
                           Total
@@ -275,7 +277,7 @@ const AdminOrders = () => {
                       </th>
                       <th
                         className="cursor-pointer"
-                        onClick={() => handleSort('status')}
+                        onClick={() => handleSort("status")}
                       >
                         <div className="d-flex align-items-center gap-2">
                           Status
@@ -293,10 +295,17 @@ const AdminOrders = () => {
                         </td>
                         <td>
                           {(() => {
-                            const d = order.date ? new Date(order.date) : (order.createdAt ? new Date(order.createdAt) : null);
+                            const d = order.date
+                              ? new Date(order.date)
+                              : order.createdAt
+                              ? new Date(order.createdAt)
+                              : null;
                             if (!d) return "-";
                             const day = String(d.getDate()).padStart(2, "0");
-                            const month = String(d.getMonth() + 1).padStart(2, "0");
+                            const month = String(d.getMonth() + 1).padStart(
+                              2,
+                              "0"
+                            );
                             const year = d.getFullYear();
                             return `${day}/${month}/${year}`;
                           })()}
@@ -304,21 +313,29 @@ const AdminOrders = () => {
                         <td>
                           <div>
                             {order.user
-                              ? (order.user.firstName || order.user.lastName)
-                                ? `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim()
+                              ? order.user.firstName || order.user.lastName
+                                ? `${order.user.firstName || ""} ${
+                                    order.user.lastName || ""
+                                  }`.trim()
                                 : order.user.username || order.user.email || "-"
                               : "-"}
                           </div>
-                          <small className="text-muted">{order.user?.email || ""}</small>
+                          <small className="text-muted">
+                            {order.user?.email || ""}
+                          </small>
                         </td>
-                        <td>${order.total?.toFixed(2) ?? "-"}</td>
+                        <td>₹{order.total?.toFixed(2) ?? "-"}</td>
                         <td>{getStatusBadge(order.status)}</td>
                         <td>
                           <div className="d-flex justify-content-end gap-2">
                             <Button
                               variant="outline-primary"
                               size="sm"
-                              onClick={() => navigate(`/admin/orders/${order._id || order.id}`)}
+                              onClick={() =>
+                                navigate(
+                                  `/admin/orders/${order._id || order.id}`
+                                )
+                              }
                               className="d-flex align-items-center gap-1"
                             >
                               <FaEye /> View
@@ -391,21 +408,29 @@ const AdminOrders = () => {
             </Card>
 
             {/* Delete Confirmation Modal */}
-            <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
+            <Modal
+              show={showDeleteModal}
+              onHide={() => setShowDeleteModal(false)}
+            >
               <Modal.Header closeButton>
                 <Modal.Title>Delete Order</Modal.Title>
               </Modal.Header>
               <Modal.Body>
-                Are you sure you want to delete order #{selectedOrder?.orderNumber}?
-                This action cannot be undone.
+                Are you sure you want to delete order #
+                {selectedOrder?.orderNumber}? This action cannot be undone.
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowDeleteModal(false)}
+                >
                   Cancel
                 </Button>
                 <Button
                   variant="danger"
-                  onClick={() => handleDeleteOrder(selectedOrder?._id || selectedOrder?.id)}
+                  onClick={() =>
+                    handleDeleteOrder(selectedOrder?._id || selectedOrder?.id)
+                  }
                 >
                   Delete
                 </Button>
@@ -413,7 +438,10 @@ const AdminOrders = () => {
             </Modal>
 
             {/* Status Update Modal */}
-            <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)}>
+            <Modal
+              show={showStatusModal}
+              onHide={() => setShowStatusModal(false)}
+            >
               <Modal.Header closeButton>
                 <Modal.Title>Update Order Status</Modal.Title>
               </Modal.Header>
@@ -422,7 +450,7 @@ const AdminOrders = () => {
                   <Form.Label>Status</Form.Label>
                   <Form.Select
                     value={newStatus}
-                    onChange={e => setNewStatus(e.target.value)}
+                    onChange={(e) => setNewStatus(e.target.value)}
                   >
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
@@ -433,7 +461,10 @@ const AdminOrders = () => {
                 </Form.Group>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowStatusModal(false)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowStatusModal(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -441,7 +472,12 @@ const AdminOrders = () => {
                   onClick={async () => {
                     if (!statusUpdatingOrder) return;
                     try {
-                      await adminAxios.put(`/orders/${statusUpdatingOrder._id || statusUpdatingOrder.id}/status`, { status: newStatus });
+                      await adminAxios.put(
+                        `/orders/${
+                          statusUpdatingOrder._id || statusUpdatingOrder.id
+                        }/status`,
+                        { status: newStatus }
+                      );
                       // Refresh orders list
                       const params = {
                         page: currentPage,
@@ -452,7 +488,7 @@ const AdminOrders = () => {
                       setOrders(res.data.orders || []);
                       setShowStatusModal(false);
                     } catch (err) {
-                      alert('Failed to update status');
+                      alert("Failed to update status");
                     }
                   }}
                 >
@@ -467,4 +503,4 @@ const AdminOrders = () => {
   );
 };
 
-export default AdminOrders; 
+export default AdminOrders;
