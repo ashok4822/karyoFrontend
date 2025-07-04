@@ -43,6 +43,7 @@ const sidebarItems = [
 
 const UserProfile = () => {
   const { user, userAccessToken } = useSelector((state) => state.auth);
+  console.log("(UserProfile.jsx) user : ", user);
   const dispatch = useDispatch();
   const [avatar, setAvatar] = useState(user?.profileImage || "/profile.png");
   const [uploading, setUploading] = useState(false);
@@ -162,6 +163,9 @@ const UserProfile = () => {
   // Add state for status filter
   const [orderStatus, setOrderStatus] = useState("all");
 
+  // Add state for edit field errors
+  const [editFieldErrors, setEditFieldErrors] = useState({});
+
   // Fetch paginated orders from backend
   useEffect(() => {
     if (activeIndex === 3) {
@@ -170,8 +174,11 @@ const UserProfile = () => {
           const params = { page: currentPage, limit: ordersPerPage };
           if (orderSearch.trim() !== "") params.search = orderSearch.trim();
           if (orderStatus && orderStatus !== "all") params.status = orderStatus;
-          const res = await userAxios.get('/orders', { params });
-          dispatch({ type: 'order/fetchUserOrders/fulfilled', payload: { orders: res.data.orders } });
+          const res = await userAxios.get("/orders", { params });
+          dispatch({
+            type: "order/fetchUserOrders/fulfilled",
+            payload: { orders: res.data.orders },
+          });
           setTotal(res.data.total || 0);
         } catch (err) {
           // handle error if needed
@@ -179,24 +186,33 @@ const UserProfile = () => {
       };
       fetchOrders();
     }
-  }, [activeIndex, currentPage, ordersPerPage, orderSearch, orderStatus, dispatch]);
+  }, [
+    activeIndex,
+    currentPage,
+    ordersPerPage,
+    orderSearch,
+    orderStatus,
+    dispatch,
+  ]);
 
   // Calculate correct start and end indices for the current page
-  const startOrder = (orders.length === 0) ? 0 : (currentPage - 1) * ordersPerPage + 1;
-  const endOrder = (orders.length === 0) ? 0 : Math.min(currentPage * ordersPerPage, total);
+  const startOrder =
+    orders.length === 0 ? 0 : (currentPage - 1) * ordersPerPage + 1;
+  const endOrder =
+    orders.length === 0 ? 0 : Math.min(currentPage * ordersPerPage, total);
   const totalPages = Math.ceil(total / ordersPerPage);
 
   // Keyboard shortcut for clearing filters (Escape key)
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && activeIndex === 3) {
+      if (event.key === "Escape" && activeIndex === 3) {
         clearFilters();
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [activeIndex]);
 
@@ -264,53 +280,84 @@ const UserProfile = () => {
         return {
           text: "Return Verified",
           color: "success",
-          message: "Your return has been verified and processed"
+          message: "Your return has been verified and processed",
         };
       case "rejected":
         return {
           text: "Return Rejected",
           color: "danger",
-          message: "Your return request has been rejected"
+          message: "Your return request has been rejected",
         };
       case "returned":
         return {
           text: "Return Requested",
           color: "warning",
-          message: "Return request submitted and under review"
+          message: "Return request submitted and under review",
         };
       case "delivered":
         return {
           text: "Delivered",
           color: "success",
-          message: "Order has been delivered successfully"
+          message: "Order has been delivered successfully",
         };
       case "cancelled":
         return {
           text: "Cancelled",
           color: "danger",
-          message: "Order has been cancelled"
+          message: "Order has been cancelled",
         };
       case "pending":
         return {
           text: "Pending",
           color: "info",
-          message: "Order is pending processing"
+          message: "Order is pending processing",
         };
       default:
         return {
           text: status.charAt(0).toUpperCase() + status.slice(1),
           color: "info",
-          message: "Order status updated"
+          message: "Order status updated",
         };
     }
+  };
+
+  // Validate edit form
+  const validateEditForm = () => {
+    const errors = {};
+    if (!editForm.firstName.trim()) {
+      errors.firstName = "First name is required";
+    } else if (!/^[A-Za-z]{2,30}$/.test(editForm.firstName.trim())) {
+      errors.firstName = "First name must be 2-30 letters";
+    }
+    if (!editForm.lastName.trim()) {
+      errors.lastName = "Last name is required";
+    } else if (!/^[A-Za-z]{2,30}$/.test(editForm.lastName.trim())) {
+      errors.lastName = "Last name must be 2-30 letters";
+    }
+    if (!editForm.mobileNo.trim()) {
+      errors.mobileNo = "Mobile number is required";
+    } else if (!/^\d{10}$/.test(editForm.mobileNo.trim())) {
+      errors.mobileNo = "Mobile number must be 10 digits";
+    }
+    if (!editForm.address.trim()) {
+      errors.address = "Address is required";
+    } else if (editForm.address.trim().length < 5 || editForm.address.trim().length > 100) {
+      errors.address = "Address must be 5-100 characters";
+    }
+    return errors;
   };
 
   // Edit Profile submit
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setEditLoading(true);
     setEditError("");
     setEditSuccess("");
+    const errors = validateEditForm();
+    setEditFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+    setEditLoading(true);
     try {
       const res = await userAxios.put("/users/profile", editForm, {
         headers: { Authorization: `Bearer ${userAccessToken}` },
@@ -623,25 +670,42 @@ const UserProfile = () => {
       <Card.Body>
         {/* Wallet UI */}
         <div className="d-flex flex-column align-items-center mb-3">
-          <div style={{
-            background: '#f6fafd',
-            border: '2px solid #0d6efd',
-            borderRadius: 12,
-            padding: 12,
-            width: '100%',
-            maxWidth: 220,
-            marginBottom: 16,
-            textAlign: 'center',
-          }}>
-            <div style={{ fontWeight: 600, color: '#0d6efd', fontSize: 16 }}>Wallet Balance</div>
+          <div
+            style={{
+              background: "#f6fafd",
+              border: "2px solid #0d6efd",
+              borderRadius: 12,
+              padding: 12,
+              width: "100%",
+              maxWidth: 220,
+              marginBottom: 16,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontWeight: 600, color: "#0d6efd", fontSize: 16 }}>
+              Wallet Balance
+            </div>
             {walletLoading ? (
               <div className="text-muted small">Loading...</div>
             ) : walletError ? (
               <div className="text-danger small">{walletError}</div>
             ) : (
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#222' }}>₹{walletBalance?.toFixed(2) || '0.00'}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#222" }}>
+                ₹{walletBalance?.toFixed(2) || "0.00"}
+              </div>
             )}
-            <a href="/wallet" style={{ fontSize: 13, color: '#0d6efd', textDecoration: 'underline', display: 'block', marginTop: 4 }}>View Wallet</a>
+            <a
+              href="/wallet"
+              style={{
+                fontSize: 13,
+                color: "#0d6efd",
+                textDecoration: "underline",
+                display: "block",
+                marginTop: 4,
+              }}
+            >
+              View Wallet
+            </a>
           </div>
         </div>
         {/* Profile Image and Info */}
@@ -700,7 +764,14 @@ const UserProfile = () => {
                 setEditForm((f) => ({ ...f, firstName: e.target.value }))
               }
               placeholder="Enter first name"
+              isInvalid={!!editFieldErrors.firstName}
+              isValid={!editFieldErrors.firstName}
             />
+            {editFieldErrors.firstName && (
+              <Form.Control.Feedback type="invalid">
+                {editFieldErrors.firstName}
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Last Name</Form.Label>
@@ -711,7 +782,14 @@ const UserProfile = () => {
                 setEditForm((f) => ({ ...f, lastName: e.target.value }))
               }
               placeholder="Enter last name"
+              isInvalid={!!editFieldErrors.lastName}
+              isValid={!editFieldErrors.lastName}
             />
+            {editFieldErrors.lastName && (
+              <Form.Control.Feedback type="invalid">
+                {editFieldErrors.lastName}
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Mobile Number</Form.Label>
@@ -722,7 +800,14 @@ const UserProfile = () => {
                 setEditForm((f) => ({ ...f, mobileNo: e.target.value }))
               }
               placeholder="Enter mobile number"
+              isInvalid={!!editFieldErrors.mobileNo}
+              isValid={!editFieldErrors.mobileNo}
             />
+            {editFieldErrors.mobileNo && (
+              <Form.Control.Feedback type="invalid">
+                {editFieldErrors.mobileNo}
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Address</Form.Label>
@@ -734,7 +819,14 @@ const UserProfile = () => {
                 setEditForm((f) => ({ ...f, address: e.target.value }))
               }
               placeholder="Enter address"
+              isInvalid={!!editFieldErrors.address}
+              isValid={!editFieldErrors.address}
             />
+            {editFieldErrors.address && (
+              <Form.Control.Feedback type="invalid">
+                {editFieldErrors.address}
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
           <Button variant="primary" type="submit" disabled={editLoading}>
             {editLoading ? "Saving..." : "Save Changes"}
@@ -1409,7 +1501,7 @@ const UserProfile = () => {
           <div className="d-flex align-items-center">
             <form
               className="d-flex align-items-center me-3"
-              onSubmit={e => {
+              onSubmit={(e) => {
                 e.preventDefault();
                 setOrderSearch(searchInput);
               }}
@@ -1420,10 +1512,12 @@ const UserProfile = () => {
                 className="form-control me-2"
                 placeholder="Search orders..."
                 value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
+                onChange={(e) => setSearchInput(e.target.value)}
                 style={{ maxWidth: 180 }}
               />
-              <button type="submit" className="btn btn-primary btn-sm me-2">Search</button>
+              <button type="submit" className="btn btn-primary btn-sm me-2">
+                Search
+              </button>
               {orderSearch && (
                 <button
                   type="button"
@@ -1441,12 +1535,12 @@ const UserProfile = () => {
               className="form-select form-select-sm"
               style={{ width: 170 }}
               value={orderStatus}
-              onChange={e => {
+              onChange={(e) => {
                 setOrderStatus(e.target.value);
                 setCurrentPage(1);
               }}
             >
-              <option value="all">All Statuses</option>
+              <option value="all">All</option>
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
               <option value="processing">Processing</option>
@@ -1469,7 +1563,9 @@ const UserProfile = () => {
           <div className="text-center py-5">
             <FaBoxOpen size={48} className="text-muted mb-3" />
             <h6 className="text-muted">No orders found</h6>
-            <p className="text-muted small">You have not placed any orders yet.</p>
+            <p className="text-muted small">
+              You have not placed any orders yet.
+            </p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -1532,33 +1628,58 @@ const UserProfile = () => {
                       </td>
                       <td>{order.items.length}</td>
                       <td>
-                        <span className={`badge bg-${
-                          order.paymentMethod === "cod" ? "warning" :
-                          order.paymentMethod === "online" ? "success" :
-                          order.paymentMethod === "wallet" ? "info" : "secondary"
-                        } bg-opacity-25 text-${
-                          order.paymentMethod === "cod" ? "warning" :
-                          order.paymentMethod === "online" ? "success" :
-                          order.paymentMethod === "wallet" ? "info" : "secondary"
-                        }`}>
-                          {order.paymentMethod === "cod" ? "COD" :
-                           order.paymentMethod === "online" ? "Online" :
-                           order.paymentMethod === "wallet" ? "Wallet" : "N/A"}
+                        <span
+                          className={`badge bg-${
+                            order.paymentMethod === "cod"
+                              ? "warning"
+                              : order.paymentMethod === "online"
+                              ? "success"
+                              : order.paymentMethod === "wallet"
+                              ? "info"
+                              : "secondary"
+                          } bg-opacity-25 text-${
+                            order.paymentMethod === "cod"
+                              ? "warning"
+                              : order.paymentMethod === "online"
+                              ? "success"
+                              : order.paymentMethod === "wallet"
+                              ? "info"
+                              : "secondary"
+                          }`}
+                        >
+                          {order.paymentMethod === "cod"
+                            ? "COD"
+                            : order.paymentMethod === "online"
+                            ? "Online"
+                            : order.paymentMethod === "wallet"
+                            ? "Wallet"
+                            : "N/A"}
                         </span>
                       </td>
                       <td>
-                        <span className={`badge bg-${
-                          order.paymentStatus === "paid" ? "success" :
-                          order.paymentStatus === "failed" ? "danger" :
-                          order.paymentStatus === "refunded" ? "info" :
-                          "warning"
-                        } bg-opacity-25 text-${
-                          order.paymentStatus === "paid" ? "success" :
-                          order.paymentStatus === "failed" ? "danger" :
-                          order.paymentStatus === "refunded" ? "info" :
-                          "warning"
-                        }`}>
-                          {order.paymentStatus ? order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1) : "Pending"}
+                        <span
+                          className={`badge bg-${
+                            order.paymentStatus === "paid"
+                              ? "success"
+                              : order.paymentStatus === "failed"
+                              ? "danger"
+                              : order.paymentStatus === "refunded"
+                              ? "info"
+                              : "warning"
+                          } bg-opacity-25 text-${
+                            order.paymentStatus === "paid"
+                              ? "success"
+                              : order.paymentStatus === "failed"
+                              ? "danger"
+                              : order.paymentStatus === "refunded"
+                              ? "info"
+                              : "warning"
+                          }`}
+                        >
+                          {order.paymentStatus
+                            ? order.paymentStatus.charAt(0).toUpperCase() +
+                              order.paymentStatus.slice(1)
+                            : "Pending"}
                         </span>
                       </td>
                       <td>
@@ -1720,7 +1841,9 @@ const UserProfile = () => {
                               <h6 className="fw-bold mb-2">
                                 Order Status:{" "}
                                 {(() => {
-                                  const statusInfo = getStatusInfo(order.status);
+                                  const statusInfo = getStatusInfo(
+                                    order.status
+                                  );
                                   return (
                                     <span
                                       className={`badge bg-${statusInfo.color} bg-opacity-25 text-${statusInfo.color}`}
@@ -1734,17 +1857,28 @@ const UserProfile = () => {
                               {/* Status-specific messages */}
                               {(() => {
                                 const statusInfo = getStatusInfo(order.status);
-                                if (statusInfo.message && (order.status === "return_verified" || order.status === "rejected" || order.status === "returned")) {
+                                if (
+                                  statusInfo.message &&
+                                  (order.status === "return_verified" ||
+                                    order.status === "rejected" ||
+                                    order.status === "returned")
+                                ) {
                                   return (
-                                    <div className={`text-${statusInfo.color} small mb-2`}>
-                                      <strong>{statusInfo.text}:</strong> {statusInfo.message}
+                                    <div
+                                      className={`text-${statusInfo.color} small mb-2`}
+                                    >
+                                      <strong>{statusInfo.text}:</strong>{" "}
+                                      {statusInfo.message}
                                     </div>
                                   );
                                 }
                                 return null;
                               })()}
                               {order.cancellationReason &&
-                                (order.status === "cancelled" || order.status === "returned" || order.status === "return_verified" || order.status === "rejected") && (
+                                (order.status === "cancelled" ||
+                                  order.status === "returned" ||
+                                  order.status === "return_verified" ||
+                                  order.status === "rejected") && (
                                   <div className="text-muted small">
                                     {order.status === "cancelled"
                                       ? "Order Cancellation Reason: "
@@ -1756,31 +1890,42 @@ const UserProfile = () => {
                                 )}
                               {order.status === "return_verified" && (
                                 <div className="text-success small">
-                                  <strong>Return Verified:</strong> Your return request has been verified by admin.
+                                  <strong>Return Verified:</strong> Your return
+                                  request has been verified by admin.
                                   {order.paymentStatus === "refunded" && (
                                     <div>
-                                      <strong>Refund Processed:</strong> ₹{order.total?.toFixed(2)} has been refunded to your wallet.
+                                      <strong>Refund Processed:</strong> ₹
+                                      {order.total?.toFixed(2)} has been
+                                      refunded to your wallet.
                                       {order.paymentMethod === "cod" && (
                                         <div className="text-muted">
-                                          <em>This refund was provided as a goodwill gesture for your COD order.</em>
+                                          <em>
+                                            This refund was provided as a
+                                            goodwill gesture for your COD order.
+                                          </em>
                                         </div>
                                       )}
                                     </div>
                                   )}
                                   {order.paymentStatus !== "refunded" && (
                                     <div>
-                                      <strong>No Refund:</strong> This return was verified without processing a refund.
+                                      <strong>No Refund:</strong> This return
+                                      was verified without processing a refund.
                                       <div className="text-muted">
-                                        <em>This typically occurs when the product was not accepted during delivery.</em>
+                                        <em>
+                                          This typically occurs when the product
+                                          was not accepted during delivery.
+                                        </em>
                                       </div>
                                     </div>
                                   )}
                                 </div>
                               )}
-                              
+
                               {order.status === "rejected" && (
                                 <div className="text-danger small">
-                                  <strong>Return Rejected:</strong> Your return request has been rejected by admin.
+                                  <strong>Return Rejected:</strong> Your return
+                                  request has been rejected by admin.
                                 </div>
                               )}
                               <div className="text-muted small">
@@ -1821,7 +1966,9 @@ const UserProfile = () => {
           <div className="d-flex justify-content-center align-items-center mt-4">
             <nav>
               <ul className="pagination mb-0">
-                <li className={`page-item${currentPage === 1 ? " disabled" : ""}`}>
+                <li
+                  className={`page-item${currentPage === 1 ? " disabled" : ""}`}
+                >
                   <button
                     className="page-link"
                     onClick={() => setCurrentPage(currentPage - 1)}
@@ -1830,21 +1977,29 @@ const UserProfile = () => {
                     Previous
                   </button>
                 </li>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <li
-                    key={page}
-                    className={`page-item${currentPage === page ? " active" : ""}`}
-                  >
-                    <button
-                      className="page-link"
-                      onClick={() => setCurrentPage(page)}
-                      disabled={currentPage === page}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <li
+                      key={page}
+                      className={`page-item${
+                        currentPage === page ? " active" : ""
+                      }`}
                     >
-                      {page}
-                    </button>
-                  </li>
-                ))}
-                <li className={`page-item${currentPage === totalPages ? " disabled" : ""}`}>
+                      <button
+                        className="page-link"
+                        onClick={() => setCurrentPage(page)}
+                        disabled={currentPage === page}
+                      >
+                        {page}
+                      </button>
+                    </li>
+                  )
+                )}
+                <li
+                  className={`page-item${
+                    currentPage === totalPages ? " disabled" : ""
+                  }`}
+                >
                   <button
                     className="page-link"
                     onClick={() => setCurrentPage(currentPage + 1)}
@@ -1935,7 +2090,9 @@ const UserProfile = () => {
   const handleSubmitReturn = async () => {
     if (!returnTarget || !returnReason.trim()) return;
     try {
-      await userAxios.post(`/users/orders/${returnTarget.orderId}/return`, { reason: returnReason });
+      await userAxios.post(`/users/orders/${returnTarget.orderId}/return`, {
+        reason: returnReason,
+      });
       setShowReturnModal(false);
       setReturnTarget(null);
       setReturnReason("");
@@ -1946,6 +2103,23 @@ const UserProfile = () => {
       // Optionally, show a toast or alert for error
     }
   };
+
+  useEffect(() => {
+    // Fetch latest user profile from backend on mount
+    const fetchUserProfile = async () => {
+      try {
+        const res = await userAxios.get("/users/profile");
+        if (res.data && res.data.user) {
+          dispatch(loginSuccess({ user: res.data.user, userAccessToken }));
+        }
+      } catch (err) {
+        // Optionally handle error (e.g., show notification)
+        // console.error("Failed to fetch user profile", err);
+      }
+    };
+    fetchUserProfile();
+    // eslint-disable-next-line
+  }, []);
 
   return (
     <Container className="py-5">
@@ -2085,12 +2259,14 @@ const UserProfile = () => {
         </Modal.Header>
         <Modal.Body>
           <Form.Group>
-            <Form.Label>Reason for return <span className="text-danger">*</span></Form.Label>
+            <Form.Label>
+              Reason for return <span className="text-danger">*</span>
+            </Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
               value={returnReason}
-              onChange={e => setReturnReason(e.target.value)}
+              onChange={(e) => setReturnReason(e.target.value)}
               placeholder="Enter reason for return (required)"
               required
               isInvalid={!returnReason.trim()}

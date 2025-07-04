@@ -32,6 +32,7 @@ export const authSlice = createSlice({
       state.error = null;
       // state.user = action.payload.user;
       // state.token = action.payload.token;
+      console.log("(authSlice.js):action.payload : ", action.payload);
       const { user, userAccessToken, adminAccessToken } = action.payload;
 
       if (user?.role === "admin") {

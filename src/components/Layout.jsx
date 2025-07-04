@@ -60,7 +60,18 @@ const Layout = () => {
             <div className="d-flex align-items-center gap-3">
               {user && userAccessToken && (
                 <span className="fw-semibold text-primary me-2 d-flex align-items-center gap-2">
-                  {user.username || user.email}
+                  <span 
+                    style={{ 
+                      cursor: "pointer",
+                      transition: "color 0.2s ease"
+                    }}
+                    onClick={() => navigate("/profile")}
+                    title="Click to view profile"
+                    onMouseEnter={(e) => e.target.style.color = "#0056b3"}
+                    onMouseLeave={(e) => e.target.style.color = ""}
+                  >
+                    {user.username || user.email}
+                  </span>
                   <img
                     src={user.profileImage || "/profile.png"}
                     alt="Profile"

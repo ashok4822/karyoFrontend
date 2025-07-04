@@ -1026,7 +1026,7 @@ const ProductDetails = () => {
                   variant="outline-secondary"
                   size="sm"
                   onClick={() => handleQuantityChange(1)}
-                  disabled={isSoldOut || quantity === currentStock}
+                  disabled={isSoldOut || quantity === currentStock || quantity >= 5}
                 >
                   <FaPlus />
                 </Button>

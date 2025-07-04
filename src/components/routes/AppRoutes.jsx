@@ -83,11 +83,9 @@ const AppRoutes = () => {
           <Route path="/google-auth-success" element={<GoogleAuthSuccess />} />
 
           {/* Admin Routes - No Layout */}
-          <Route 
-            path="/admin/login" 
-            element={
-              <AdminRedirectRoute element={<AdminLogin />} />
-            } 
+          <Route
+            path="/admin/login"
+            element={<AdminRedirectRoute element={<AdminLogin />} />}
           />
           <Route
             path="/admin"
@@ -216,15 +214,18 @@ const AppRoutes = () => {
             />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/cart" element={<Cart />} />
-            <Route 
-              path="/checkout" 
+            <Route
+              path="/checkout"
               element={
                 <UserProtectedRoute>
                   <Checkout />
                 </UserProtectedRoute>
-              } 
+              }
             />
-            <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+            <Route
+              path="/order-confirmation/:orderId"
+              element={<OrderConfirmation />}
+            />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />

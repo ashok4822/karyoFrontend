@@ -10,14 +10,14 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
     brands: [],
     variantColours: [],
     variantCapacities: [],
-    priceRange: [0, 5000]
+    priceRange: [0, 5000],
   });
 
   const [filterData, setFilterData] = useState({
     categories: [],
     brands: [],
     variantColours: [],
-    variantCapacities: []
+    variantCapacities: [],
   });
 
   const [loading, setLoading] = useState(true);
@@ -27,27 +27,29 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
     const fetchFilterData = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch categories
-        const categoriesResponse = await userAxios.get('/categories');
+        const categoriesResponse = await userAxios.get("/categories");
         const categories = categoriesResponse.data.categories || [];
-        
+
         // Fetch brand options
-        const brandsResponse = await userAxios.get('/products/brand-options');
+        const brandsResponse = await userAxios.get("/products/brand-options");
         const brands = brandsResponse.data.brands || [];
-        
+
         // Fetch variant options
-        const variantsResponse = await userAxios.get('/products/variant-options');
+        const variantsResponse = await userAxios.get(
+          "/products/variant-options"
+        );
         const variants = variantsResponse.data || {};
-        
+
         setFilterData({
           categories,
           brands,
           variantColours: variants.colours || [],
-          variantCapacities: variants.capacities || []
+          variantCapacities: variants.capacities || [],
         });
       } catch (error) {
-        console.error('Error fetching filter data:', error);
+        console.error("Error fetching filter data:", error);
       } finally {
         setLoading(false);
       }
@@ -64,45 +66,45 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
   }, [currentFilters]);
 
   const handleCategoryChange = (categoryId) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       categories: prev.categories.includes(categoryId)
-        ? prev.categories.filter(id => id !== categoryId)
-        : [...prev.categories, categoryId]
+        ? prev.categories.filter((id) => id !== categoryId)
+        : [...prev.categories, categoryId],
     }));
   };
 
   const handleBrandChange = (brand) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       brands: prev.brands.includes(brand)
-        ? prev.brands.filter(b => b !== brand)
-        : [...prev.brands, brand]
+        ? prev.brands.filter((b) => b !== brand)
+        : [...prev.brands, brand],
     }));
   };
 
   const handleVariantColourChange = (colour) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       variantColours: prev.variantColours.includes(colour)
-        ? prev.variantColours.filter(c => c !== colour)
-        : [...prev.variantColours, colour]
+        ? prev.variantColours.filter((c) => c !== colour)
+        : [...prev.variantColours, colour],
     }));
   };
 
   const handleVariantCapacityChange = (capacity) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       variantCapacities: prev.variantCapacities.includes(capacity)
-        ? prev.variantCapacities.filter(c => c !== capacity)
-        : [...prev.variantCapacities, capacity]
+        ? prev.variantCapacities.filter((c) => c !== capacity)
+        : [...prev.variantCapacities, capacity],
     }));
   };
 
   const handlePriceRangeChange = (min, max) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      priceRange: [parseInt(min), parseInt(max)]
+      priceRange: [parseInt(min), parseInt(max)],
     }));
   };
 
@@ -116,7 +118,7 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
       brands: [],
       variantColours: [],
       variantCapacities: [],
-      priceRange: [0, 5000]
+      priceRange: [0, 5000],
     };
     setFilters(clearedFilters);
     onApplyFilters(clearedFilters);
@@ -202,7 +204,7 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
               Price Range
               {(filters.priceRange[0] > 0 || filters.priceRange[1] < 5000) && (
                 <Badge bg="secondary" className="ms-2">
-                  ${filters.priceRange[0]} - ${filters.priceRange[1]}
+                  ₹{filters.priceRange[0]} - ₹{filters.priceRange[1]}
                 </Badge>
               )}
             </Accordion.Header>
@@ -212,7 +214,12 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
                   type="number"
                   placeholder="Min"
                   value={filters.priceRange[0]}
-                  onChange={(e) => handlePriceRangeChange(e.target.value, filters.priceRange[1])}
+                  onChange={(e) =>
+                    handlePriceRangeChange(
+                      e.target.value,
+                      filters.priceRange[1]
+                    )
+                  }
                   min="0"
                   max={filters.priceRange[1]}
                 />
@@ -221,7 +228,12 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
                   type="number"
                   placeholder="Max"
                   value={filters.priceRange[1]}
-                  onChange={(e) => handlePriceRangeChange(filters.priceRange[0], e.target.value)}
+                  onChange={(e) =>
+                    handlePriceRangeChange(
+                      filters.priceRange[0],
+                      e.target.value
+                    )
+                  }
                   min={filters.priceRange[0]}
                   max="10000"
                 />
@@ -322,4 +334,4 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
   );
 };
 
-export default ProductFilters; 
+export default ProductFilters;

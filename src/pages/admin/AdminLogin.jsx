@@ -87,7 +87,7 @@ const AdminLogin = () => {
         <Row className="justify-content-center">
           <Col md={8} lg={6} xl={5}>
             <div className="text-center mb-4">
-              <h1 className="h2">KARYO Admin</h1>
+              <h1 className="h2">CARYO Admin</h1>
               <p className="text-muted">Sign in to access the admin panel</p>
             </div>
 
