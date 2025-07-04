@@ -42,6 +42,7 @@ const AdminDiscounts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+  const [updateTrigger, setUpdateTrigger] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -58,11 +59,13 @@ const AdminDiscounts = () => {
 
   useEffect(() => {
     // Fetch discounts on component mount
+    const backendStatus = statusFilter === 'expired' ? 'all' : statusFilter;
+    
     dispatch(fetchDiscounts({
       page: 1,
       limit: 10,
       search: searchQuery,
-      status: statusFilter,
+      status: backendStatus,
       sortBy: sortConfig.key,
       sortOrder: sortConfig.direction,
     }));
@@ -70,15 +73,18 @@ const AdminDiscounts = () => {
 
   // Refetch discounts when filters change
   useEffect(() => {
+    // Don't send 'expired' status to backend since we handle it on frontend
+    const backendStatus = statusFilter === 'expired' ? 'all' : statusFilter;
+    
     dispatch(fetchDiscounts({
       page: 1,
       limit: 10,
       search: searchQuery,
-      status: statusFilter,
+      status: backendStatus,
       sortBy: sortConfig.key,
       sortOrder: sortConfig.direction,
     }));
-  }, [dispatch, searchQuery, statusFilter, sortConfig]);
+  }, [dispatch, searchQuery, statusFilter, sortConfig, updateTrigger]);
 
   // Handle errors with SweetAlert
   useEffect(() => {
@@ -95,6 +101,24 @@ const AdminDiscounts = () => {
       }, 100);
     }
   }, [error, dispatch]);
+
+  // Check for expired discounts every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force a re-render to update expired status
+      const now = new Date();
+      const hasExpiredDiscounts = discounts.some(discount => 
+        discount.status === 'active' && new Date(discount.validTo) < now
+      );
+      
+      if (hasExpiredDiscounts) {
+        // Trigger a re-render by updating the trigger state
+        setUpdateTrigger(prev => prev + 1);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [discounts]);
 
   const handleShowModal = (discount = null) => {
     if (discount) {
@@ -365,6 +389,54 @@ const AdminDiscounts = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  // Function to check if a discount has expired
+  const isDiscountExpired = (discount) => {
+    const now = new Date();
+    const validTo = new Date(discount.validTo);
+    return validTo < now;
+  };
+
+  // Function to get the effective status of a discount
+  const getEffectiveStatus = (discount) => {
+    if (discount.status === 'inactive') {
+      return 'inactive';
+    }
+    if (isDiscountExpired(discount)) {
+      return 'expired';
+    }
+    return discount.status;
+  };
+
+  // Function to get time remaining until expiration
+  const getTimeRemaining = (validTo) => {
+    const now = new Date();
+    const expiryDate = new Date(validTo);
+    const timeDiff = expiryDate - now;
+    
+    if (timeDiff <= 0) {
+      return 'Expired';
+    }
+    
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    if (days > 0) {
+      return `${days} day${days > 1 ? 's' : ''} left`;
+    } else if (hours > 0) {
+      return `${hours} hour${hours > 1 ? 's' : ''} left`;
+    } else {
+      return 'Less than 1 hour left';
+    }
+  };
+
+  // Filter discounts based on effective status
+  const getFilteredDiscounts = () => {
+    if (statusFilter === 'all') {
+      return discounts;
+    }
+    return discounts.filter(discount => getEffectiveStatus(discount) === statusFilter);
+  };
+
   if (loading && discounts.length === 0) {
     return (
       <Container fluid className="py-5">
@@ -395,6 +467,13 @@ const AdminDiscounts = () => {
             <Row className="mb-4">
               <Col>
                 <h2 className="mb-0">Discount Management</h2>
+                <div className="d-flex gap-3 mt-2">
+                  <small className="text-muted">
+                    Total: {total} | Active: {discounts.filter(d => getEffectiveStatus(d) === 'active').length} | 
+                    Inactive: {discounts.filter(d => getEffectiveStatus(d) === 'inactive').length} | 
+                    Expired: {discounts.filter(d => getEffectiveStatus(d) === 'expired').length}
+                  </small>
+                </div>
               </Col>
               <Col xs="auto">
                 <Button
@@ -454,7 +533,7 @@ const AdminDiscounts = () => {
             {/* Discounts Table */}
             <Card className="border-0 shadow-sm">
               <Card.Header className="bg-light">
-                <h5 className="mb-0">Discounts ({total})</h5>
+                <h5 className="mb-0">Discounts ({statusFilter === 'all' ? total : getFilteredDiscounts().length})</h5>
               </Card.Header>
               <Card.Body>
                 <div className="table-responsive">
@@ -488,7 +567,7 @@ const AdminDiscounts = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {discounts.length === 0 ? (
+                      {getFilteredDiscounts().length === 0 ? (
                         <tr>
                           <td colSpan={7} className="text-center text-muted py-4">
                             <div>
@@ -515,7 +594,7 @@ const AdminDiscounts = () => {
                           </td>
                         </tr>
                       ) : (
-                        discounts.map((discount) => (
+                        getFilteredDiscounts().map((discount) => (
                           <tr key={discount._id}>
                             <td>{discount.name}</td>
                             <td>{discount.description || '-'}</td>
@@ -536,15 +615,35 @@ const AdminDiscounts = () => {
                             <td>
                               <div>
                                 <div>From: {formatDate(discount.validFrom)}</div>
-                                <div>To: {formatDate(discount.validTo)}</div>
+                                <div className={`d-flex align-items-center gap-1 ${
+                                  isDiscountExpired(discount) ? 'text-danger' : 
+                                  new Date(discount.validTo) - new Date() < 24 * 60 * 60 * 1000 ? 'text-warning' : ''
+                                }`}>
+                                  To: {formatDate(discount.validTo)}
+                                  {isDiscountExpired(discount) && <span title="Expired">⏰</span>}
+                                  {!isDiscountExpired(discount) && new Date(discount.validTo) - new Date() < 24 * 60 * 60 * 1000 && (
+                                    <span title="Expires soon">⚠️</span>
+                                  )}
+                                </div>
+                                <small className={`text-muted ${
+                                  isDiscountExpired(discount) ? 'text-danger' : 
+                                  new Date(discount.validTo) - new Date() < 24 * 60 * 60 * 1000 ? 'text-warning' : ''
+                                }`}>
+                                  {getTimeRemaining(discount.validTo)}
+                                </small>
                               </div>
                             </td>
                             <td>
                               <Badge bg={
-                                discount.status === 'active' ? 'success' : 
-                                discount.status === 'inactive' ? 'secondary' : 'danger'
+                                getEffectiveStatus(discount) === 'active' ? 'success' : 
+                                getEffectiveStatus(discount) === 'inactive' ? 'secondary' : 'danger'
                               }>
-                                {discount.status}
+                                {getEffectiveStatus(discount)}
+                                {getEffectiveStatus(discount) === 'expired' && (
+                                  <span className="ms-1" title="Expired on {formatDate(discount.validTo)}">
+                                    ⏰
+                                  </span>
+                                )}
                               </Badge>
                             </td>
                             <td>
