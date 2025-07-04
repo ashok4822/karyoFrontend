@@ -60,9 +60,11 @@ const OrderConfirmation = () => {
     leftY += 5;
     doc.text(`Order Date: ${new Date(currentOrder.createdAt).toLocaleDateString('en-IN')}`, 14, leftY);
     leftY += 5;
-    doc.text(`Payment: ${currentOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}`, 14, leftY);
+    doc.text(`Payment Method: ${currentOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}`, 14, leftY);
     leftY += 5;
-    doc.text(`Payment Status: ${currentOrder.status ? currentOrder.status.charAt(0).toUpperCase() + currentOrder.status.slice(1) : 'N/A'}`, 14, leftY);
+    doc.text(`Payment Status: ${currentOrder.paymentStatus ? currentOrder.paymentStatus.charAt(0).toUpperCase() + currentOrder.paymentStatus.slice(1) : 'Pending'}`, 14, leftY);
+    leftY += 5;
+    doc.text(`Order Status: ${currentOrder.status ? currentOrder.status.charAt(0).toUpperCase() + currentOrder.status.slice(1) : 'Pending'}`, 14, leftY);
     // Right column: Shipping info
     let rightY = y;
     doc.text(`${currentOrder.shippingAddress.recipientName}`, 120, rightY);
@@ -185,6 +187,17 @@ const OrderConfirmation = () => {
                   <span className="badge bg-success bg-opacity-25 text-success fs-6">Order #{currentOrder.orderNumber}</span>
                   <span className="badge bg-primary bg-opacity-25 text-primary fs-6">{currentOrder.paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment"}</span>
                   <span className="badge bg-info bg-opacity-25 text-info fs-6">{currentOrder.status.charAt(0).toUpperCase() + currentOrder.status.slice(1)}</span>
+                  <span className={`badge fs-6 ${
+                    currentOrder.paymentStatus === "paid" 
+                      ? "bg-success bg-opacity-25 text-success" 
+                      : currentOrder.paymentStatus === "failed"
+                      ? "bg-danger bg-opacity-25 text-danger"
+                      : currentOrder.paymentStatus === "refunded"
+                      ? "bg-info bg-opacity-25 text-info"
+                      : "bg-warning bg-opacity-25 text-warning"
+                  }`}>
+                    Payment: {currentOrder.paymentStatus ? currentOrder.paymentStatus.charAt(0).toUpperCase() + currentOrder.paymentStatus.slice(1) : "Pending"}
+                  </span>
                 </div>
               </div>
 
@@ -194,6 +207,16 @@ const OrderConfirmation = () => {
                   <ul className="list-unstyled text-muted small mb-0">
                     <li className="mb-2 d-flex justify-content-between"><span>Order Date:</span><span className="fw-semibold text-dark">{new Date(currentOrder.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span></li>
                     <li className="mb-2 d-flex justify-content-between"><span>Total Amount:</span><span className="fw-bold text-dark">INR {currentOrder.total.toFixed(2)}</span></li>
+                    <li className="mb-2 d-flex justify-content-between"><span>Payment Method:</span><span className="fw-semibold text-dark">{currentOrder.paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment"}</span></li>
+                    <li className="mb-2 d-flex justify-content-between"><span>Payment Status:</span><span className={`fw-semibold ${
+                      currentOrder.paymentStatus === "paid" 
+                        ? "text-success" 
+                        : currentOrder.paymentStatus === "failed"
+                        ? "text-danger"
+                        : currentOrder.paymentStatus === "refunded"
+                        ? "text-info"
+                        : "text-warning"
+                    }`}>{currentOrder.paymentStatus ? currentOrder.paymentStatus.charAt(0).toUpperCase() + currentOrder.paymentStatus.slice(1) : "Pending"}</span></li>
                   </ul>
                 </div>
                 <div className="col-md-6">

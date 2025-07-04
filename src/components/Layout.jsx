@@ -17,6 +17,8 @@ const Layout = () => {
   const wishlistCount = useSelector((state) => state.wishlist.items.length);
   const cartCount = useSelector((state) => state.cart.items.length);
 
+  console.log(user);
+
   const handleLogout = async () => {
     try {
       await userAxios.post("/auth/logout");

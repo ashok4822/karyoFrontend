@@ -40,6 +40,8 @@ const AdminOrderDetails = () => {
   const navigate = useNavigate();
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [showPaymentStatusModal, setShowPaymentStatusModal] = useState(false);
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showVerifyReturnModal, setShowVerifyReturnModal] = useState(false);
@@ -95,6 +97,10 @@ const AdminOrderDetails = () => {
     setSelectedStatus(e.target.value);
   };
 
+  const handlePaymentStatusChange = (e) => {
+    setSelectedPaymentStatus(e.target.value);
+  };
+
   const handleUpdateStatus = async () => {
     try {
       await adminAxios.put(`/orders/${id}/status`, { status: selectedStatus });
@@ -102,8 +108,26 @@ const AdminOrderDetails = () => {
       const res = await adminAxios.get(`/orders/${id}`);
       setOrder(res.data.order);
       setShowStatusModal(false);
+      showSuccessAlert("Success", "Order status updated successfully!");
     } catch (error) {
       console.error("Error updating order status:", error);
+      showErrorAlert("Error", "Failed to update order status. Please try again.");
+    }
+  };
+
+  const handleUpdatePaymentStatus = async () => {
+    try {
+      await adminAxios.put(`/orders/${id}/payment-status`, { 
+        paymentStatus: selectedPaymentStatus 
+      });
+      // Refetch order details to update UI
+      const res = await adminAxios.get(`/orders/${id}`);
+      setOrder(res.data.order);
+      setShowPaymentStatusModal(false);
+      showSuccessAlert("Success", "Payment status updated successfully!");
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      showErrorAlert("Error", "Failed to update payment status. Please try again.");
     }
   };
 
@@ -439,17 +463,40 @@ const AdminOrderDetails = () => {
                     <FaCreditCard className="text-success" />
                   </div>
                   <div>
-                    <h6 className="mb-0">{order.payment?.method || "-"}</h6>
+                    <h6 className="mb-0">{order.paymentMethod || "-"}</h6>
                     <small className="text-muted">
-                      Transaction ID: {order.payment?.transactionId || "-"}
+                      Transaction ID: {order.transactionId || "-"}
                     </small>
                   </div>
                 </div>
-                <Badge
-                  bg={order.payment?.status === "paid" ? "success" : "warning"}
-                >
-                  {order.payment?.status || "-"}
-                </Badge>
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <Badge
+                    bg={
+                      order.paymentStatus === "paid"
+                        ? "success"
+                        : order.paymentStatus === "failed"
+                        ? "danger"
+                        : order.paymentStatus === "refunded"
+                        ? "info"
+                        : "warning"
+                    }
+                  >
+                    {order.paymentStatus || "-"}
+                  </Badge>
+                  {/* Show payment status update button only for COD orders */}
+                  {order.paymentMethod === "cod" && (
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPaymentStatus(order.paymentStatus || "");
+                        setShowPaymentStatusModal(true);
+                      }}
+                    >
+                      <FaEdit /> Update Payment Status
+                    </Button>
+                  )}
+                </div>
               </Card.Body>
             </Card>
 
@@ -501,13 +548,13 @@ const AdminOrderDetails = () => {
                     >
                       <FaCheck /> Verify Return Request
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="warning"
                       className="w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
                       onClick={() => setShowVerifyWithoutRefundModal(true)}
                     >
                       <FaCheck /> Verify Without Refund
-                    </Button>
+                    </Button> */}
                     <Button
                       variant="danger"
                       className="w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
@@ -767,6 +814,51 @@ const AdminOrderDetails = () => {
           </Button>
           <Button variant="primary" onClick={handleUpdateStatus}>
             Update Status
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Payment Status Update Modal */}
+      <Modal show={showPaymentStatusModal} onHide={() => setShowPaymentStatusModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Update Payment Status</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="alert alert-info mb-3">
+            <strong>Note:</strong> This option is only available for Cash on Delivery (COD) orders.
+          </div>
+          <Form.Group>
+            <Form.Label>Payment Status</Form.Label>
+            <Form.Select value={selectedPaymentStatus} onChange={handlePaymentStatusChange}>
+              <option value="">Select payment status</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="failed">Failed</option>
+              <option value="refunded">Refunded</option>
+            </Form.Select>
+          </Form.Group>
+          <div className="mt-3">
+            <small className="text-muted">
+              <strong>Status Descriptions:</strong>
+              <ul className="mb-0 mt-1">
+                <li><strong>Pending:</strong> Payment is expected upon delivery</li>
+                <li><strong>Paid:</strong> Customer has paid the amount</li>
+                <li><strong>Failed:</strong> Customer refused to pay or payment failed</li>
+                <li><strong>Refunded:</strong> Amount has been refunded to customer</li>
+              </ul>
+            </small>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowPaymentStatusModal(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleUpdatePaymentStatus}
+            disabled={!selectedPaymentStatus}
+          >
+            Update Payment Status
           </Button>
         </Modal.Footer>
       </Modal>

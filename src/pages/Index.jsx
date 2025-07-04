@@ -135,7 +135,7 @@ const Index = () => {
                         </Card.Text>
                         <div className="d-flex justify-content-between align-items-center">
                           <span className="h5 mb-0">
-                            $
+                            ₹
                             {product.variants?.[0]?.price ||
                               placeholders[i].price}
                           </span>
@@ -165,7 +165,7 @@ const Index = () => {
                           {ph.description}
                         </Card.Text>
                         <div className="d-flex justify-content-between align-items-center">
-                          <span className="h5 mb-0">${ph.price}</span>
+                          <span className="h5 mb-0">₹{ph.price}</span>
                           <Button variant="outline-primary" size="sm" disabled>
                             Add to Cart
                           </Button>
@@ -278,7 +278,7 @@ const Index = () => {
                 </div>
                 <h3 className="h5">Free Shipping</h3>
                 <p className="text-muted mb-0">
-                  Free shipping on all orders over $50
+                  Free shipping on all orders over ₹50
                 </p>
               </div>
             </Col>

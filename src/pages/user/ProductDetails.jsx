@@ -1059,7 +1059,7 @@ const ProductDetails = () => {
               <FaTruck className="text-primary fs-4" />
               <div>
                 <h6 className="mb-1">Free Shipping</h6>
-                <p className="text-muted small mb-0">On orders over $100</p>
+                <p className="text-muted small mb-0">On orders over ₹100</p>
               </div>
             </div>
             <div className="d-flex align-items-center gap-3 mb-3">

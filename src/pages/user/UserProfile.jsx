@@ -1481,7 +1481,8 @@ const UserProfile = () => {
                   <th>Status</th>
                   <th>Total</th>
                   <th>Items</th>
-                  <th>Payment</th>
+                  <th>Payment Method</th>
+                  <th>Payment Status</th>
                   <th>Order Details</th>
                 </tr>
               </thead>
@@ -1546,6 +1547,21 @@ const UserProfile = () => {
                         </span>
                       </td>
                       <td>
+                        <span className={`badge bg-${
+                          order.paymentStatus === "paid" ? "success" :
+                          order.paymentStatus === "failed" ? "danger" :
+                          order.paymentStatus === "refunded" ? "info" :
+                          "warning"
+                        } bg-opacity-25 text-${
+                          order.paymentStatus === "paid" ? "success" :
+                          order.paymentStatus === "failed" ? "danger" :
+                          order.paymentStatus === "refunded" ? "info" :
+                          "warning"
+                        }`}>
+                          {order.paymentStatus ? order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1) : "Pending"}
+                        </span>
+                      </td>
+                      <td>
                         {order.status === "pending" && (
                           <Button
                             variant="danger"
@@ -1578,7 +1594,7 @@ const UserProfile = () => {
                   if (expandedOrderId === order._id) {
                     rows.push(
                       <tr key={order._id + "-expanded"}>
-                        <td colSpan={8} style={{ background: "#f8f9fa" }}>
+                        <td colSpan={9} style={{ background: "#f8f9fa" }}>
                           <div className="p-3">
                             <h6 className="fw-bold mb-3">Order Items</h6>
                             <div className="row g-3">
