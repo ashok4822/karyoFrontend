@@ -1,27 +1,11 @@
-import React from "react";
-import { Provider } from "react-redux";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React, { useState } from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
   Navigate,
-  useLocation,
 } from "react-router-dom";
-import { store } from "../../redux/store/store";
-import { useSelector, useDispatch } from "react-redux";
-import { useEffect, useState } from "react";
-import {
-  loginSuccess,
-  logoutUser,
-  logoutAdmin,
-  setUserAccessToken,
-  setAdminAccessToken,
-} from "../../redux/reducers/authSlice";
 import Layout from "../Layout";
-import userAxios from "../../lib/userAxios";
-import adminAxios from "../../lib/adminAxios";
 
 // Pages
 import Index from "../../pages/Index";
@@ -56,14 +40,12 @@ import Wallet from "../../pages/user/Wallet";
 import Contact from "../../pages/user/Contact";
 import About from "../../pages/About";
 
-const queryClient = new QueryClient();
-
 const AppRoutes = () => {
-  const [restoring, setRestoring] = useState(true);
+  const [isSessionRestored, setIsSessionRestored] = useState(false);
 
   return (
     <BrowserRouter>
-      {restoring && (
+      {!isSessionRestored && (
         <div
           style={{
             minHeight: "100vh",
@@ -76,8 +58,8 @@ const AppRoutes = () => {
         </div>
       )}
 
-      <AuthSync onRestored={() => setRestoring(false)} />
-      {!restoring && (
+      <AuthSync onRestored={() => setIsSessionRestored(true)} />
+      {isSessionRestored && (
         <Routes>
           {/* Google Auth Success Route */}
           <Route path="/google-auth-success" element={<GoogleAuthSuccess />} />
