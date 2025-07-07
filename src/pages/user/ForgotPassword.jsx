@@ -22,6 +22,7 @@ const ForgotPassword = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(0);
+  const [resetToken, setResetToken] = useState("");
 
   useEffect(() => {
     let interval;
@@ -30,6 +31,12 @@ const ForgotPassword = () => {
     }
     return () => clearInterval(interval);
   }, [step, timer]);
+
+  useEffect(() => {
+    if (step !== 2 && timer !== 0) {
+      setTimer(0);
+    }
+  }, [step]);
 
   const handleRequestOtp = async (e, isResend = false) => {
     if (e) e.preventDefault();
@@ -41,10 +48,21 @@ const ForgotPassword = () => {
     }
     setLoading(true);
     try {
-      await api.post("auth/request-password-reset-otp", { email });
-      setSuccessMsg(isResend ? "OTP resent to your email." : "OTP sent to your email.");
+      const res = await api.post("auth/request-password-reset-otp", { email });
+      setSuccessMsg(
+        isResend ? "OTP resent to your email." : "OTP sent to your email."
+      );
       setStep(2);
-      setTimer(OTP_EXPIRY_SECONDS);
+      if (res.data && res.data.expiresAt) {
+        const now = Date.now();
+        const secondsLeft = Math.max(
+          0,
+          Math.round((res.data.expiresAt - now) / 1000)
+        );
+        setTimer(secondsLeft);
+      } else {
+        setTimer(OTP_EXPIRY_SECONDS);
+      }
     } catch (error) {
       setServerError(error.response?.data?.message || "Failed to send OTP");
     } finally {
@@ -62,11 +80,22 @@ const ForgotPassword = () => {
     }
     setLoading(true);
     try {
-      await api.post("auth/verify-password-reset-otp", { email, otp });
+      const res = await api.post("auth/verify-password-reset-otp", {
+        email,
+        otp,
+      });
       setSuccessMsg("OTP verified. Please enter your new password.");
       setStep(3);
+      setTimer(0);
+      if (res.data && res.data.resetToken) {
+        setResetToken(res.data.resetToken);
+      } else {
+        setServerError("Failed to get reset token. Please try again.");
+      }
     } catch (error) {
-      setServerError(error.response?.data?.message || "OTP verification failed");
+      setServerError(
+        error.response?.data?.message || "OTP verification failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -84,9 +113,13 @@ const ForgotPassword = () => {
       setServerError("Passwords do not match");
       return;
     }
+    if (!resetToken) {
+      setServerError("Reset token missing. Please verify OTP again.");
+      return;
+    }
     setLoading(true);
     try {
-      await api.post("auth/reset-password", { email, otp, newPassword });
+      await api.post("auth/reset-password", { email, newPassword, resetToken });
       setSuccessMsg("Password reset successful! Redirecting to login...");
       setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
@@ -117,10 +150,14 @@ const ForgotPassword = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      required
                     />
                   </Form.Group>
-                  <Button type="submit" variant="primary" className="w-100" disabled={loading}>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-100"
+                    disabled={loading}
+                  >
                     {loading ? "Sending OTP..." : "Send OTP"}
                   </Button>
                 </Form>
@@ -135,11 +172,15 @@ const ForgotPassword = () => {
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                         placeholder="Enter OTP"
-                        required
                         disabled={timer === 0}
                       />
                     </Form.Group>
-                    <Button type="submit" variant="success" className="w-100" disabled={loading || timer === 0}>
+                    <Button
+                      type="submit"
+                      variant="success"
+                      className="w-100"
+                      disabled={loading || timer === 0}
+                    >
                       {loading ? "Verifying..." : "Verify OTP"}
                     </Button>
                     <Button
@@ -171,7 +212,6 @@ const ForgotPassword = () => {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
-                      required
                     />
                   </Form.Group>
                   <Form.Group className="mb-3">
@@ -181,10 +221,14 @@ const ForgotPassword = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
-                      required
                     />
                   </Form.Group>
-                  <Button type="submit" variant="primary" className="w-100" disabled={loading}>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-100"
+                    disabled={loading}
+                  >
                     {loading ? "Resetting..." : "Reset Password"}
                   </Button>
                 </Form>
@@ -197,4 +241,4 @@ const ForgotPassword = () => {
   );
 };
 
-export default ForgotPassword; 
+export default ForgotPassword;

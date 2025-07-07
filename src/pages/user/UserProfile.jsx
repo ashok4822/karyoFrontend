@@ -666,6 +666,7 @@ const UserProfile = () => {
       });
       setForgotPasswordSuccess("OTP verified. Please enter your new password.");
       setForgotPasswordStep(3);
+      setForgotPasswordTimer(0); // <-- Stop timer after OTP verified
     } catch (error) {
       setForgotPasswordError(
         error.response?.data?.message || "OTP verification failed"
@@ -1362,7 +1363,7 @@ const UserProfile = () => {
           userAccessToken,
         })
       );
-      setOtpTimer(0); // Stop the OTP timer after successful verification
+      setOtpTimer(0); // <-- Stop timer after OTP verified
       setEditEmail("");
       setEditEmailOtp("");
     } catch (err) {
@@ -2216,6 +2217,21 @@ const UserProfile = () => {
     fetchUserProfile();
     // eslint-disable-next-line
   }, []);
+
+  // Add useEffect to reset forgotPasswordTimer if step changes away from OTP entry
+  useEffect(() => {
+    if (forgotPasswordStep !== 2 && forgotPasswordTimer !== 0) {
+      setForgotPasswordTimer(0);
+    }
+  }, [forgotPasswordStep]);
+
+  // Add useEffect to reset otpTimer if not in email OTP entry state
+  useEffect(() => {
+    // Assuming editEmailSuccess is set to a string containing 'updated' after success
+    if (editEmailSuccess && editEmailSuccess.includes("updated") && otpTimer !== 0) {
+      setOtpTimer(0);
+    }
+  }, [editEmailSuccess]);
 
   return (
     <Container className="py-5">
