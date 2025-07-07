@@ -166,6 +166,9 @@ const UserProfile = () => {
   // Add state for edit field errors
   const [editFieldErrors, setEditFieldErrors] = useState({});
 
+  // Add state for add field errors
+  const [addFieldErrors, setAddFieldErrors] = useState({});
+
   // Fetch paginated orders from backend
   useEffect(() => {
     if (activeIndex === 3) {
@@ -404,11 +407,47 @@ const UserProfile = () => {
   }, [activeIndex, userAccessToken]);
 
   // Add new shipping address
+  const validateAddAddressForm = () => {
+    const errors = {};
+    if (!newAddress.recipientName.trim()) {
+      errors.recipientName = "Recipient name is required";
+    }
+    if (!newAddress.addressLine1.trim()) {
+      errors.addressLine1 = "Address Line 1 is required";
+    }
+    if (!newAddress.city.trim()) {
+      errors.city = "City is required";
+    }
+    if (!newAddress.state.trim()) {
+      errors.state = "State is required";
+    }
+    if (!newAddress.postalCode.trim()) {
+      errors.postalCode = "Postal code is required";
+    } else if (!/^\d{4,10}$/.test(newAddress.postalCode.trim())) {
+      errors.postalCode = "Postal code must be 4-10 digits";
+    }
+    if (!newAddress.country.trim()) {
+      errors.country = "Country is required";
+    }
+    if (!newAddress.phoneNumber.trim()) {
+      errors.phoneNumber = "Phone number is required";
+    } else if (!/^\d{10,15}$/.test(newAddress.phoneNumber.trim())) {
+      errors.phoneNumber = "Phone number must be 10-15 digits";
+    }
+    return errors;
+  };
+
   const handleAddAddress = async (e) => {
     e.preventDefault();
     setAddLoading(true);
     setAddError("");
     setAddSuccess("");
+    const errors = validateAddAddressForm();
+    setAddFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setAddLoading(false);
+      return;
+    }
     try {
       const res = await userAxios.post("/users/shipping-address", newAddress, {
         headers: { Authorization: `Bearer ${userAccessToken}` },
@@ -426,6 +465,7 @@ const UserProfile = () => {
         phoneNumber: "",
         isDefault: false,
       });
+      setAddFieldErrors({});
       // Refresh address list
       setShippingAddresses((prev) => [
         res.data.address,
@@ -441,7 +481,11 @@ const UserProfile = () => {
         setShippingAddresses((prev) => [...prev, res.data.address]);
       }
     } catch (err) {
-      setAddError(err.response?.data?.message || "Failed to add address");
+      if (err.response && err.response.status === 400 && err.response.data && err.response.data.errors) {
+        setAddFieldErrors(err.response.data.errors);
+      } else {
+        setAddError(err.response?.data?.message || "Failed to add address");
+      }
     } finally {
       setAddLoading(false);
     }
@@ -964,7 +1008,13 @@ const UserProfile = () => {
                   }))
                 }
                 placeholder="Enter recipient name"
+                isInvalid={!!addFieldErrors.recipientName}
               />
+              {addFieldErrors.recipientName && (
+                <Form.Control.Feedback type="invalid">
+                  {addFieldErrors.recipientName}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Address Line 1</Form.Label>
@@ -975,7 +1025,13 @@ const UserProfile = () => {
                   setNewAddress((a) => ({ ...a, addressLine1: e.target.value }))
                 }
                 placeholder="Enter address line 1"
+                isInvalid={!!addFieldErrors.addressLine1}
               />
+              {addFieldErrors.addressLine1 && (
+                <Form.Control.Feedback type="invalid">
+                  {addFieldErrors.addressLine1}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Address Line 2</Form.Label>
@@ -997,7 +1053,13 @@ const UserProfile = () => {
                   setNewAddress((a) => ({ ...a, city: e.target.value }))
                 }
                 placeholder="Enter city"
+                isInvalid={!!addFieldErrors.city}
               />
+              {addFieldErrors.city && (
+                <Form.Control.Feedback type="invalid">
+                  {addFieldErrors.city}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>State</Form.Label>
@@ -1008,7 +1070,13 @@ const UserProfile = () => {
                   setNewAddress((a) => ({ ...a, state: e.target.value }))
                 }
                 placeholder="Enter state"
+                isInvalid={!!addFieldErrors.state}
               />
+              {addFieldErrors.state && (
+                <Form.Control.Feedback type="invalid">
+                  {addFieldErrors.state}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Postal Code</Form.Label>
@@ -1019,7 +1087,13 @@ const UserProfile = () => {
                   setNewAddress((a) => ({ ...a, postalCode: e.target.value }))
                 }
                 placeholder="Enter postal code"
+                isInvalid={!!addFieldErrors.postalCode}
               />
+              {addFieldErrors.postalCode && (
+                <Form.Control.Feedback type="invalid">
+                  {addFieldErrors.postalCode}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Country</Form.Label>
@@ -1030,7 +1104,13 @@ const UserProfile = () => {
                   setNewAddress((a) => ({ ...a, country: e.target.value }))
                 }
                 placeholder="Enter country"
+                isInvalid={!!addFieldErrors.country}
               />
+              {addFieldErrors.country && (
+                <Form.Control.Feedback type="invalid">
+                  {addFieldErrors.country}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group className="mb-2">
               <Form.Label>Phone Number</Form.Label>
@@ -1041,7 +1121,13 @@ const UserProfile = () => {
                   setNewAddress((a) => ({ ...a, phoneNumber: e.target.value }))
                 }
                 placeholder="Enter phone number"
+                isInvalid={!!addFieldErrors.phoneNumber}
               />
+              {addFieldErrors.phoneNumber && (
+                <Form.Control.Feedback type="invalid">
+                  {addFieldErrors.phoneNumber}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Check
               className="mb-2"
@@ -1250,9 +1336,9 @@ const UserProfile = () => {
       setEditEmailSuccess(res.data.message || "OTP sent to email");
       setOtpTimer(OTP_EXPIRY_SECONDS);
     } catch (err) {
-      setEditEmailError(
-        err.response?.data?.message || "Failed to send OTP. Please try again."
-      );
+      const msg = err.response?.data?.message || "Failed to send OTP. Please try again.";
+      setEditEmailError(msg);
+      // Optionally, you could focus the input or highlight it here
     } finally {
       setEditEmailLoading(false);
     }
@@ -1276,6 +1362,7 @@ const UserProfile = () => {
           userAccessToken,
         })
       );
+      setOtpTimer(0); // Stop the OTP timer after successful verification
       setEditEmail("");
       setEditEmailOtp("");
     } catch (err) {
@@ -1305,7 +1392,13 @@ const UserProfile = () => {
               onChange={(e) => setEditEmail(e.target.value)}
               placeholder="Enter new email"
               disabled={editEmailLoading || editEmailSuccess}
+              isInvalid={!!editEmailError}
             />
+            {editEmailError && (
+              <Form.Control.Feedback type="invalid">
+                {editEmailError}
+              </Form.Control.Feedback>
+            )}
           </Form.Group>
           <Button
             variant="primary"
