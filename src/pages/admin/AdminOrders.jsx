@@ -39,8 +39,8 @@ const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
-  const [sortField, setSortField] = useState("date");
+
+  const [sortField, setSortField] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -63,7 +63,8 @@ const AdminOrders = () => {
           limit: ordersPerPage,
           status: statusFilter || undefined,
           search: searchTerm || undefined,
-          date: dateFilter || undefined,
+          sortBy: sortField,
+          sortOrder: sortDirection,
         };
         const res = await adminAxios.get("/orders", { params });
         setOrders(res.data.orders || []);
@@ -78,7 +79,7 @@ const AdminOrders = () => {
       }
     };
     fetchOrders();
-  }, [currentPage, statusFilter, searchTerm, dateFilter]);
+  }, [currentPage, statusFilter, searchTerm, sortField, sortDirection]);
 
   const handleSearchInputChange = (e) => {
     setSearchInput(e.target.value);
@@ -101,11 +102,6 @@ const AdminOrders = () => {
     setCurrentPage(1);
   };
 
-  const handleDateFilter = (e) => {
-    setDateFilter(e.target.value);
-    setCurrentPage(1);
-  };
-
   const handleSort = (field) => {
     if (field === sortField) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -113,6 +109,7 @@ const AdminOrders = () => {
       setSortField(field);
       setSortDirection("asc");
     }
+    setCurrentPage(1); // Reset to first page when sorting changes
   };
 
   const handleDeleteOrder = async (orderId) => {
@@ -124,7 +121,8 @@ const AdminOrders = () => {
         limit: ordersPerPage,
         status: statusFilter || undefined,
         search: searchTerm || undefined,
-        date: dateFilter || undefined,
+        sortBy: sortField,
+        sortOrder: sortDirection,
       };
       const res = await adminAxios.get("/orders", { params });
       setOrders(res.data.orders || []);
@@ -145,11 +143,6 @@ const AdminOrders = () => {
     return <Badge bg={variants[status] || "secondary"}>{status}</Badge>;
   };
 
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <FaSort className="text-muted" />;
-    return sortDirection === "asc" ? <FaSortUp /> : <FaSortDown />;
-  };
-
   // Calculate correct start and end indices for the current page
   const startOrder =
     orders.length === 0 ? 0 : (currentPage - 1) * ordersPerPage + 1;
@@ -160,8 +153,14 @@ const AdminOrders = () => {
     setSearchInput("");
     setSearchTerm("");
     setStatusFilter("");
-    setDateFilter("");
+    setSortField("createdAt");
+    setSortDirection("desc");
     setCurrentPage(1);
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return <FaSort className="text-muted" />;
+    return sortDirection === "asc" ? <FaSortUp /> : <FaSortDown />;
   };
 
   if (loading) {
@@ -228,25 +227,18 @@ const AdminOrders = () => {
                       <option value="shipped">Shipped</option>
                       <option value="delivered">Delivered</option>
                       <option value="cancelled">Cancelled</option>
+                      <option value="returned">Return</option>
                     </Form.Select>
                   </Col>
-                  <Col md={3}>
-                    <Form.Control
-                      type="date"
-                      value={dateFilter}
-                      onChange={handleDateFilter}
-                    />
-                  </Col>
+
                   <Col md={2}>
-                    {(searchInput || searchTerm || statusFilter || dateFilter) && (
-                      <Button
-                        variant="outline-secondary"
-                        className="w-100 d-flex align-items-center justify-content-center gap-2"
-                        onClick={handleClearAll}
-                      >
-                        <FaFilter /> Clear
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline-secondary"
+                      className="w-100 d-flex align-items-center justify-content-center gap-2"
+                      onClick={handleClearAll}
+                    >
+                      <FaFilter /> Clear All
+                    </Button>
                   </Col>
                 </Row>
               </Card.Body>
@@ -257,50 +249,54 @@ const AdminOrders = () => {
                 <Table hover className="align-middle mb-0">
                   <thead className="bg-light">
                     <tr>
-                      <th
-                        className="cursor-pointer"
-                        onClick={() => handleSort("orderNumber")}
-                      >
-                        <div className="d-flex align-items-center gap-2">
-                          Order ID
-                          <SortIcon field="orderNumber" />
-                        </div>
+                      <th className="cursor-pointer">
+                        <button
+                          type="button"
+                          onClick={() => handleSort("orderNumber")}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                        >
+                          <div className="d-flex align-items-center gap-2">
+                            Order ID
+                            {getSortIcon("orderNumber")}
+                          </div>
+                        </button>
                       </th>
-                      <th
-                        className="cursor-pointer"
-                        onClick={() => handleSort("date")}
-                      >
-                        <div className="d-flex align-items-center gap-2">
-                          Date
-                          <SortIcon field="date" />
-                        </div>
+                      <th className="cursor-pointer">
+                        <button
+                          type="button"
+                          onClick={() => handleSort("createdAt")}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                        >
+                          <div className="d-flex align-items-center gap-2">
+                            Date
+                            {getSortIcon("createdAt")}
+                          </div>
+                        </button>
                       </th>
-                      <th
-                        className="cursor-pointer"
-                        onClick={() => handleSort("customer.name")}
-                      >
-                        <div className="d-flex align-items-center gap-2">
-                          Customer
-                          <SortIcon field="customer.name" />
-                        </div>
+                      <th>Customer</th>
+                      <th className="cursor-pointer">
+                        <button
+                          type="button"
+                          onClick={() => handleSort("total")}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                        >
+                          <div className="d-flex align-items-center gap-2">
+                            Total
+                            {getSortIcon("total")}
+                          </div>
+                        </button>
                       </th>
-                      <th
-                        className="cursor-pointer"
-                        onClick={() => handleSort("total")}
-                      >
-                        <div className="d-flex align-items-center gap-2">
-                          Total
-                          <SortIcon field="total" />
-                        </div>
-                      </th>
-                      <th
-                        className="cursor-pointer"
-                        onClick={() => handleSort("status")}
-                      >
-                        <div className="d-flex align-items-center gap-2">
-                          Status
-                          <SortIcon field="status" />
-                        </div>
+                      <th className="cursor-pointer">
+                        <button
+                          type="button"
+                          onClick={() => handleSort("status")}
+                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                        >
+                          <div className="d-flex align-items-center gap-2">
+                            Status
+                            {getSortIcon("status")}
+                          </div>
+                        </button>
                       </th>
                       <th className="text-end">Actions</th>
                     </tr>
@@ -475,6 +471,7 @@ const AdminOrders = () => {
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
+                    <option value="returned">Return</option>
                   </Form.Select>
                 </Form.Group>
               </Modal.Body>
@@ -502,7 +499,8 @@ const AdminOrders = () => {
                         limit: ordersPerPage,
                         status: statusFilter || undefined,
                         search: searchTerm || undefined,
-                        date: dateFilter || undefined,
+                        sortBy: sortField,
+                        sortOrder: sortDirection,
                       };
                       const res = await adminAxios.get("/orders", { params });
                       setOrders(res.data.orders || []);

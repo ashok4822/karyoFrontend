@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
@@ -27,6 +27,20 @@ import {
 import adminAxios from '../../lib/adminAxios';
 import Swal from 'sweetalert2';
 
+// Debounce hook
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 const AdminDiscountUsage = () => {
   const dispatch = useDispatch();
   const { discounts } = useSelector((state) => state.discounts);
@@ -36,15 +50,28 @@ const AdminDiscountUsage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     // Fetch discounts for dropdown
     dispatch(fetchDiscounts({ limit: 100 }));
   }, [dispatch]);
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
   useEffect(() => {
     fetchUsageStats();
-  }, [searchQuery, currentPage]);
+  }, [debouncedSearchQuery, currentPage]);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [debouncedSearchQuery]);
+
+  useEffect(() => {
+    console.log('AdminDiscountUsage mounted');
+  }, []);
 
   const fetchUsageStats = async () => {
     setLoading(true);
@@ -53,7 +80,7 @@ const AdminDiscountUsage = () => {
         params: {
           page: currentPage,
           limit: 10,
-          search: searchQuery,
+          search: debouncedSearchQuery,
         }
       });
       setUsageStats(response.data);
@@ -66,7 +93,15 @@ const AdminDiscountUsage = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   };
 
   const getSortIcon = (key) => {
@@ -95,6 +130,28 @@ const AdminDiscountUsage = () => {
               <h5 className="mb-0">Overall Usage Statistics</h5>
             </Card.Header>
             <Card.Body>
+              <Row className="mb-4">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>Search Discounts</Form.Label>
+                    <div className="input-group">
+                      <span className="input-group-text">
+                        <FaSearch />
+                      </span>
+                      <Form.Control
+                        type="text"
+                        placeholder="Search by discount name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        ref={el => {
+                          inputRef.current = el;
+                          if (el) console.log('Search input mounted');
+                        }}
+                      />
+                    </div>
+                  </Form.Group>
+                </Col>
+              </Row>
               {loading ? (
                 <div className="text-center py-4">
                   <Spinner animation="border" />
@@ -102,25 +159,6 @@ const AdminDiscountUsage = () => {
                 </div>
               ) : usageStats ? (
                 <>
-                  <Row className="mb-4">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Search Discounts</Form.Label>
-                        <div className="input-group">
-                          <span className="input-group-text">
-                            <FaSearch />
-                          </span>
-                          <Form.Control
-                            type="text"
-                            placeholder="Search by discount name..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                          />
-                        </div>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
                   <div className="table-responsive">
                     <Table hover className="align-middle">
                       <thead>

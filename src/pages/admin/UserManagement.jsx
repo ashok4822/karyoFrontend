@@ -88,6 +88,18 @@ const UserManagement = () => {
     }
   };
 
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  };
+
   return (
     <Container fluid className="py-5">
       <Row>
@@ -196,7 +208,7 @@ const UserManagement = () => {
                                 {user.isDeleted ? "Blocked" : "Active"}
                               </Badge>
                             </td>
-                            <td>{new Date(user.createdAt).toLocaleString()}</td>
+                            <td>{formatDateTime(user.createdAt)}</td>
                             <td>
                               <Button
                                 variant={user.isDeleted ? "success" : "danger"}

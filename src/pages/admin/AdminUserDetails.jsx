@@ -58,6 +58,18 @@ const AdminUserDetails = () => {
     console.log('Delete user:', userId);
   };
 
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 p-6 flex items-center justify-center">
@@ -131,11 +143,11 @@ const AdminUserDetails = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Join Date</p>
-                  <p className="text-lg">{user.joinDate}</p>
+                  <p className="text-lg">{formatDateTime(user.joinDate)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Last Login</p>
-                  <p className="text-lg">{user.lastLogin}</p>
+                  <p className="text-lg">{formatDateTime(user.lastLogin)}</p>
                 </div>
               </div>
             </CardContent>
@@ -157,7 +169,7 @@ const AdminUserDetails = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Last Order</p>
-                  <p className="text-lg">{user.orders.lastOrder}</p>
+                  <p className="text-lg">{formatDateTime(user.orders.lastOrder)}</p>
                 </div>
               </div>
             </CardContent>
