@@ -7,6 +7,7 @@ import { createOrder } from "../../redux/reducers/orderSlice";
 import { fetchShippingAddresses, createShippingAddress, updateShippingAddress, setDefaultShippingAddress } from "../../redux/reducers/shippingAddressSlice";
 import { fetchUserActiveDiscounts, setSelectedDiscount, clearSelectedDiscount } from "../../redux/reducers/userDiscountSlice";
 import userAxios from "../../lib/userAxios";
+import { Modal, Button, Form, Alert } from "react-bootstrap";
 
 const Checkout = () => {
   const cart = useSelector((state) => state.cart);
@@ -54,6 +55,9 @@ const Checkout = () => {
   const [codAvailable, setCodAvailable] = useState(true);
   const [codChecking, setCodChecking] = useState(false);
   const [discountsFetchAttempted, setDiscountsFetchAttempted] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Initialize cart if not already done
   useEffect(() => {
@@ -365,6 +369,8 @@ const Checkout = () => {
 
   const handleSaveNewAddress = async () => {
     if (!validateForm()) {
+      setErrorMessage("Please fill in all required fields correctly");
+      setSuccessMessage("");
       toast({
         title: "Please fix the errors",
         description: "Please fill in all required fields correctly",
@@ -386,33 +392,45 @@ const Checkout = () => {
       };
 
       await dispatch(createShippingAddress(addressData)).unwrap();
-      
-      toast({
-        title: "Address saved successfully",
-        description: "Your new shipping address has been saved",
-        variant: "default",
-      });
-
-      setShowNewAddressForm(false);
-      setFormData({
-        recipientName: "",
-        addressLine1: "",
-        addressLine2: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        country: "India",
-        phoneNumber: "",
-        isDefault: false,
-      });
-      setErrors({});
-      
+      setSuccessMessage("Address added successfully");
+      setErrorMessage("");
+      setTimeout(() => {
+        setShowAddressModal(false);
+        setSuccessMessage("");
+        setFormData({
+          recipientName: "",
+          addressLine1: "",
+          addressLine2: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          country: "India",
+          phoneNumber: "",
+          isDefault: false,
+        });
+        setErrors({});
+      }, 1200);
     } catch (error) {
-      toast({
-        title: "Failed to save address",
-        description: error.message || "Please try again",
-        variant: "destructive",
-      });
+      // Check for field-level errors in error.response?.data?.errors or error.errors
+      const fieldErrors = error?.errors || error?.response?.data?.errors;
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        setErrors(fieldErrors);
+        setErrorMessage("Please fix the highlighted fields.");
+        setSuccessMessage("");
+        toast({
+          title: "Validation Error",
+          description: "Please fix the highlighted fields.",
+          variant: "destructive",
+        });
+      } else {
+        setErrorMessage(error.message || "Failed to save address. Please try again.");
+        setSuccessMessage("");
+        toast({
+          title: "Failed to save address",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -797,7 +815,23 @@ const Checkout = () => {
                 
                 <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
                   <button
-                    onClick={handleAddNewAddress}
+                    onClick={() => {
+                      setFormData({
+                        recipientName: "",
+                        addressLine1: "",
+                        addressLine2: "",
+                        city: "",
+                        state: "",
+                        postalCode: "",
+                        country: "India",
+                        phoneNumber: "",
+                        isDefault: false,
+                      });
+                      setShowAddressModal(true);
+                      setErrors({});
+                      setSuccessMessage("");
+                      setErrorMessage("");
+                    }}
                     style={{
                       padding: "0.75rem 1.5rem",
                       background: "transparent",
@@ -872,7 +906,23 @@ const Checkout = () => {
                   </p>
                 </div>
                 <button
-                  onClick={handleAddNewAddress}
+                  onClick={() => {
+                    setFormData({
+                      recipientName: "",
+                      addressLine1: "",
+                      addressLine2: "",
+                      city: "",
+                      state: "",
+                      postalCode: "",
+                      country: "India",
+                      phoneNumber: "",
+                      isDefault: false,
+                    });
+                    setShowAddressModal(true);
+                    setErrors({});
+                    setSuccessMessage("");
+                    setErrorMessage("");
+                  }}
                   style={{
                     padding: "0.875rem 2rem",
                     background: "#4f46e5",
@@ -901,319 +951,367 @@ const Checkout = () => {
               </div>
             )}
 
+            {/* New Address Form - moved above Payment Method */}
+            <Modal show={showAddressModal} onHide={() => {
+              setShowAddressModal(false);
+              setErrors({});
+              setSuccessMessage("");
+              setErrorMessage("");
+              setFormData({
+                recipientName: "",
+                addressLine1: "",
+                addressLine2: "",
+                city: "",
+                state: "",
+                postalCode: "",
+                country: "India",
+                phoneNumber: "",
+                isDefault: false,
+              });
+            }} centered backdrop="static" keyboard={false}>
+              <Modal.Header closeButton>
+                <Modal.Title>Add New Shipping Address</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
+                {successMessage && <Alert variant="success">{successMessage}</Alert>}
+                <Form autoComplete="off">
+                  <Form.Group className="mb-2">
+                    <Form.Label>Recipient Name</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.recipientName}
+                      onChange={e => setFormData(f => ({ ...f, recipientName: e.target.value }))}
+                      placeholder="Enter recipient name"
+                      isInvalid={!!errors.recipientName}
+                    />
+                    {errors.recipientName && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.recipientName}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Address Line 1</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.addressLine1}
+                      onChange={e => setFormData(f => ({ ...f, addressLine1: e.target.value }))}
+                      placeholder="Enter address line 1"
+                      isInvalid={!!errors.addressLine1}
+                    />
+                    {errors.addressLine1 && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.addressLine1}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Address Line 2</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.addressLine2}
+                      onChange={e => setFormData(f => ({ ...f, addressLine2: e.target.value }))}
+                      placeholder="Enter address line 2 (optional)"
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>City</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.city}
+                      onChange={e => setFormData(f => ({ ...f, city: e.target.value }))}
+                      placeholder="Enter city"
+                      isInvalid={!!errors.city}
+                    />
+                    {errors.city && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.city}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>State</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.state}
+                      onChange={e => setFormData(f => ({ ...f, state: e.target.value }))}
+                      placeholder="Enter state"
+                      isInvalid={!!errors.state}
+                    />
+                    {errors.state && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.state}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Postal Code</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.postalCode}
+                      onChange={e => setFormData(f => ({ ...f, postalCode: e.target.value }))}
+                      placeholder="Enter postal code"
+                      isInvalid={!!errors.postalCode}
+                    />
+                    {errors.postalCode && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.postalCode}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Country</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.country}
+                      onChange={e => setFormData(f => ({ ...f, country: e.target.value }))}
+                      placeholder="Enter country"
+                      isInvalid={!!errors.country}
+                    />
+                    {errors.country && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.country}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Phone Number</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={formData.phoneNumber}
+                      onChange={e => setFormData(f => ({ ...f, phoneNumber: e.target.value }))}
+                      placeholder="Enter phone number"
+                      isInvalid={!!errors.phoneNumber}
+                    />
+                    {errors.phoneNumber && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.phoneNumber}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Check
+                    className="mb-2"
+                    type="checkbox"
+                    label="Set as default address"
+                    checked={formData.isDefault}
+                    onChange={e => setFormData(f => ({ ...f, isDefault: e.target.checked }))}
+                  />
+                  <Button
+                    variant="primary"
+                    className="w-100 mt-2"
+                    type="button"
+                    onClick={handleSaveNewAddress}
+                    disabled={loading}
+                  >
+                    {loading ? "Adding..." : "Add Address"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="w-100 mt-2"
+                    type="button"
+                    onClick={() => {
+                      setShowAddressModal(false);
+                      setErrors({});
+                      setSuccessMessage("");
+                      setErrorMessage("");
+                      setFormData({
+                        recipientName: "",
+                        addressLine1: "",
+                        addressLine2: "",
+                        city: "",
+                        state: "",
+                        postalCode: "",
+                        country: "India",
+                        phoneNumber: "",
+                        isDefault: false,
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Form>
+              </Modal.Body>
+            </Modal>
+
             {/* Edit Address Modal */}
-            {showEditAddressForm && editingAddress && (
-              <div style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 1000,
-                padding: "1rem"
-              }}>
-                <div style={{
-                  backgroundColor: "#fff",
-                  borderRadius: "8px",
-                  padding: "2rem",
-                  maxWidth: "600px",
-                  width: "100%",
-                  maxHeight: "90vh",
-                  overflowY: "auto",
-                  position: "relative"
-                }}>
-                  <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "1.5rem",
-                    borderBottom: "1px solid #eee",
-                    paddingBottom: "1rem"
-                  }}>
-                    <h3 style={{ margin: 0, fontSize: "1.5rem" }}>Edit Address</h3>
-                    <button
-                      onClick={() => {
-                        setShowEditAddressForm(false);
-                        setEditingAddress(null);
-                        setEditErrors({});
-                      }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        fontSize: "1.5rem",
-                        cursor: "pointer",
-                        color: "#666",
-                        padding: "0.25rem",
-                        borderRadius: "4px",
-                        width: "32px",
-                        height: "32px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  
-                  <form>
-                    <div style={{ marginBottom: "1rem" }}>
-                      <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                        Recipient Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="recipientName"
-                        value={editFormData.recipientName}
-                        onChange={handleEditInputChange}
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem",
-                          border: editErrors.recipientName ? "1px solid #dc3545" : "1px solid #ddd",
-                          borderRadius: "4px",
-                          fontSize: "1rem"
-                        }}
-                        placeholder="Enter recipient name"
-                      />
-                      {editErrors.recipientName && (
-                        <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                          {editErrors.recipientName}
-                        </p>
-                      )}
-                    </div>
-
-                    <div style={{ marginBottom: "1rem" }}>
-                      <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                        Address Line 1 *
-                      </label>
-                      <input
-                        type="text"
-                        name="addressLine1"
-                        value={editFormData.addressLine1}
-                        onChange={handleEditInputChange}
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem",
-                          border: editErrors.addressLine1 ? "1px solid #dc3545" : "1px solid #ddd",
-                          borderRadius: "4px",
-                          fontSize: "1rem"
-                        }}
-                        placeholder="Enter address line 1"
-                      />
-                      {editErrors.addressLine1 && (
-                        <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                          {editErrors.addressLine1}
-                        </p>
-                      )}
-                    </div>
-
-                    <div style={{ marginBottom: "1rem" }}>
-                      <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                        Address Line 2
-                      </label>
-                      <input
-                        type="text"
-                        name="addressLine2"
-                        value={editFormData.addressLine2}
-                        onChange={handleEditInputChange}
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem",
-                          border: "1px solid #ddd",
-                          borderRadius: "4px",
-                          fontSize: "1rem"
-                        }}
-                        placeholder="Enter address line 2 (optional)"
-                      />
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                      <div>
-                        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                          City *
-                        </label>
-                        <input
-                          type="text"
-                          name="city"
-                          value={editFormData.city}
-                          onChange={handleEditInputChange}
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem",
-                            border: editErrors.city ? "1px solid #dc3545" : "1px solid #ddd",
-                            borderRadius: "4px",
-                            fontSize: "1rem"
-                          }}
-                          placeholder="Enter city"
-                        />
-                        {editErrors.city && (
-                          <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                            {editErrors.city}
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                          State *
-                        </label>
-                        <input
-                          type="text"
-                          name="state"
-                          value={editFormData.state}
-                          onChange={handleEditInputChange}
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem",
-                            border: editErrors.state ? "1px solid #dc3545" : "1px solid #ddd",
-                            borderRadius: "4px",
-                            fontSize: "1rem"
-                          }}
-                          placeholder="Enter state"
-                        />
-                        {editErrors.state && (
-                          <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                            {editErrors.state}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                      <div>
-                        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                          Postal Code *
-                        </label>
-                        <input
-                          type="text"
-                          name="postalCode"
-                          value={editFormData.postalCode}
-                          onChange={handleEditInputChange}
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem",
-                            border: editErrors.postalCode ? "1px solid #dc3545" : "1px solid #ddd",
-                            borderRadius: "4px",
-                            fontSize: "1rem"
-                          }}
-                          placeholder="Enter postal code"
-                        />
-                        {editErrors.postalCode && (
-                          <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                            {editErrors.postalCode}
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                          Country *
-                        </label>
-                        <input
-                          type="text"
-                          name="country"
-                          value={editFormData.country}
-                          onChange={handleEditInputChange}
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem",
-                            border: editErrors.country ? "1px solid #dc3545" : "1px solid #ddd",
-                            borderRadius: "4px",
-                            fontSize: "1rem"
-                          }}
-                          placeholder="Enter country"
-                        />
-                        {editErrors.country && (
-                          <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                            {editErrors.country}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: "2rem" }}>
-                      <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phoneNumber"
-                        value={editFormData.phoneNumber}
-                        onChange={handleEditInputChange}
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem",
-                          border: editErrors.phoneNumber ? "1px solid #dc3545" : "1px solid #ddd",
-                          borderRadius: "4px",
-                          fontSize: "1rem"
-                        }}
-                        placeholder="Enter phone number"
-                      />
-                      {editErrors.phoneNumber && (
-                        <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                          {editErrors.phoneNumber}
-                        </p>
-                      )}
-                    </div>
-
-                    <div style={{ marginBottom: "2rem" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                        <input
-                          type="checkbox"
-                          name="isDefault"
-                          checked={editFormData.isDefault}
-                          onChange={handleEditInputChange}
-                          style={{ margin: 0 }}
-                        />
-                        <span style={{ fontWeight: "500" }}>Set as default address</span>
-                      </label>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowEditAddressForm(false);
-                          setEditingAddress(null);
-                          setEditErrors({});
-                        }}
-                        style={{
-                          padding: "0.75rem 1.5rem",
-                          background: "transparent",
-                          color: "#666",
-                          border: "1px solid #ddd",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                          fontSize: "1rem"
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleUpdateAddress}
-                        disabled={editLoading}
-                        style={{
-                          padding: "0.75rem 1.5rem",
-                          background: editLoading ? "#ccc" : "#4f46e5",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: "8px",
-                          cursor: editLoading ? "not-allowed" : "pointer",
-                          fontSize: "1rem"
-                        }}
-                      >
-                        {editLoading ? "Updating..." : "Update Address"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
+            <Modal show={showEditAddressForm} onHide={() => {
+              setShowEditAddressForm(false);
+              setEditErrors({});
+              setEditingAddress(null);
+              setEditFormData({
+                recipientName: "",
+                addressLine1: "",
+                addressLine2: "",
+                city: "",
+                state: "",
+                postalCode: "",
+                country: "",
+                phoneNumber: "",
+                isDefault: false,
+              });
+            }} centered backdrop="static" keyboard={false}>
+              <Modal.Header closeButton>
+                <Modal.Title>Edit Shipping Address</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                <Form autoComplete="off">
+                  <Form.Group className="mb-2">
+                    <Form.Label>Recipient Name</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.recipientName}
+                      onChange={e => setEditFormData(f => ({ ...f, recipientName: e.target.value }))}
+                      placeholder="Enter recipient name"
+                      isInvalid={!!editErrors.recipientName}
+                    />
+                    {editErrors.recipientName && (
+                      <Form.Control.Feedback type="invalid">
+                        {editErrors.recipientName}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Address Line 1</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.addressLine1}
+                      onChange={e => setEditFormData(f => ({ ...f, addressLine1: e.target.value }))}
+                      placeholder="Enter address line 1"
+                      isInvalid={!!editErrors.addressLine1}
+                    />
+                    {editErrors.addressLine1 && (
+                      <Form.Control.Feedback type="invalid">
+                        {editErrors.addressLine1}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Address Line 2</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.addressLine2}
+                      onChange={e => setEditFormData(f => ({ ...f, addressLine2: e.target.value }))}
+                      placeholder="Enter address line 2 (optional)"
+                    />
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>City</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.city}
+                      onChange={e => setEditFormData(f => ({ ...f, city: e.target.value }))}
+                      placeholder="Enter city"
+                      isInvalid={!!editErrors.city}
+                    />
+                    {editErrors.city && (
+                      <Form.Control.Feedback type="invalid">
+                        {editErrors.city}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>State</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.state}
+                      onChange={e => setEditFormData(f => ({ ...f, state: e.target.value }))}
+                      placeholder="Enter state"
+                      isInvalid={!!editErrors.state}
+                    />
+                    {editErrors.state && (
+                      <Form.Control.Feedback type="invalid">
+                        {editErrors.state}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Postal Code</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.postalCode}
+                      onChange={e => setEditFormData(f => ({ ...f, postalCode: e.target.value }))}
+                      placeholder="Enter postal code"
+                      isInvalid={!!editErrors.postalCode}
+                    />
+                    {editErrors.postalCode && (
+                      <Form.Control.Feedback type="invalid">
+                        {editErrors.postalCode}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Country</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.country}
+                      onChange={e => setEditFormData(f => ({ ...f, country: e.target.value }))}
+                      placeholder="Enter country"
+                      isInvalid={!!editErrors.country}
+                    />
+                    {editErrors.country && (
+                      <Form.Control.Feedback type="invalid">
+                        {editErrors.country}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Phone Number</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFormData.phoneNumber}
+                      onChange={e => setEditFormData(f => ({ ...f, phoneNumber: e.target.value }))}
+                      placeholder="Enter phone number"
+                      isInvalid={!!editErrors.phoneNumber}
+                    />
+                    {editErrors.phoneNumber && (
+                      <Form.Control.Feedback type="invalid">
+                        {editErrors.phoneNumber}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                  <Form.Check
+                    className="mb-2"
+                    type="checkbox"
+                    label="Set as default address"
+                    checked={editFormData.isDefault}
+                    onChange={e => setEditFormData(f => ({ ...f, isDefault: e.target.checked }))}
+                  />
+                  <Button
+                    variant="primary"
+                    className="w-100 mt-2"
+                    type="button"
+                    onClick={handleUpdateAddress}
+                    disabled={editLoading}
+                  >
+                    {editLoading ? "Updating..." : "Update Address"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="w-100 mt-2"
+                    type="button"
+                    onClick={() => {
+                      setShowEditAddressForm(false);
+                      setEditErrors({});
+                      setEditingAddress(null);
+                      setEditFormData({
+                        recipientName: "",
+                        addressLine1: "",
+                        addressLine2: "",
+                        city: "",
+                        state: "",
+                        postalCode: "",
+                        country: "",
+                        phoneNumber: "",
+                        isDefault: false,
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Form>
+              </Modal.Body>
+            </Modal>
 
             {/* Payment Method */}
             <div style={{ marginBottom: "2rem" }}>
@@ -1632,266 +1730,6 @@ const Checkout = () => {
           </div>
         </div>
       </div>
-
-      {/* New Address Form */}
-      {showNewAddressForm && (
-        <div style={{ marginBottom: "2rem" }}>
-          <h3 style={{ marginBottom: "1rem", fontSize: "1.25rem" }}>Add New Address</h3>
-          <form>
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                Recipient Name *
-              </label>
-              <input
-                type="text"
-                name="recipientName"
-                value={formData.recipientName}
-                onChange={handleInputChange}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: errors.recipientName ? "1px solid #dc3545" : "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem"
-                }}
-                placeholder="Enter recipient name"
-              />
-              {errors.recipientName && (
-                <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                  {errors.recipientName}
-                </p>
-              )}
-            </div>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                Address Line 1 *
-              </label>
-              <input
-                type="text"
-                name="addressLine1"
-                value={formData.addressLine1}
-                onChange={handleInputChange}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: errors.addressLine1 ? "1px solid #dc3545" : "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem"
-                }}
-                placeholder="Enter address line 1"
-              />
-              {errors.addressLine1 && (
-                <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                  {errors.addressLine1}
-                </p>
-              )}
-            </div>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                Address Line 2
-              </label>
-              <input
-                type="text"
-                name="addressLine2"
-                value={formData.addressLine2}
-                onChange={handleInputChange}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem"
-                }}
-                placeholder="Enter address line 2 (optional)"
-              />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-              <div>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                  City *
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    border: errors.city ? "1px solid #dc3545" : "1px solid #ddd",
-                    borderRadius: "4px",
-                    fontSize: "1rem"
-                  }}
-                  placeholder="Enter city"
-                />
-                {errors.city && (
-                  <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                    {errors.city}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                  State *
-                </label>
-                <input
-                  type="text"
-                  name="state"
-                  value={formData.state}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    border: errors.state ? "1px solid #dc3545" : "1px solid #ddd",
-                    borderRadius: "4px",
-                    fontSize: "1rem"
-                  }}
-                  placeholder="Enter state"
-                />
-                {errors.state && (
-                  <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                    {errors.state}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-              <div>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                  Postal Code *
-                </label>
-                <input
-                  type="text"
-                  name="postalCode"
-                  value={formData.postalCode}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    border: errors.postalCode ? "1px solid #dc3545" : "1px solid #ddd",
-                    borderRadius: "4px",
-                    fontSize: "1rem"
-                  }}
-                  placeholder="Enter postal code"
-                />
-                {errors.postalCode && (
-                  <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                    {errors.postalCode}
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                  Country *
-                </label>
-                <input
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem",
-                    border: errors.country ? "1px solid #dc3545" : "1px solid #ddd",
-                    borderRadius: "4px",
-                    fontSize: "1rem"
-                  }}
-                  placeholder="Enter country"
-                />
-                {errors.country && (
-                  <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                    {errors.country}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  border: errors.phoneNumber ? "1px solid #dc3545" : "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "1rem"
-                }}
-                placeholder="Enter phone number"
-              />
-              {errors.phoneNumber && (
-                <p style={{ color: "#dc3545", fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                  {errors.phoneNumber}
-                </p>
-              )}
-            </div>
-
-            <div style={{ marginBottom: "2rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  name="isDefault"
-                  checked={formData.isDefault}
-                  onChange={handleInputChange}
-                  style={{ margin: 0 }}
-                />
-                <span style={{ fontWeight: "500" }}>Set as default address</span>
-              </label>
-            </div>
-
-            <div style={{ display: "flex", gap: "1rem" }}>
-              <button
-                type="button"
-                onClick={handleSaveNewAddress}
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  background: "#4f46e5",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "1rem"
-                }}
-              >
-                Save Address
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowNewAddressForm(false);
-                  setErrors({});
-                  if (shippingAddress.addresses && shippingAddress.addresses.length > 0) {
-                    const defaultAddress = shippingAddress.addresses.find(addr => addr.isDefault);
-                    setSelectedAddressId(defaultAddress ? defaultAddress._id : shippingAddress.addresses[0]._id);
-                  }
-                }}
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  background: "transparent",
-                  color: "#666",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "1rem"
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 };

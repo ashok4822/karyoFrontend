@@ -30,8 +30,9 @@ export const createShippingAddress = createAsyncThunk(
       const response = await userAxios.post("/users/shipping-address", addressData);
       return response.data;
     } catch (error) {
+      // Return the full error response for field-level validation
       return thunkAPI.rejectWithValue(
-        error.response?.data?.error || "Failed to create shipping address"
+        error.response?.data || { error: "Failed to create shipping address" }
       );
     }
   }

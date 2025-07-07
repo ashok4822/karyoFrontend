@@ -219,7 +219,7 @@ const Wishlist = () => {
                   border: "1px solid #eee",
                   borderRadius: 8,
                   padding: 16,
-                  opacity: status === "inactive" ? 0.6 : 1,
+                  opacity: (status === "inactive" || outOfStock) ? 0.6 : 1,
                 }}
               >
                 <Link
@@ -258,28 +258,24 @@ const Wishlist = () => {
                       Variant: {item.variantName}
                     </span>
                   )}
-                  {status === "inactive" && (
+                  {(status === "inactive" || outOfStock) && (
                     <div
                       style={{
                         color: "#dc3545",
                         fontWeight: "bold",
                         fontSize: 14,
                         marginTop: 4,
+                        padding: "4px 8px",
+                        backgroundColor: "#fef2f2",
+                        borderRadius: "4px",
+                        border: "1px solid #fecaca",
+                        display: "inline-block",
                       }}
                     >
-                      {variantInactive ? "Inactive Variant" : "Inactive Product"}
-                    </div>
-                  )}
-                  {outOfStock && (
-                    <div
-                      style={{
-                        color: "#dc3545",
-                        fontWeight: "bold",
-                        fontSize: 14,
-                        marginTop: 4,
-                      }}
-                    >
-                      Out of Stock
+                      {status === "inactive" 
+                        ? (variantInactive ? "Inactive Variant" : "Inactive Product")
+                        : "Out of Stock"
+                      }
                     </div>
                   )}
                 </div>
