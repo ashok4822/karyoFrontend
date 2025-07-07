@@ -49,16 +49,11 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       const res = await api.post("auth/request-password-reset-otp", { email });
-      setSuccessMsg(
-        isResend ? "OTP resent to your email." : "OTP sent to your email."
-      );
+      setSuccessMsg(isResend ? "OTP resent to your email." : "OTP sent to your email.");
       setStep(2);
       if (res.data && res.data.expiresAt) {
         const now = Date.now();
-        const secondsLeft = Math.max(
-          0,
-          Math.round((res.data.expiresAt - now) / 1000)
-        );
+        const secondsLeft = Math.max(0, Math.round((res.data.expiresAt - now) / 1000) - 3);
         setTimer(secondsLeft);
       } else {
         setTimer(OTP_EXPIRY_SECONDS);
@@ -80,10 +75,7 @@ const ForgotPassword = () => {
     }
     setLoading(true);
     try {
-      const res = await api.post("auth/verify-password-reset-otp", {
-        email,
-        otp,
-      });
+      const res = await api.post("auth/verify-password-reset-otp", { email, otp });
       setSuccessMsg("OTP verified. Please enter your new password.");
       setStep(3);
       setTimer(0);
@@ -93,9 +85,7 @@ const ForgotPassword = () => {
         setServerError("Failed to get reset token. Please try again.");
       }
     } catch (error) {
-      setServerError(
-        error.response?.data?.message || "OTP verification failed"
-      );
+      setServerError(error.response?.data?.message || "OTP verification failed");
     } finally {
       setLoading(false);
     }
@@ -150,14 +140,10 @@ const ForgotPassword = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
+                      
                     />
                   </Form.Group>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-100"
-                    disabled={loading}
-                  >
+                  <Button type="submit" variant="primary" className="w-100" disabled={loading}>
                     {loading ? "Sending OTP..." : "Send OTP"}
                   </Button>
                 </Form>
@@ -172,15 +158,11 @@ const ForgotPassword = () => {
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                         placeholder="Enter OTP"
+                        
                         disabled={timer === 0}
                       />
                     </Form.Group>
-                    <Button
-                      type="submit"
-                      variant="success"
-                      className="w-100"
-                      disabled={loading || timer === 0}
-                    >
+                    <Button type="submit" variant="success" className="w-100" disabled={loading || timer === 0}>
                       {loading ? "Verifying..." : "Verify OTP"}
                     </Button>
                     <Button
@@ -212,6 +194,7 @@ const ForgotPassword = () => {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Enter new password"
+                      
                     />
                   </Form.Group>
                   <Form.Group className="mb-3">
@@ -221,14 +204,10 @@ const ForgotPassword = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Confirm new password"
+                      
                     />
                   </Form.Group>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-100"
-                    disabled={loading}
-                  >
+                  <Button type="submit" variant="primary" className="w-100" disabled={loading}>
                     {loading ? "Resetting..." : "Reset Password"}
                   </Button>
                 </Form>
@@ -241,4 +220,4 @@ const ForgotPassword = () => {
   );
 };
 
-export default ForgotPassword;
+export default ForgotPassword; 

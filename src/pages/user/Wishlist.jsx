@@ -7,6 +7,7 @@ import {
   fetchWishlist,
 } from "../../redux/reducers/wishlistSlice";
 import { addToCart, getAvailableStock } from "../../redux/reducers/cartSlice";
+import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 
 const Wishlist = () => {
   const wishlist = useSelector((state) => state.wishlist.items);
@@ -27,10 +28,15 @@ const Wishlist = () => {
     }
   }, [dispatch, wishlist.length, loading, initialized]);
 
+  useEffect(() => {
+    // Fetch latest products when wishlist page loads
+    dispatch(fetchProductsFromBackend({ limit: 1000 })); // adjust limit as needed
+  }, [dispatch]);
+
   // Helper to get product and variant status
   const getProductStatus = (item) => {
     const product = products.find((p) => p._id === item.id);
-    if (!product) return { status: "unknown", outOfStock: false };
+    if (!product) return { status: "unknown", outOfStock: false, variantInactive: false };
     // Find the variant
     let variant = null;
     if (product.variantDetails && product.variantDetails.length > 0) {
@@ -39,11 +45,12 @@ const Wishlist = () => {
       variant = product.variants.find((v) => v._id === item.variant);
     }
     const outOfStock = variant ? variant.stock === 0 : product.totalStock === 0;
-    const inactive =
-      product.status !== "active" || product.blocked || product.unavailable;
+    const productInactive = product.status !== "active" || product.blocked || product.unavailable;
+    const variantInactive = variant && variant.status === "inactive";
     return {
-      status: inactive ? "inactive" : "active",
+      status: productInactive || variantInactive ? "inactive" : "active",
       outOfStock,
+      variantInactive,
     };
   };
 
@@ -198,7 +205,7 @@ const Wishlist = () => {
       ) : (
         <ul style={{ listStyle: "none", padding: 0 }}>
           {wishlist.map((item) => {
-            const { status, outOfStock } = getProductStatus(item);
+            const { status, outOfStock, variantInactive } = getProductStatus(item);
             const isAddingToCart = addingToCart[item.id + "-" + item.variant];
             const isDisabled = status === "inactive" || outOfStock || isAddingToCart || cartLoading;
             
@@ -260,7 +267,7 @@ const Wishlist = () => {
                         marginTop: 4,
                       }}
                     >
-                      Inactive Product
+                      {variantInactive ? "Inactive Variant" : "Inactive Product"}
                     </div>
                   )}
                   {outOfStock && (
