@@ -36,49 +36,56 @@ const AuthSync = ({ onRestored = () => {} }) => {
     let pending = 0;
 
     const restoreUser = async () => {
-      // Skip if on admin route
       if (location.pathname.startsWith("/admin")) return;
-      
+
+      let token = userAccessToken;
+
       try {
-        let token = userAccessToken;
-        
-        // If no access token, try to refresh
-        if (!token) {
-          const { data } = await userAxios.post("/auth/refresh-token");
-          if (data?.token) {
-            token = data.token;
-            localStorage.setItem("userAccessToken", token);
-            dispatch(setUserAccessToken(token));
-          } else {
-            // No token available, logout
-            dispatch(logoutUser());
-            return;
-          }
-        }
-
-        // Always check user profile to verify status
-        const profileRes = await userAxios.get("/users/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (profileRes?.data?.user) {
-          if (profileRes.data.user.isDeleted) {
-            dispatch(logoutUser());
-            navigate('/login', { replace: true });
-            return;
-          }
-          dispatch(
-            loginSuccess({
+        // If we have a token, try to fetch the profile
+        if (token) {
+          const profileRes = await userAxios.get("/users/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (profileRes?.data?.user) {
+            if (profileRes.data.user.isDeleted) {
+              dispatch(logoutUser());
+              navigate('/login', { replace: true });
+              return;
+            }
+            dispatch(loginSuccess({
               user: profileRes.data.user,
               userAccessToken: token,
-            })
-          );
+            }));
+          }
+        } else {
+          // No token, try to refresh
+          const { data } = await userAxios.post("/auth/refresh-token");
+          if (data?.token) {
+            localStorage.setItem("userAccessToken", data.token);
+            dispatch(setUserAccessToken(data.token));
+            // Now fetch profile with new token
+            const profileRes = await userAxios.get("/users/profile", {
+              headers: { Authorization: `Bearer ${data.token}` },
+            });
+            if (profileRes?.data?.user) {
+              if (profileRes.data.user.isDeleted) {
+                dispatch(logoutUser());
+                navigate('/login', { replace: true });
+                return;
+              }
+              dispatch(loginSuccess({
+                user: profileRes.data.user,
+                userAccessToken: data.token,
+              }));
+            }
+          } else {
+            dispatch(logoutUser());
+          }
         }
-      } catch {
-        // Only logout user if you're in a user route
-        if (!location.pathname.startsWith("/admin")) {
-          dispatch(logoutUser());
-        }
+      } catch (err) {
+        // If profile fetch fails with 401, axios interceptor will handle refresh
+        // If refresh fails, user will be logged out by interceptor
+        dispatch(logoutUser());
       }
     };
 
