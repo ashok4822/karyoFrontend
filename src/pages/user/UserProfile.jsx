@@ -2207,6 +2207,12 @@ const UserProfile = () => {
       try {
         const res = await userAxios.get("/users/profile");
         if (res.data && res.data.user) {
+          // Check if user is blocked
+          if (res.data.user.isDeleted) {
+            dispatch(logoutUser());
+            navigate('/login', { replace: true });
+            return;
+          }
           dispatch(loginSuccess({ user: res.data.user, userAccessToken }));
         }
       } catch (err) {
