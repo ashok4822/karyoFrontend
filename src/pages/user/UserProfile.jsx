@@ -135,8 +135,8 @@ const UserProfile = () => {
 
   // Add state for return modal
   const [showReturnModal, setShowReturnModal] = useState(false);
-  const [returnReason, setReturnReason] = useState("");
-  const [returnTarget, setReturnTarget] = useState(null); // { orderId }
+  const [returnTarget, setReturnTarget] = useState(null); // { orderId, items }
+  const [returnItems, setReturnItems] = useState([]); // [{ productVariantId, checked, reason }]
 
   const [walletBalance, setWalletBalance] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
@@ -1671,11 +1671,9 @@ const UserProfile = () => {
                 <tr>
                   <th></th>
                   <th>Order #</th>
-                  <th>Status</th>
                   <th>Total</th>
                   <th>Items</th>
                   <th>Payment Method</th>
-                  <th>Payment Status</th>
                   <th>Order Details</th>
                 </tr>
               </thead>
@@ -1707,19 +1705,6 @@ const UserProfile = () => {
                         )}
                       </td>
                       <td className="fw-semibold">{order.orderNumber}</td>
-                      <td>
-                        {(() => {
-                          const statusInfo = getStatusInfo(order.status);
-                          return (
-                            <span
-                              className={`badge bg-${statusInfo.color} bg-opacity-25 text-${statusInfo.color}`}
-                              title={statusInfo.message}
-                            >
-                              {statusInfo.text}
-                            </span>
-                          );
-                        })()}
-                      </td>
                       <td className="fw-bold">
                         ₹{(order.total ?? 0).toFixed(2)}
                       </td>
@@ -1754,52 +1739,6 @@ const UserProfile = () => {
                         </span>
                       </td>
                       <td>
-                        <span
-                          className={`badge bg-${
-                            order.paymentStatus === "paid"
-                              ? "success"
-                              : order.paymentStatus === "failed"
-                              ? "danger"
-                              : order.paymentStatus === "refunded"
-                              ? "info"
-                              : "warning"
-                          } bg-opacity-25 text-${
-                            order.paymentStatus === "paid"
-                              ? "success"
-                              : order.paymentStatus === "failed"
-                              ? "danger"
-                              : order.paymentStatus === "refunded"
-                              ? "info"
-                              : "warning"
-                          }`}
-                        >
-                          {order.paymentStatus
-                            ? order.paymentStatus.charAt(0).toUpperCase() +
-                              order.paymentStatus.slice(1)
-                            : "Pending"}
-                        </span>
-                      </td>
-                      <td>
-                        {order.status === "pending" && (
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            className="ms-2"
-                            onClick={() => handleOpenCancelModal(order._id)}
-                          >
-                            Cancel Order
-                          </Button>
-                        )}
-                        {order.status === "delivered" && (
-                          <Button
-                            variant="warning"
-                            size="sm"
-                            className="ms-2"
-                            onClick={() => handleOpenReturnModal(order._id)}
-                          >
-                            Return Order
-                          </Button>
-                        )}
                         <a
                           href={`/order-confirmation/${order._id}`}
                           className="btn btn-sm btn-outline-primary ms-2"
@@ -1899,29 +1838,44 @@ const UserProfile = () => {
                                         )}
                                       </div>
                                       <div className="mt-1">
-                                        {item.cancelled ? (
-                                          <span className="badge bg-danger bg-opacity-25 text-danger">
-                                            Cancelled
-                                          </span>
-                                        ) : order.status === "pending" ? (
-                                          <Button
-                                            variant="outline-danger"
-                                            size="sm"
-                                            onClick={() =>
-                                              handleOpenCancelModal(
-                                                order._id,
-                                                item.productVariantId._id ||
-                                                  item.productVariantId
-                                              )
-                                            }
-                                          >
-                                            Cancel Product
-                                          </Button>
-                                        ) : (
-                                          <span className="badge bg-success bg-opacity-25 text-success">
-                                            Active
-                                          </span>
-                                        )}
+                                        {(() => {
+                                          const itemStatus = item.itemStatus || "pending";
+                                          if (item.cancelled) {
+                                            return (
+                                              <span className="badge bg-danger bg-opacity-25 text-danger">Cancelled</span>
+                                            );
+                                          } else if (itemStatus === "return_verified") {
+                                            return (
+                                              <span className="badge bg-success bg-opacity-25 text-success">Return Verified</span>
+                                            );
+                                          } else if (itemStatus === "returned" || (item.returned && itemStatus !== "return_verified")) {
+                                            return (
+                                              <span className="badge bg-warning bg-opacity-25 text-warning">Return Requested</span>
+                                            );
+                                          } else if (itemStatus === "delivered") {
+                                            return (
+                                              <>
+                                                <span className="badge bg-info bg-opacity-25 text-info me-2">Delivered</span>
+                                                <Button
+                                                  variant="outline-warning"
+                                                  size="sm"
+                                                  onClick={() =>
+                                                    handleOpenReturnModal(order._id, item.productVariantId._id || item.productVariantId)
+                                                  }
+                                                  disabled={item.cancelled || item.returned || itemStatus === "return_verified"}
+                                                >
+                                                  Return Product
+                                                </Button>
+                                              </>
+                                            );
+                                          } else {
+                                            return (
+                                              <span className="badge bg-secondary bg-opacity-25 text-secondary">
+                                                {itemStatus.charAt(0).toUpperCase() + itemStatus.slice(1)}
+                                              </span>
+                                            );
+                                          }
+                                        })()}
                                       </div>
                                       {item.cancellationReason &&
                                         item.cancelled && (
@@ -1929,102 +1883,24 @@ const UserProfile = () => {
                                             Reason: {item.cancellationReason}
                                           </div>
                                         )}
+                                      <div className="text-muted small">
+                                        Payment Status: {(() => {
+                                          const payStatus = item.itemPaymentStatus || order.paymentStatus || "pending";
+                                          let color = "warning";
+                                          if (payStatus === "paid") color = "success";
+                                          else if (payStatus === "failed") color = "danger";
+                                          else if (payStatus === "refunded") color = "info";
+                                          return (
+                                            <span className={`badge bg-${color} bg-opacity-25 text-${color}`}>{payStatus.charAt(0).toUpperCase() + payStatus.slice(1)}</span>
+                                          );
+                                        })()}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               ))}
                             </div>
                             <div className="mt-4">
-                              <h6 className="fw-bold mb-2">
-                                Order Status:{" "}
-                                {(() => {
-                                  const statusInfo = getStatusInfo(
-                                    order.status
-                                  );
-                                  return (
-                                    <span
-                                      className={`badge bg-${statusInfo.color} bg-opacity-25 text-${statusInfo.color}`}
-                                      title={statusInfo.message}
-                                    >
-                                      {statusInfo.text}
-                                    </span>
-                                  );
-                                })()}
-                              </h6>
-                              {/* Status-specific messages */}
-                              {(() => {
-                                const statusInfo = getStatusInfo(order.status);
-                                if (
-                                  statusInfo.message &&
-                                  (order.status === "return_verified" ||
-                                    order.status === "rejected" ||
-                                    order.status === "returned")
-                                ) {
-                                  return (
-                                    <div
-                                      className={`text-${statusInfo.color} small mb-2`}
-                                    >
-                                      <strong>{statusInfo.text}:</strong>{" "}
-                                      {statusInfo.message}
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              })()}
-                              {order.cancellationReason &&
-                                (order.status === "cancelled" ||
-                                  order.status === "returned" ||
-                                  order.status === "return_verified" ||
-                                  order.status === "rejected") && (
-                                  <div className="text-muted small">
-                                    {order.status === "cancelled"
-                                      ? "Order Cancellation Reason: "
-                                      : order.status === "rejected"
-                                      ? "Return Rejection Reason: "
-                                      : "Order Return Reason: "}
-                                    {order.cancellationReason}
-                                  </div>
-                                )}
-                              {order.status === "return_verified" && (
-                                <div className="text-success small">
-                                  <strong>Return Verified:</strong> Your return
-                                  request has been verified by admin.
-                                  {order.paymentStatus === "refunded" && (
-                                    <div>
-                                      <strong>Refund Processed:</strong> ₹
-                                      {order.total?.toFixed(2)} has been
-                                      refunded to your wallet.
-                                      {order.paymentMethod === "cod" && (
-                                        <div className="text-muted">
-                                          <em>
-                                            This refund was provided as a
-                                            goodwill gesture for your COD order.
-                                          </em>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                  {order.paymentStatus !== "refunded" && (
-                                    <div>
-                                      <strong>No Refund:</strong> This return
-                                      was verified without processing a refund.
-                                      <div className="text-muted">
-                                        <em>
-                                          This typically occurs when the product
-                                          was not accepted during delivery.
-                                        </em>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {order.status === "rejected" && (
-                                <div className="text-danger small">
-                                  <strong>Return Rejected:</strong> Your return
-                                  request has been rejected by admin.
-                                </div>
-                              )}
                               <div className="text-muted small">
                                 Order Date:{" "}
                                 {(() => {
@@ -2178,26 +2054,56 @@ const UserProfile = () => {
   };
 
   // Add state and handler for return modal
-  const handleOpenReturnModal = (orderId) => {
-    setReturnTarget({ orderId });
-    setReturnReason("");
+  const handleOpenReturnModal = (orderId, productVariantId = null) => {
+    const order = orders.find((o) => o._id === orderId);
+    if (!order) return;
+    let itemsToReturn = order.items;
+    if (productVariantId) {
+      itemsToReturn = order.items.filter(
+        (item) => (item.productVariantId._id || item.productVariantId) === productVariantId
+      );
+    }
+    setReturnTarget({ orderId, items: itemsToReturn });
+    setReturnItems(
+      itemsToReturn.map((item) => ({
+        productVariantId: item.productVariantId._id || item.productVariantId,
+        checked: true,
+        reason: "",
+        name: item.productVariantId?.product?.name || "Product",
+        details: `${item.productVariantId?.colour || ''} ${item.productVariantId?.capacity || ''}`.trim(),
+      }))
+    );
     setShowReturnModal(true);
   };
 
   const handleSubmitReturn = async () => {
-    if (!returnTarget || !returnReason.trim()) return;
+    if (!returnTarget) return;
+    // Only one item in returnItems, always checked
+    const item = returnItems[0];
     try {
       await userAxios.post(`/users/orders/${returnTarget.orderId}/return`, {
-        reason: returnReason,
+        items: [{
+          productVariantId: item.productVariantId,
+          reason: item.reason,
+        }],
       });
       setShowReturnModal(false);
       setReturnTarget(null);
-      setReturnReason("");
-      // Refresh orders list
+      setReturnItems([]);
       dispatch(fetchUserOrders());
-      // Optionally, show a toast or alert for success
+      Swal.fire({
+        icon: 'success',
+        title: 'Return Requested',
+        text: 'Your return request has been submitted successfully.',
+        timer: 2000,
+        showConfirmButton: false
+      });
     } catch (err) {
-      // Optionally, show a toast or alert for error
+      Swal.fire({
+        icon: 'error',
+        title: 'Return Failed',
+        text: err?.response?.data?.message || err?.message || 'An error occurred while submitting your return request.',
+      });
     }
   };
 
@@ -2370,29 +2276,34 @@ const UserProfile = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-      {/* Add Return Order Modal at the end */}
+      {/* Add Return Product Modal at the end (per-item only) */}
       <Modal show={showReturnModal} onHide={() => setShowReturnModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Return Order</Modal.Title>
+          <Modal.Title>Return Product</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form.Group>
-            <Form.Label>
-              Reason for return <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              value={returnReason}
-              onChange={(e) => setReturnReason(e.target.value)}
-              placeholder="Enter reason for return (required)"
-              required
-              isInvalid={!returnReason.trim()}
-            />
-            <Form.Control.Feedback type="invalid">
-              Reason is required.
-            </Form.Control.Feedback>
-          </Form.Group>
+          {returnItems.length > 0 && (
+            <div className="border rounded-3 p-2 mb-2">
+              <div>
+                <strong>{returnItems[0].name}</strong>
+                {returnItems[0].details && <span className="text-muted small ms-2">{returnItems[0].details}</span>}
+              </div>
+              <Form.Group className="mt-2">
+                <Form.Label>Reason for return (optional)</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  value={returnItems[0].reason}
+                  onChange={(e) => {
+                    const updated = [...returnItems];
+                    updated[0].reason = e.target.value;
+                    setReturnItems(updated);
+                  }}
+                  placeholder="Enter reason for return (optional)"
+                />
+              </Form.Group>
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowReturnModal(false)}>
@@ -2401,7 +2312,7 @@ const UserProfile = () => {
           <Button
             variant="warning"
             onClick={handleSubmitReturn}
-            disabled={!returnReason.trim()}
+            disabled={returnItems.length === 0}
           >
             Confirm Return
           </Button>

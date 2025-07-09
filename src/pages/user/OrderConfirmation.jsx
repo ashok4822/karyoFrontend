@@ -66,37 +66,28 @@ const OrderConfirmation = () => {
       leftY
     );
     leftY += 5;
-    doc.text(
-      `Payment Method: ${
-        currentOrder.paymentMethod === "cod"
-          ? "Cash on Delivery"
-          : "Online Payment"
-      }`,
-      14,
-      leftY
-    );
-    leftY += 5;
-    doc.text(
-      `Payment Status: ${
-        currentOrder.paymentStatus
-          ? currentOrder.paymentStatus.charAt(0).toUpperCase() +
-            currentOrder.paymentStatus.slice(1)
-          : "Pending"
-      }`,
-      14,
-      leftY
-    );
-    leftY += 5;
-    doc.text(
-      `Order Status: ${
-        currentOrder.status
-          ? currentOrder.status.charAt(0).toUpperCase() +
-            currentOrder.status.slice(1)
-          : "Pending"
-      }`,
-      14,
-      leftY
-    );
+    // Remove overall payment status and order status from header
+    // doc.text(
+    //   `Payment Method: ${
+    //     currentOrder.paymentMethod === "cod"
+    //       ? "Cash on Delivery"
+    //       : "Online Payment"
+    //   }`,
+    //   14,
+    //   leftY
+    // );
+    // leftY += 5;
+    // doc.text(
+    //   `Order Status: ${
+    //     currentOrder.status
+    //       ? currentOrder.status.charAt(0).toUpperCase() +
+    //         currentOrder.status.slice(1)
+    //       : "Pending"
+    //   }`,
+    //   14,
+    //   leftY
+    // );
+    // leftY += 5;
     // Right column: Shipping info
     let rightY = y;
     doc.text(`${currentOrder.shippingAddress.recipientName}`, 120, rightY);
@@ -117,21 +108,22 @@ const OrderConfirmation = () => {
     rightY += 5;
     doc.text(`Phone: ${currentOrder.shippingAddress.phoneNumber}`, 120, rightY);
     y = Math.max(leftY, rightY) + 8;
-    // Order Items Table
+    y += 8; // Add extra gap before the table
+    // Order Items Table with status columns
     autoTable(doc, {
       startY: y,
-      head: [["#", "Product", "Variant", "Qty", "Unit Price", "Total"]],
+      head: [["#", "Product", "Variant", "Qty", "Unit Price", "Total", "Status", "Payment Status"]],
       body: currentOrder.items.map((item, idx) => [
         idx + 1,
         item.productVariantId?.product?.name || "Product",
         `${item.productVariantId?.colour || ""}${
-          item.productVariantId?.capacity
-            ? ", " + item.productVariantId.capacity
-            : ""
+          item.productVariantId?.capacity ? ", " + item.productVariantId.capacity : ""
         }`,
         item.quantity,
         `INR ${item.price.toFixed(2)}`,
         `INR ${(item.price * item.quantity).toFixed(2)}`,
+        item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown',
+        item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending',
       ]),
       theme: "grid",
       headStyles: {
@@ -296,27 +288,6 @@ const OrderConfirmation = () => {
                       ? "Cash on Delivery"
                       : "Online Payment"}
                   </span>
-                  <span className="badge bg-info bg-opacity-25 text-info fs-6">
-                    {currentOrder.status.charAt(0).toUpperCase() +
-                      currentOrder.status.slice(1)}
-                  </span>
-                  <span
-                    className={`badge fs-6 ${
-                      currentOrder.paymentStatus === "paid"
-                        ? "bg-success bg-opacity-25 text-success"
-                        : currentOrder.paymentStatus === "failed"
-                        ? "bg-danger bg-opacity-25 text-danger"
-                        : currentOrder.paymentStatus === "refunded"
-                        ? "bg-info bg-opacity-25 text-info"
-                        : "bg-warning bg-opacity-25 text-warning"
-                    }`}
-                  >
-                    Payment:{" "}
-                    {currentOrder.paymentStatus
-                      ? currentOrder.paymentStatus.charAt(0).toUpperCase() +
-                        currentOrder.paymentStatus.slice(1)
-                      : "Pending"}
-                  </span>
                 </div>
               </div>
 
@@ -345,25 +316,6 @@ const OrderConfirmation = () => {
                         {currentOrder.paymentMethod === "cod"
                           ? "Cash on Delivery"
                           : "Online Payment"}
-                      </span>
-                    </li>
-                    <li className="mb-2 d-flex justify-content-between">
-                      <span>Payment Status:</span>
-                      <span
-                        className={`fw-semibold ${
-                          currentOrder.paymentStatus === "paid"
-                            ? "text-success"
-                            : currentOrder.paymentStatus === "failed"
-                            ? "text-danger"
-                            : currentOrder.paymentStatus === "refunded"
-                            ? "text-info"
-                            : "text-warning"
-                        }`}
-                      >
-                        {currentOrder.paymentStatus
-                          ? currentOrder.paymentStatus.charAt(0).toUpperCase() +
-                            currentOrder.paymentStatus.slice(1)
-                          : "Pending"}
                       </span>
                     </li>
                   </ul>
@@ -441,6 +393,26 @@ const OrderConfirmation = () => {
                         </div>
                         <div className="text-muted small">
                           Qty: {item.quantity}
+                        </div>
+                        <div className="mt-1">
+                          <span className={`badge me-1 ${
+                            item.itemStatus === 'delivered' ? 'bg-success bg-opacity-25 text-success' :
+                            item.itemStatus === 'processing' ? 'bg-warning bg-opacity-25 text-warning' :
+                            item.itemStatus === 'cancelled' ? 'bg-danger bg-opacity-25 text-danger' :
+                            item.itemStatus === 'returned' ? 'bg-info bg-opacity-25 text-info' :
+                            item.itemStatus === 'return_verified' ? 'bg-primary bg-opacity-25 text-primary' :
+                            'bg-secondary bg-opacity-25 text-secondary'
+                          }`}>
+                            {item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown'}
+                          </span>
+                          <span className={`badge ${
+                            item.itemPaymentStatus === 'paid' ? 'bg-success bg-opacity-25 text-success' :
+                            item.itemPaymentStatus === 'failed' ? 'bg-danger bg-opacity-25 text-danger' :
+                            item.itemPaymentStatus === 'refunded' ? 'bg-info bg-opacity-25 text-info' :
+                            'bg-warning bg-opacity-25 text-warning'
+                          }`}>
+                            Payment: {item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending'}
+                          </span>
                         </div>
                       </div>
                     </li>

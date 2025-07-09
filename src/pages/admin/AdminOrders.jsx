@@ -215,23 +215,8 @@ const AdminOrders = () => {
                       </InputGroup>
                     </Form>
                   </Col>
+                  {/* Remove the status filter dropdown from the admin orders table UI */}
                   <Col md={3}>
-                    <Form.Select
-                      value={statusFilter}
-                      onChange={handleStatusFilter}
-                      className="d-flex align-items-center gap-2"
-                    >
-                      <option value="">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="returned">Return</option>
-                    </Form.Select>
-                  </Col>
-
-                  <Col md={2}>
                     <Button
                       variant="outline-secondary"
                       className="w-100 d-flex align-items-center justify-content-center gap-2"
@@ -286,18 +271,6 @@ const AdminOrders = () => {
                           </div>
                         </button>
                       </th>
-                      <th className="cursor-pointer">
-                        <button
-                          type="button"
-                          onClick={() => handleSort("status")}
-                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
-                        >
-                          <div className="d-flex align-items-center gap-2">
-                            Status
-                            {getSortIcon("status")}
-                          </div>
-                        </button>
-                      </th>
                       <th className="text-end">Actions</th>
                     </tr>
                   </thead>
@@ -339,7 +312,6 @@ const AdminOrders = () => {
                           </small>
                         </td>
                         <td>₹{order.total?.toFixed(2) ?? "-"}</td>
-                        <td>{getStatusBadge(order.status)}</td>
                         <td>
                           <div className="d-flex justify-content-end gap-2">
                             <Button
@@ -353,18 +325,6 @@ const AdminOrders = () => {
                               className="d-flex align-items-center gap-1"
                             >
                               <FaEye /> View
-                            </Button>
-                            <Button
-                              variant="outline-secondary"
-                              size="sm"
-                              onClick={() => {
-                                setStatusUpdatingOrder(order);
-                                setNewStatus(order.status);
-                                setShowStatusModal(true);
-                              }}
-                              className="d-flex align-items-center gap-1"
-                            >
-                              <FaEdit /> Edit
                             </Button>
                             <Button
                               variant="outline-danger"

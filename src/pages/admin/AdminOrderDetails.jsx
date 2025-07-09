@@ -75,6 +75,34 @@ const AdminOrderDetails = () => {
     },
   });
 
+  // Per-item status state for dropdowns
+  const [itemStatusStates, setItemStatusStates] = useState({});
+
+  // Initialize itemStatusStates when order loads
+  useEffect(() => {
+    if (order && order.items && Array.isArray(order.items)) {
+      const initialStates = {};
+      order.items.forEach(item => {
+        initialStates[item._id] = item.itemStatus || "pending";
+      });
+      setItemStatusStates(initialStates);
+    }
+  }, [order]);
+
+  // Per-item payment status state for dropdowns
+  const [itemPaymentStatusStates, setItemPaymentStatusStates] = useState({});
+
+  // Initialize itemPaymentStatusStates when order loads
+  useEffect(() => {
+    if (order && order.items && Array.isArray(order.items)) {
+      const initialStates = {};
+      order.items.forEach(item => {
+        initialStates[item._id] = item.itemPaymentStatus || "pending";
+      });
+      setItemPaymentStatusStates(initialStates);
+    }
+  }, [order]);
+
   useEffect(() => {
     const fetchOrder = async () => {
       setLoading(true);
@@ -207,13 +235,6 @@ const AdminOrderDetails = () => {
             >
               <FaPrint /> Print
             </Button>
-            <Button
-              variant="outline-primary"
-              onClick={handleDownloadInvoice}
-              className="d-flex align-items-center gap-2"
-            >
-              <FaDownload /> Invoice
-            </Button>
           </div>
         </Col>
       </Row>
@@ -227,26 +248,40 @@ const AdminOrderDetails = () => {
 
       <Row className="g-4">
         {/* Order Summary */}
-        <Col lg={8}>
+        <Col lg={12}>
           <Card className="border-0 shadow-sm">
             <Card.Header className="bg-transparent d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Order #{order.orderNumber}</h5>
-              <Badge
-                bg={
-                  order.status === "completed"
-                    ? "success"
-                    : order.status === "processing"
-                    ? "primary"
-                    : order.status === "shipped"
-                    ? "info"
-                    : order.status === "cancelled"
-                    ? "danger"
-                    : "warning"
-                }
-              >
-                {order.status}
-              </Badge>
+              <span className="fw-bold text-uppercase text-primary" style={{ fontSize: '1rem' }}>
+                {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethod === 'online' ? 'Online' : '-'}
+              </span>
             </Card.Header>
+            {/* Customer Information (detailed, below order number) */}
+            <div className="px-4 pt-3 pb-2">
+              <div className="d-flex align-items-center mb-2 gap-3">
+                <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style={{ width: 40, height: 40 }}>
+                  <FaUser className="text-primary" size={22} />
+                </div>
+                <div className="d-flex flex-wrap align-items-center gap-4" style={{ fontSize: '1.05rem', rowGap: '0.5rem' }}>
+                  <span className="fw-bold">
+                    {order.user
+                      ? order.user.firstName || order.user.lastName
+                        ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
+                        : order.user.username || order.user.email || "-"
+                      : "-"}
+                  </span>
+                  <span className="text-muted d-flex align-items-center">
+                    <FaEnvelope className="me-1" />{order.user?.email || "-"}
+                  </span>
+                  <span className="text-muted d-flex align-items-center">
+                    <FaPhone className="me-1" />{order.user?.mobileNo || "-"}
+                  </span>
+                  <span className="text-muted d-flex align-items-center">
+                    <FaMapMarkerAlt className="me-1" />{order.user?.address || "-"}
+                  </span>
+                </div>
+              </div>
+            </div>
             <Card.Body>
               <div className="table-responsive">
                 <Table hover className="align-middle">
@@ -256,14 +291,25 @@ const AdminOrderDetails = () => {
                       <th>Price</th>
                       <th>Quantity</th>
                       <th className="text-end">Total</th>
+                      <th>Status</th>
+                      <th>Payment Status</th>
+                      <th>Reason</th>
+                      <th>Update Status</th>
+                      <th>Update Payment</th>
                     </tr>
                   </thead>
                   <tbody>
                     {order.items.map((item, idx) => {
                       const variant = item.productVariantId || {};
                       const product = variant.product || {};
+                      const isCancelled = item.cancelled;
+                      const itemStatus = item.itemStatus || "pending";
+                      const itemPaymentStatus = item.itemPaymentStatus || "pending";
                       return (
-                        <tr key={item._id || variant._id || idx}>
+                        <tr
+                          key={item._id || variant._id || idx}
+                          style={isCancelled ? { opacity: 0.5, textDecoration: "line-through" } : {}}
+                        >
                           <td>
                             <div className="d-flex align-items-center">
                               <img
@@ -278,9 +324,6 @@ const AdminOrderDetails = () => {
                               />
                               <div>
                                 <h6 className="mb-0">{product.name || "-"}</h6>
-                                <small className="text-muted">
-                                  SKU: {variant.sku || "-"}
-                                </small>
                               </div>
                             </div>
                           </td>
@@ -291,6 +334,104 @@ const AdminOrderDetails = () => {
                             {item.price && item.quantity
                               ? (item.price * item.quantity).toFixed(2)
                               : "-"}
+                          </td>
+                          <td>
+                            {isCancelled ? (
+                              <Badge bg="danger">Cancelled</Badge>
+                            ) : itemStatus === "return_verified" ? (
+                              <Badge bg="success">Return Verified</Badge>
+                            ) : itemStatus === "returned" || (item.returned && itemStatus !== "return_verified") ? (
+                              <Badge bg="warning">Return Requested</Badge>
+                            ) : ["delivered"].includes(itemStatus) ? (
+                              <Badge bg="info">Delivered</Badge>
+                            ) : (
+                              <Badge bg="success">{itemStatus.charAt(0).toUpperCase() + itemStatus.slice(1)}</Badge>
+                            )}
+                          </td>
+                          <td>
+                            <Badge bg={
+                              itemPaymentStatus === "paid"
+                                ? "success"
+                                : itemPaymentStatus === "failed"
+                                ? "danger"
+                                : itemPaymentStatus === "refunded"
+                                ? "info"
+                                : "warning"
+                            }>
+                              {itemPaymentStatus.charAt(0).toUpperCase() + itemPaymentStatus.slice(1)}
+                            </Badge>
+                          </td>
+                          <td>
+                            {isCancelled && item.cancellationReason ? (
+                              <span className="text-danger small">{item.cancellationReason}</span>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                          <td>
+                            <Form.Select
+                              value={itemStatusStates[item._id] || itemStatus}
+                              onChange={e => setItemStatusStates(s => ({ ...s, [item._id]: e.target.value }))}
+                              size="sm"
+                              disabled={isCancelled}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="processing">Processing</option>
+                              <option value="shipped">Shipped</option>
+                              <option value="delivered">Delivered</option>
+                              <option value="cancelled">Cancelled</option>
+                              <option value="returned">Returned</option>
+                              <option value="return_verified">Return Verified</option>
+                            </Form.Select>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              className="mt-1"
+                              disabled={isCancelled || (itemStatusStates[item._id] || itemStatus) === itemStatus}
+                              onClick={async () => {
+                                try {
+                                  await adminAxios.put(`/orders/${order._id}/items/${item._id}/status`, { status: itemStatusStates[item._id] });
+                                  const res = await adminAxios.get(`/orders/${order._id}`);
+                                  setOrder(res.data.order);
+                                  showSuccessAlert("Success", "Item status updated successfully!");
+                                } catch (err) {
+                                  showErrorAlert("Error", "Failed to update item status.");
+                                }
+                              }}
+                            >
+                              Update
+                            </Button>
+                          </td>
+                          <td>
+                            <Form.Select
+                              value={itemPaymentStatusStates?.[item._id] || itemPaymentStatus}
+                              onChange={e => setItemPaymentStatusStates(s => ({ ...s, [item._id]: e.target.value }))}
+                              size="sm"
+                              disabled={isCancelled}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="paid">Paid</option>
+                              <option value="failed">Failed</option>
+                              <option value="refunded">Refunded</option>
+                            </Form.Select>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              className="mt-1"
+                              disabled={isCancelled || (itemPaymentStatusStates?.[item._id] || itemPaymentStatus) === itemPaymentStatus}
+                              onClick={async () => {
+                                try {
+                                  await adminAxios.put(`/orders/${order._id}/items/${item._id}/status`, { paymentStatus: itemPaymentStatusStates[item._id] });
+                                  const res = await adminAxios.get(`/orders/${order._id}`);
+                                  setOrder(res.data.order);
+                                  showSuccessAlert("Success", "Item payment status updated successfully!");
+                                } catch (err) {
+                                  showErrorAlert("Error", "Failed to update item payment status.");
+                                }
+                              }}
+                            >
+                              Update
+                            </Button>
                           </td>
                         </tr>
                       );
@@ -303,10 +444,12 @@ const AdminOrderDetails = () => {
                       </td>
                       <td className="text-end">
                         ₹
-                        {order.subtotal?.toFixed(2) ??
-                          order.total?.toFixed(2) ??
-                          "-"}
+                        {order.items
+                          .filter((item) => !item.cancelled)
+                          .reduce((sum, item) => sum + (item.price * item.quantity), 0)
+                          .toFixed(2)}
                       </td>
+                      <td colSpan="2"></td>
                     </tr>
                     <tr>
                       <td colSpan="3" className="text-end">
@@ -315,15 +458,15 @@ const AdminOrderDetails = () => {
                       <td className="text-end">
                         -₹{getDiscountAmount().toFixed(2)}
                       </td>
+                      <td colSpan="2"></td>
                     </tr>
                     {order.discount &&
                       (order.discount.discountName || order.discount.code) && (
                         <tr>
-                          <td colSpan="4" className="text-end text-muted">
-                            Discount Availed:{" "}
+                          <td colSpan="6" className="text-end text-muted">
+                            Discount Availed: {" "}
                             <strong>
-                              {order.discount.discountName ||
-                                order.discount.code}
+                              {order.discount.discountName || order.discount.code}
                             </strong>
                           </td>
                         </tr>
@@ -333,14 +476,21 @@ const AdminOrderDetails = () => {
                         <strong>Shipping</strong>
                       </td>
                       <td className="text-end">₹0.00</td>
+                      <td colSpan="2"></td>
                     </tr>
                     <tr>
                       <td colSpan="3" className="text-end">
                         <strong>Total</strong>
                       </td>
                       <td className="text-end">
-                        <strong>₹{order.total?.toFixed(2) ?? "-"}</strong>
+                        <strong>
+                          ₹
+                          {(
+                            order.items.filter((item) => !item.cancelled).reduce((sum, item) => sum + (item.price * item.quantity), 0) - getDiscountAmount()
+                          ).toFixed(2)}
+                        </strong>
                       </td>
+                      <td colSpan="2"></td>
                     </tr>
                   </tfoot>
                 </Table>
@@ -411,379 +561,6 @@ const AdminOrderDetails = () => {
               )}
             </Card.Body>
           </Card>
-        </Col>
-
-        {/* Order Details Sidebar */}
-        <Col lg={4}>
-          <div className="d-flex flex-column gap-4">
-            {/* Customer Information */}
-            <Card className="border-0 shadow-sm">
-              <Card.Header className="bg-transparent">
-                <h5 className="mb-0">Customer Information</h5>
-              </Card.Header>
-              <Card.Body>
-                <div className="d-flex align-items-center mb-3">
-                  <div className="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
-                    <FaUser className="text-primary" />
-                  </div>
-                  <div>
-                    <h6 className="mb-0">
-                      {order.user
-                        ? order.user.firstName || order.user.lastName
-                          ? `${order.user.firstName || ""} ${
-                              order.user.lastName || ""
-                            }`.trim()
-                          : order.user.username || order.user.email || "-"
-                        : "-"}
-                    </h6>
-                    <small className="text-muted">
-                      {order.user?.email || ""}
-                    </small>
-                  </div>
-                </div>
-                <div className="d-flex align-items-center mb-2">
-                  <FaPhone className="text-muted me-2" />
-                  <span>{order.user?.mobileNo || "-"}</span>
-                </div>
-                <div className="d-flex align-items-start">
-                  <FaMapMarkerAlt className="text-muted me-2 mt-1" />
-                  <span>{order.user?.address || "-"}</span>
-                </div>
-              </Card.Body>
-            </Card>
-
-            {/* Payment Information */}
-            <Card className="border-0 shadow-sm">
-              <Card.Header className="bg-transparent">
-                <h5 className="mb-0">Payment Information</h5>
-              </Card.Header>
-              <Card.Body>
-                <div className="d-flex align-items-center mb-3">
-                  <div className="rounded-circle bg-success bg-opacity-10 p-3 me-3">
-                    <FaCreditCard className="text-success" />
-                  </div>
-                  <div>
-                    <h6 className="mb-0">{order.paymentMethod || "-"}</h6>
-                    <small className="text-muted">
-                      Transaction ID: {order.transactionId || "-"}
-                    </small>
-                  </div>
-                </div>
-                <div className="d-flex align-items-center justify-content-between mb-3">
-                  <Badge
-                    bg={
-                      order.paymentStatus === "paid"
-                        ? "success"
-                        : order.paymentStatus === "failed"
-                        ? "danger"
-                        : order.paymentStatus === "refunded"
-                        ? "info"
-                        : "warning"
-                    }
-                  >
-                    {order.paymentStatus || "-"}
-                  </Badge>
-                  {/* Show payment status update button only for COD orders */}
-                  {order.paymentMethod === "cod" && (
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedPaymentStatus(order.paymentStatus || "");
-                        setShowPaymentStatusModal(true);
-                      }}
-                    >
-                      <FaEdit /> Update Payment Status
-                    </Button>
-                  )}
-                </div>
-              </Card.Body>
-            </Card>
-
-            {/* Shipping Information */}
-            <Card className="border-0 shadow-sm">
-              <Card.Header className="bg-transparent">
-                <h5 className="mb-0">Shipping Information</h5>
-              </Card.Header>
-              <Card.Body>
-                <div className="d-flex align-items-center mb-3">
-                  <div className="rounded-circle bg-info bg-opacity-10 p-3 me-3">
-                    <FaTruck className="text-info" />
-                  </div>
-                  <div>
-                    <h6 className="mb-0">
-                      {getShippingStatusLabel(order.shipping?.status)}
-                    </h6>
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-
-            {/* Order Actions */}
-            <Card className="border-0 shadow-sm">
-              <Card.Header className="bg-transparent">
-                <h5 className="mb-0">Order Actions</h5>
-              </Card.Header>
-              <Card.Body>
-                <Button
-                  variant="primary"
-                  className="w-100 mb-2 d-flex align-items-center justify-content-center gap-2"
-                  onClick={() => setShowStatusModal(true)}
-                >
-                  <FaEdit /> Update Status
-                </Button>
-                {/* <Button
-                  variant="outline-primary"
-                  className="w-100 d-flex align-items-center justify-content-center gap-2"
-                  onClick={() => navigate(`/admin/orders/${id}/edit`)}
-                >
-                  <FaEdit /> Edit Order
-                </Button> */}
-                {order.status === "returned" && (
-                  <>
-                    <Button
-                      variant="success"
-                      className="w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
-                      onClick={() => setShowVerifyReturnModal(true)}
-                    >
-                      <FaCheck /> Verify Return Request
-                    </Button>
-                    {/* <Button
-                      variant="warning"
-                      className="w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
-                      onClick={() => setShowVerifyWithoutRefundModal(true)}
-                    >
-                      <FaCheck /> Verify Without Refund
-                    </Button> */}
-                    <Button
-                      variant="danger"
-                      className="w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
-                      onClick={() => setShowRejectReturnModal(true)}
-                    >
-                      <FaTimes /> Reject Return Request
-                    </Button>
-                    <Modal
-                      show={showVerifyReturnModal}
-                      onHide={() => setShowVerifyReturnModal(false)}
-                    >
-                      <Modal.Header closeButton>
-                        <Modal.Title>Confirm Return Verification</Modal.Title>
-                      </Modal.Header>
-                      <Modal.Body>
-                        <p>
-                          Are you sure you want to verify this return request?
-                          This action cannot be undone.
-                        </p>
-                        {((order.paymentMethod === "online" &&
-                          (order.paymentStatus === "paid" ||
-                            order.paymentStatus === "pending")) ||
-                          order.paymentMethod === "cod") && (
-                          <div className="alert alert-info">
-                            <strong>Refund Information:</strong> The full amount
-                            of ₹{order.total?.toFixed(2)} will be automatically
-                            refunded to the customer's wallet upon verification.
-                            {order.paymentMethod === "cod" && (
-                              <div className="mt-1 small">
-                                <em>
-                                  Note: This refund is provided as a goodwill
-                                  gesture for COD orders.
-                                </em>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </Modal.Body>
-                      <Modal.Footer>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setShowVerifyReturnModal(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="success"
-                          onClick={async () => {
-                            try {
-                              const response = await adminAxios.put(
-                                `/orders/${id}/verify-return`
-                              );
-                              // Refetch order details to update UI
-                              const res = await adminAxios.get(`/orders/${id}`);
-                              setOrder(res.data.order);
-                              setShowVerifyReturnModal(false);
-
-                              // Show success message with refund information
-                              if (response.data.refundProcessed) {
-                                const paymentMethodText =
-                                  order.paymentMethod === "cod"
-                                    ? "COD"
-                                    : "online payment";
-                                showSuccessAlert(
-                                  "Return Verified Successfully!",
-                                  `Refund of ₹${order.total?.toFixed(
-                                    2
-                                  )} has been added to the customer's wallet as a goodwill gesture.`
-                                );
-                              } else {
-                                showSuccessAlert(
-                                  "Return Verified Successfully!",
-                                  "The return request has been verified."
-                                );
-                              }
-                            } catch (err) {
-                              showErrorAlert(
-                                "Verification Failed",
-                                "Failed to verify return request. Please try again."
-                              );
-                            }
-                          }}
-                        >
-                          Confirm Verify
-                        </Button>
-                      </Modal.Footer>
-                    </Modal>
-
-                    {/* Verify Without Refund Modal */}
-                    <Modal
-                      show={showVerifyWithoutRefundModal}
-                      onHide={() => setShowVerifyWithoutRefundModal(false)}
-                    >
-                      <Modal.Header closeButton>
-                        <Modal.Title>Verify Return Without Refund</Modal.Title>
-                      </Modal.Header>
-                      <Modal.Body>
-                        <p>
-                          Are you sure you want to verify this return request
-                          without processing a refund?
-                        </p>
-                        <div className="alert alert-warning">
-                          <strong>Note:</strong> This option is typically used
-                          when:
-                          <ul className="mb-0 mt-2">
-                            <li>
-                              Customer did not accept the product during COD
-                              delivery
-                            </li>
-                            <li>
-                              Product was returned without payment being made
-                            </li>
-                            <li>
-                              Other scenarios where refund is not applicable
-                            </li>
-                          </ul>
-                        </div>
-                      </Modal.Body>
-                      <Modal.Footer>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setShowVerifyWithoutRefundModal(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="warning"
-                          onClick={async () => {
-                            try {
-                              await adminAxios.put(
-                                `/orders/${id}/verify-return-no-refund`
-                              );
-                              // Refetch order details to update UI
-                              const res = await adminAxios.get(`/orders/${id}`);
-                              setOrder(res.data.order);
-                              setShowVerifyWithoutRefundModal(false);
-                              showSuccessAlert(
-                                "Return Verified",
-                                "Return verified successfully without refund!"
-                              );
-                            } catch (err) {
-                              showErrorAlert(
-                                "Verification Failed",
-                                "Failed to verify return request. Please try again."
-                              );
-                            }
-                          }}
-                        >
-                          Confirm Verify
-                        </Button>
-                      </Modal.Footer>
-                    </Modal>
-
-                    {/* Reject Return Modal */}
-                    <Modal
-                      show={showRejectReturnModal}
-                      onHide={() => setShowRejectReturnModal(false)}
-                    >
-                      <Modal.Header closeButton>
-                        <Modal.Title>Reject Return Request</Modal.Title>
-                      </Modal.Header>
-                      <Modal.Body>
-                        <p>
-                          Are you sure you want to reject this return request?
-                          This action cannot be undone.
-                        </p>
-                        <Form.Group>
-                          <Form.Label>
-                            Rejection Reason{" "}
-                            <span className="text-danger">*</span>
-                          </Form.Label>
-                          <Form.Control
-                            as="textarea"
-                            rows={3}
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Please provide a reason for rejecting this return request..."
-                            required
-                          />
-                        </Form.Group>
-                      </Modal.Body>
-                      <Modal.Footer>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setShowRejectReturnModal(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="danger"
-                          onClick={async () => {
-                            if (!rejectReason.trim()) {
-                              showErrorAlert(
-                                "Rejection Reason Required",
-                                "Please provide a reason for rejection."
-                              );
-                              return;
-                            }
-                            try {
-                              await adminAxios.put(
-                                `/orders/${id}/reject-return`,
-                                { reason: rejectReason }
-                              );
-                              // Refetch order details to update UI
-                              const res = await adminAxios.get(`/orders/${id}`);
-                              setOrder(res.data.order);
-                              setShowRejectReturnModal(false);
-                              setRejectReason("");
-                              showSuccessAlert(
-                                "Return Rejected",
-                                "Return request rejected successfully!"
-                              );
-                            } catch (err) {
-                              showErrorAlert(
-                                "Rejection Failed",
-                                "Failed to reject return request. Please try again."
-                              );
-                            }
-                          }}
-                        >
-                          Confirm Reject
-                        </Button>
-                      </Modal.Footer>
-                    </Modal>
-                  </>
-                )}
-              </Card.Body>
-            </Card>
-          </div>
         </Col>
       </Row>
 
@@ -867,3 +644,4 @@ const AdminOrderDetails = () => {
 };
 
 export default AdminOrderDetails;
+
