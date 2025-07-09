@@ -111,6 +111,7 @@ const UserProfile = () => {
     useState("");
   const [forgotPasswordConfirmPassword, setForgotPasswordConfirmPassword] =
     useState("");
+  const [forgotPasswordResetToken, setForgotPasswordResetToken] = useState("");
   const [forgotPasswordError, setForgotPasswordError] = useState("");
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState("");
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
@@ -160,8 +161,7 @@ const UserProfile = () => {
   const [orderSearch, setOrderSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
 
-  // Add state for status filter
-  const [orderStatus, setOrderStatus] = useState("all");
+
 
   // Add state for edit field errors
   const [editFieldErrors, setEditFieldErrors] = useState({});
@@ -176,7 +176,6 @@ const UserProfile = () => {
         try {
           const params = { page: currentPage, limit: ordersPerPage };
           if (orderSearch.trim() !== "") params.search = orderSearch.trim();
-          if (orderStatus && orderStatus !== "all") params.status = orderStatus;
           const res = await userAxios.get("/orders", { params });
           dispatch({
             type: "order/fetchUserOrders/fulfilled",
@@ -194,7 +193,6 @@ const UserProfile = () => {
     currentPage,
     ordersPerPage,
     orderSearch,
-    orderStatus,
     dispatch,
   ]);
 
@@ -660,13 +658,17 @@ const UserProfile = () => {
     }
     setForgotPasswordLoading(true);
     try {
-      await userAxios.post("auth/verify-password-reset-otp", {
+      const res = await userAxios.post("auth/verify-password-reset-otp", {
         email: forgotPasswordEmail,
         otp: forgotPasswordOtp,
       });
       setForgotPasswordSuccess("OTP verified. Please enter your new password.");
       setForgotPasswordStep(3);
       setForgotPasswordTimer(0); // <-- Stop timer after OTP verified
+      // Store the reset token from the response
+      if (res.data && res.data.resetToken) {
+        setForgotPasswordResetToken(res.data.resetToken);
+      }
     } catch (error) {
       setForgotPasswordError(
         error.response?.data?.message || "OTP verification failed"
@@ -692,7 +694,7 @@ const UserProfile = () => {
     try {
       await userAxios.post("auth/reset-password", {
         email: forgotPasswordEmail,
-        otp: forgotPasswordOtp,
+        resetToken: forgotPasswordResetToken,
         newPassword: forgotPasswordNewPassword,
       });
       setForgotPasswordSuccess("Password reset successful!");
@@ -702,6 +704,7 @@ const UserProfile = () => {
       setForgotPasswordOtp("");
       setForgotPasswordNewPassword("");
       setForgotPasswordConfirmPassword("");
+      setForgotPasswordResetToken("");
       setForgotPasswordTimer(0);
     } catch (error) {
       setForgotPasswordError(
@@ -1597,7 +1600,7 @@ const UserProfile = () => {
           <h5 className="fw-bold mb-3">My Orders</h5>
           <div className="d-flex align-items-center">
             <form
-              className="d-flex align-items-center me-3"
+              className="d-flex align-items-center"
               onSubmit={(e) => {
                 e.preventDefault();
                 setOrderSearch(searchInput);
@@ -1628,26 +1631,6 @@ const UserProfile = () => {
                 </button>
               )}
             </form>
-            <select
-              className="form-select form-select-sm"
-              style={{ width: 170 }}
-              value={orderStatus}
-              onChange={(e) => {
-                setOrderStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-            >
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="processing">Processing</option>
-              <option value="shipped">Shipped</option>
-              <option value="delivered">Delivered</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="returned">Returned</option>
-              <option value="return_verified">Return Verified</option>
-              <option value="rejected">Rejected</option>
-            </select>
           </div>
         </div>
         {ordersLoading ? (

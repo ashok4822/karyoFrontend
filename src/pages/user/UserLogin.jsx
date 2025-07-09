@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../redux/reducers/authSlice";
 import userAxios from "../../lib/userAxios";
@@ -17,12 +17,25 @@ import { FaEnvelope, FaLock, FaGoogle } from "react-icons/fa";
 
 const UserLogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [serverError, setServerError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Check for error messages from URL params or navigation state
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const errorParam = urlParams.get('error');
+    
+    if (errorParam === 'rate_limit') {
+      setServerError("Too many authentication attempts. Please wait a while before trying again.");
+    } else if (location.state?.message) {
+      setServerError(location.state.message);
+    }
+  }, [location]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

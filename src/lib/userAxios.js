@@ -11,6 +11,7 @@ userAxios.interceptors.request.use(
     if (userAccessToken) {
       config.headers['Authorization'] = `Bearer ${userAccessToken}`;
     }
+    console.log('userAxios request:', config.method?.toUpperCase(), config.url);
     return config;
   },
   (error) => Promise.reject(error)
@@ -32,13 +33,26 @@ const processQueue = (error, token = null) => {
 
 userAxios.interceptors.response.use(
   (response) => {
+    console.log('userAxios response:', response.status, response.config.url);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
-    // Prevent infinite loop
+    console.log('userAxios error:', error.response?.status, originalRequest.url, error.response?.data);
+    
+    // Prevent infinite loop and handle rate limiting
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      // Don't retry refresh token requests
+      if (originalRequest.url === '/auth/refresh-token') {
+        console.log('userAxios: Refresh token request failed, logging out');
+        localStorage.removeItem('userAccessToken');
+        localStorage.removeItem('userRole');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+      
       if (isRefreshing) {
+        console.log('userAxios: Refresh already in progress, queuing request');
         // Queue the request until refresh is done
         return new Promise(function(resolve, reject) {
           failedQueue.push({resolve, reject});
@@ -51,25 +65,46 @@ userAxios.interceptors.response.use(
           return Promise.reject(err);
         });
       }
+      
       originalRequest._retry = true;
       isRefreshing = true;
+      console.log('userAxios: Starting token refresh');
+      
       try {
         const res = await axios.post('http://localhost:5000/auth/refresh-token', {}, { withCredentials: true });
         const newToken = res.data.token;
+        console.log('userAxios: Token refresh successful');
         localStorage.setItem('userAccessToken', newToken);
         userAxios.defaults.headers['Authorization'] = 'Bearer ' + newToken;
         processQueue(null, newToken);
         return userAxios(originalRequest);
       } catch (refreshError) {
+        console.log('userAxios: Token refresh failed:', refreshError.response?.status, refreshError.response?.data);
         processQueue(refreshError, null);
         localStorage.removeItem('userAccessToken');
         localStorage.removeItem('userRole');
-        window.location.href = '/login';
+        
+        // Handle rate limiting specifically
+        if (refreshError.response?.status === 429) {
+          console.log('userAxios: Rate limited on refresh token');
+          // Redirect to login with rate limit message
+          window.location.href = '/login?error=rate_limit';
+        } else {
+          window.location.href = '/login';
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
+    
+    // Handle rate limiting for other requests
+    if (error.response && error.response.status === 429) {
+      console.log('userAxios: Rate limited:', originalRequest.url);
+      // You might want to show a user-friendly message here
+    }
+    
     return Promise.reject(error);
   }
 );

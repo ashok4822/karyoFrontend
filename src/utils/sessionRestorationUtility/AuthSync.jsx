@@ -16,6 +16,7 @@ const AuthSync = ({ onRestored = () => {} }) => {
   );
   const [loading, setLoading] = useState(false);
   const timerRef = useRef(null);
+  const syncInProgressRef = useRef(false);
 
   useEffect(() => {
     const publicPaths = [
@@ -33,21 +34,29 @@ const AuthSync = ({ onRestored = () => {} }) => {
       return;
     }
 
-    let pending = 0;
+    // Prevent multiple simultaneous syncs
+    if (syncInProgressRef.current) {
+      console.log("AuthSync: Sync already in progress, skipping");
+      return;
+    }
 
     const restoreUser = async () => {
       if (location.pathname.startsWith("/admin")) return;
 
       let token = userAccessToken;
+      console.log("AuthSync: Starting user restoration, token exists:", !!token);
 
       try {
         // If we have a token, try to fetch the profile
         if (token) {
+          console.log("AuthSync: Attempting to fetch profile with existing token");
           const profileRes = await userAxios.get("/users/profile", {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (profileRes?.data?.user) {
+            console.log("AuthSync: Profile fetch successful");
             if (profileRes.data.user.isDeleted) {
+              console.log("AuthSync: User is deleted, logging out");
               dispatch(logoutUser());
               navigate('/login', { replace: true });
               return;
@@ -56,11 +65,16 @@ const AuthSync = ({ onRestored = () => {} }) => {
               user: profileRes.data.user,
               userAccessToken: token,
             }));
+            return; // Success, no need to refresh
           }
-        } else {
-          // No token, try to refresh
+        }
+        
+        // No token or profile fetch failed, try to refresh
+        console.log("AuthSync: No token or profile fetch failed, attempting refresh");
+        try {
           const { data } = await userAxios.post("/auth/refresh-token");
           if (data?.token) {
+            console.log("AuthSync: Refresh successful, fetching profile with new token");
             localStorage.setItem("userAccessToken", data.token);
             dispatch(setUserAccessToken(data.token));
             // Now fetch profile with new token
@@ -69,6 +83,7 @@ const AuthSync = ({ onRestored = () => {} }) => {
             });
             if (profileRes?.data?.user) {
               if (profileRes.data.user.isDeleted) {
+                console.log("AuthSync: User is deleted after refresh, logging out");
                 dispatch(logoutUser());
                 navigate('/login', { replace: true });
                 return;
@@ -79,12 +94,25 @@ const AuthSync = ({ onRestored = () => {} }) => {
               }));
             }
           } else {
+            console.log("AuthSync: Refresh failed - no token in response");
             dispatch(logoutUser());
+          }
+        } catch (refreshError) {
+          // If refresh fails (including rate limiting), logout user
+          console.log("AuthSync: Refresh token failed:", refreshError.response?.status, refreshError.response?.data);
+          dispatch(logoutUser());
+          if (refreshError.response?.status === 429) {
+            // Rate limited - redirect to login with message
+            console.log("AuthSync: Rate limited, redirecting to login");
+            navigate('/login', { 
+              replace: true,
+              state: { message: "Too many authentication attempts. Please try again later." }
+            });
           }
         }
       } catch (err) {
-        // If profile fetch fails with 401, axios interceptor will handle refresh
-        // If refresh fails, user will be logged out by interceptor
+        // If profile fetch fails with 401, we already tried refresh above
+        console.log("AuthSync: Profile fetch failed:", err.response?.status, err.response?.data);
         dispatch(logoutUser());
       }
     };
@@ -122,6 +150,14 @@ const AuthSync = ({ onRestored = () => {} }) => {
     };
 
     const runSync = async () => {
+      // Prevent multiple simultaneous syncs
+      if (syncInProgressRef.current) {
+        return;
+      }
+      
+      syncInProgressRef.current = true;
+      console.log("AuthSync: Starting sync process");
+      
       // Start a timer to show loading after 500ms
       timerRef.current = setTimeout(() => setLoading(true), 500);
       const tasks = [];
@@ -131,11 +167,13 @@ const AuthSync = ({ onRestored = () => {} }) => {
       if (!adminAccessToken) tasks.push(restoreAdmin());
 
       await Promise.allSettled(tasks);
+      
       // Restoration finished, clear timer and hide loading
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
+      
       // Fetch wishlist if user is logged in and not on admin route
       if (!location.pathname.startsWith("/admin") && localStorage.getItem("userAccessToken")) {
         dispatch(fetchWishlist());
@@ -144,7 +182,10 @@ const AuthSync = ({ onRestored = () => {} }) => {
       if (!location.pathname.startsWith("/admin") && localStorage.getItem("userAccessToken")) {
         dispatch(fetchCart());
       }
+      
       setLoading(false);
+      syncInProgressRef.current = false;
+      console.log("AuthSync: Sync process completed");
       onRestored();
     };
 
@@ -156,6 +197,7 @@ const AuthSync = ({ onRestored = () => {} }) => {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
+      syncInProgressRef.current = false;
     };
   }, [
     dispatch,
