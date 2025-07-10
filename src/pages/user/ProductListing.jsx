@@ -28,6 +28,7 @@ import {
   FaSort,
   FaSortAmountDown,
   FaSortAmountUp,
+  FaCartPlus,
 } from "react-icons/fa";
 import ProductFilters from "../../components/ProductFilters";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
@@ -467,18 +468,61 @@ const ProductListing = () => {
                             })()}
                           </div>
                         </div>
-                        <Button
-                          variant="primary"
-                          size="md"
-                          className="w-100 rounded-pill fw-semibold py-2"
+                        <div
+                          className="w-100 d-flex align-items-center justify-content-between p-3"
+                          style={{
+                            background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
+                            borderRadius: '12px',
+                            border: '1px solid #34495e',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(44, 62, 80, 0.2)',
+                          }}
                           onClick={e => {
                             e.stopPropagation();
                             handleAddToCart(product);
                           }}
-                          style={{ letterSpacing: 1 }}
+                          onMouseEnter={(e) => {
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = '0 4px 16px rgba(44, 62, 80, 0.4)';
+                            e.target.style.borderColor = '#3498db';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = '0 2px 8px rgba(44, 62, 80, 0.2)';
+                            e.target.style.borderColor = '#34495e';
+                          }}
                         >
-                          <FaShoppingCart className="me-2" />Add to Cart
-                        </Button>
+                          <div className="d-flex align-items-center">
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #3498db, #2980b9)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: '12px',
+                                boxShadow: '0 2px 6px rgba(52, 152, 219, 0.3)',
+                              }}
+                            >
+                              <FaCartPlus style={{ color: 'white', fontSize: '1.1rem' }} />
+                            </div>
+                            <span style={{ color: 'white', fontWeight: '600', fontSize: '1rem' }}>
+                              Add to Cart
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              background: '#3498db',
+                              transition: 'all 0.3s ease',
+                            }}
+                          />
+                        </div>
                       </div>
                     </Card.Body>
                   </Card>

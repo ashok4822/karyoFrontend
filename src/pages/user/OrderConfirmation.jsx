@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link, useLocation } from "react-router-dom";
 import { clearCartState, clearCart } from "../../redux/reducers/cartSlice";
 import {
   clearCurrentOrder,
@@ -15,6 +15,8 @@ const OrderConfirmation = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { orderId } = useParams();
+  const location = useLocation();
+  const [isFreshOrder, setIsFreshOrder] = useState(false);
 
   useEffect(() => {
     if (!currentOrder && orderId) {
@@ -23,13 +25,25 @@ const OrderConfirmation = () => {
   }, [currentOrder, orderId, dispatch]);
 
   useEffect(() => {
-    dispatch(clearCart());
-    dispatch(clearCartState());
-    // const timer = setTimeout(() => {
-    //   dispatch(clearCurrentOrder());
-    // }, 10000);
-    // return () => clearTimeout(timer);
-  }, [dispatch]);
+    // Check if this is a fresh order placement by looking for a query parameter
+    const params = new URLSearchParams(location.search);
+    const fresh = params.get('fresh');
+    
+    if (fresh === 'true') {
+      setIsFreshOrder(true);
+      // Clear the fresh parameter from URL without reloading
+      const newUrl = location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    } else {
+      setIsFreshOrder(false);
+    }
+
+    // Only clear cart and cart state if this is a fresh order
+    if (fresh === 'true') {
+      dispatch(clearCart());
+      dispatch(clearCartState());
+    }
+  }, [dispatch, location]);
 
   const handleDownloadInvoice = () => {
     if (!currentOrder) return;
@@ -246,50 +260,68 @@ const OrderConfirmation = () => {
         <div className="row justify-content-center">
           <div className="col-lg-8">
             <div className="card shadow-lg rounded-4 border-0 p-4">
-              <div className="text-center mb-4">
-                <div className="order-success-icon mx-auto mb-3">
-                  <svg
-                    width="48"
-                    height="48"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="#198754"
-                      strokeWidth="3"
-                      fill="#d1e7dd"
-                    />
-                    <path
-                      d="M7 13l3 3 7-7"
-                      stroke="#198754"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+              {isFreshOrder && (
+                <div className="text-center mb-4">
+                  <div className="order-success-icon mx-auto mb-3">
+                    <svg
+                      width="48"
+                      height="48"
                       fill="none"
-                    />
-                  </svg>
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="#198754"
+                        strokeWidth="3"
+                        fill="#d1e7dd"
+                      />
+                      <path
+                        d="M7 13l3 3 7-7"
+                        stroke="#198754"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    </svg>
+                  </div>
+                  <h1 className="h3 fw-bold mb-2">Order Placed Successfully!</h1>
+                  <p className="text-muted mb-2">
+                    Thank you for your purchase. Your order is confirmed and being
+                    processed.
+                  </p>
+                  <div className="d-flex flex-wrap justify-content-center gap-2 mt-2">
+                    <span className="badge bg-success bg-opacity-25 text-success fs-6">
+                      Order #{currentOrder.orderNumber}
+                    </span>
+                    <span className="badge bg-primary bg-opacity-25 text-primary fs-6">
+                      {currentOrder.paymentMethod === "cod"
+                        ? "Cash on Delivery"
+                        : "Online Payment"}
+                    </span>
+                  </div>
                 </div>
-                <h1 className="h3 fw-bold mb-2">Order Placed Successfully!</h1>
-                <p className="text-muted mb-2">
-                  Thank you for your purchase. Your order is confirmed and being
-                  processed.
-                </p>
-                <div className="d-flex flex-wrap justify-content-center gap-2 mt-2">
-                  <span className="badge bg-success bg-opacity-25 text-success fs-6">
-                    Order #{currentOrder.orderNumber}
-                  </span>
-                  <span className="badge bg-primary bg-opacity-25 text-primary fs-6">
-                    {currentOrder.paymentMethod === "cod"
-                      ? "Cash on Delivery"
-                      : "Online Payment"}
-                  </span>
+              )}
+              
+              {!isFreshOrder && (
+                <div className="text-center mb-4">
+                  <h1 className="h3 fw-bold mb-2">Order Details</h1>
+                  <div className="d-flex flex-wrap justify-content-center gap-2 mt-2">
+                    <span className="badge bg-success bg-opacity-25 text-success fs-6">
+                      Order #{currentOrder.orderNumber}
+                    </span>
+                    <span className="badge bg-primary bg-opacity-25 text-primary fs-6">
+                      {currentOrder.paymentMethod === "cod"
+                        ? "Cash on Delivery"
+                        : "Online Payment"}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="row g-4 mb-4">
                 <div className="col-md-6">

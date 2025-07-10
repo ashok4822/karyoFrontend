@@ -586,8 +586,8 @@ const Checkout = () => {
         description: "Your order has been placed and you will receive a confirmation email shortly.",
         variant: "default",
       });
-      // Redirect to order confirmation page with orderId
-      navigate(`/order-confirmation/${orderId}`);
+      // Redirect to order confirmation page with orderId and fresh parameter
+      navigate(`/order-confirmation/${orderId}?fresh=true`);
       
     } catch (error) {
       toast({
