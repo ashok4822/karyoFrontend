@@ -39,3 +39,7 @@ export const resetPassword = (email, resetToken, newPassword) => {
     })
   );
 };
+
+export const logoutUser = async () => {
+  return await apiHandler(userAxios.post("auth/logout"));
+};

@@ -13,7 +13,7 @@ import {
   Card,
 } from "react-bootstrap";
 import { FaShoppingCart, FaUser, FaSearch, FaSignOutAlt } from "react-icons/fa";
-import userAxios from "../lib/userAxios";
+import { logoutUser } from "../services/user/authService";
 
 const Index = () => {
   const dispatch = useDispatch();
@@ -26,12 +26,13 @@ const Index = () => {
   }, [dispatch]);
 
   const handleLogout = async () => {
-    try {
-      await userAxios.post("auth/logout");
+    const response = await logoutUser();
+    if (response.success) {
       dispatch(logoutAction());
       navigate("/");
-    } catch (error) {
-      // Optionally show error
+    } else {
+      // Optional: show error to user
+      console.error("Logout failed:", response.error);
     }
   };
 
@@ -111,7 +112,7 @@ const Index = () => {
                 price: "39.99",
               },
             ];
-            
+
             return Array.from({ length: 4 }, (_, i) => {
               if (featured[i]) {
                 const product = featured[i];
