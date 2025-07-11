@@ -12,14 +12,16 @@ import {
   Col,
   Card,
 } from "react-bootstrap";
-import { FaShoppingCart, FaUser, FaSearch, FaSignOutAlt } from "react-icons/fa";
+import { FaShoppingCart, FaUser, FaSearch, FaSignOutAlt, FaHeart } from "react-icons/fa";
 import { logoutUser } from "../services/user/authService";
+import { addToWishlist, removeFromWishlist } from "../redux/reducers/wishlistSlice";
 
 const Index = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const { products } = useSelector((state) => state.products);
+  const wishlist = useSelector((state) => state.wishlist.items);
 
   useEffect(() => {
     dispatch(loadUser());
@@ -33,6 +35,36 @@ const Index = () => {
     } else {
       // Optional: show error to user
       console.error("Logout failed:", response.error);
+    }
+  };
+
+  const handleToggleWishlist = (product, e) => {
+    e.stopPropagation();
+    const variant = product.variants?.[0];
+    const variantId = variant?.id;
+    
+    if (!variantId) {
+      return;
+    }
+
+    const isWishlisted = wishlist.some(item => 
+      item.id === product.id && item.variant === variantId
+    );
+
+    if (isWishlisted) {
+      dispatch(removeFromWishlist({ 
+        id: product.id, 
+        variant: variantId 
+      }));
+    } else {
+      dispatch(addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: variant?.price || product.price,
+        image: variant?.mainImage || product.mainImage,
+        variant: variantId,
+        variantName: variant ? `${variant.color || ''} - ${variant.size || ''}`.trim() : "",
+      }));
     }
   };
 
@@ -119,16 +151,67 @@ const Index = () => {
                 return (
                   <Col key={`product-${product.id || i}`}>
                     <Card className="h-100 shadow-sm hover-shadow">
-                      <Card.Img
-                        variant="top"
-                        src={
-                          product.variants?.[0]?.mainImage ||
-                          placeholders[i].image
-                        }
-                        alt={product.name}
-                        className="object-fit-cover"
-                        style={{ height: "200px" }}
-                      />
+                      <div className="position-relative">
+                        <Card.Img
+                          variant="top"
+                          src={
+                            product.variants?.[0]?.mainImage ||
+                            placeholders[i].image
+                          }
+                          alt={product.name}
+                          className="object-fit-cover"
+                          style={{ height: "200px" }}
+                        />
+                        {/* Wishlist Icon */}
+                        {(() => {
+                          const variant = product.variants?.[0];
+                          const variantId = variant?.id;
+                          const isWishlisted = variantId ? wishlist.some(item => 
+                            item.id === product.id && item.variant === variantId
+                          ) : false;
+                          
+                          return (
+                            <Button
+                              variant="light"
+                              size="sm"
+                              className="position-absolute rounded-circle d-flex align-items-center justify-content-center"
+                              style={{ 
+                                top: '8px',
+                                right: '8px',
+                                width: '30px', 
+                                height: '30px', 
+                                padding: 0,
+                                border: 'none',
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                zIndex: 10,
+                                transition: 'all 0.2s ease'
+                              }}
+                              onClick={(e) => handleToggleWishlist(product, e)}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                              }}
+                            >
+                              <FaHeart
+                                className={isWishlisted ? "text-danger" : ""}
+                                style={{
+                                  color: isWishlisted ? undefined : "#555",
+                                  filter: !isWishlisted ? "drop-shadow(0 1px 2px rgba(0,0,0,0.10))" : "none"
+                                }}
+                                size={20}
+                                fill={isWishlisted ? "#dc3545" : "none"}
+                                stroke="#dc3545"
+                                strokeWidth={4}
+                              />
+                            </Button>
+                          );
+                        })()}
+                      </div>
                       <Card.Body>
                         <Card.Title className="h6">{product.name}</Card.Title>
                         <Card.Text className="text-muted small">

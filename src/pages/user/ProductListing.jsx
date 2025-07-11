@@ -33,6 +33,7 @@ import {
 import ProductFilters from "../../components/ProductFilters";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 import { addToCart } from "../../redux/reducers/cartSlice";
+import { addToWishlist, removeFromWishlist } from "../../redux/reducers/wishlistSlice";
 import { toast } from "react-toastify";
 
 const ProductListing = () => {
@@ -44,6 +45,7 @@ const ProductListing = () => {
   const { products, loading, error, pagination } = useSelector(
     (state) => state.products
   );
+  const wishlist = useSelector((state) => state.wishlist.items);
 
   // Debug logging
   // console.log('ProductListing render:', { products, loading, error, pagination });
@@ -211,11 +213,38 @@ const ProductListing = () => {
     }
   };
 
-  const handleAddToWishlist = (product) => {
-    dispatch({
-      type: "ADD_TO_WISHLIST",
-      payload: product.id,
-    });
+  const handleToggleWishlist = (product, e) => {
+    e.stopPropagation();
+    const variant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
+    const variantId = variant?._id || variant?.id;
+    const productId = product._id || product.id;
+    
+    if (!variantId) {
+      toast.error("This product does not have a valid variant to add to wishlist.");
+      return;
+    }
+
+    const isWishlisted = wishlist.some(item => 
+      item.id === productId && item.variant === variantId
+    );
+
+    if (isWishlisted) {
+      dispatch(removeFromWishlist({ 
+        id: productId, 
+        variant: variantId 
+      }));
+      toast.success("Removed from wishlist!");
+    } else {
+      dispatch(addToWishlist({
+        id: productId,
+        name: product.name,
+        price: variant?.price || product.price,
+        image: getImageUrl(product.mainImage, product),
+        variant: variantId,
+        variantName: variant ? `${variant.colour || ''} - ${variant.capacity || ''}`.trim() : "",
+      }));
+      toast.success("Added to wishlist!");
+    }
   };
 
   const handleProductClick = (productId) => {
@@ -414,6 +443,56 @@ const ProductListing = () => {
                       {product.isNew && (
                         <Badge bg="primary" className="position-absolute top-0 start-0 m-2">New</Badge>
                       )}
+                      {/* Wishlist Icon */}
+                      {(() => {
+                        const variant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
+                        const variantId = variant?._id || variant?.id;
+                        const productId = product._id || product.id;
+                        const isWishlisted = variantId ? wishlist.some(item => 
+                          item.id === productId && item.variant === variantId
+                        ) : false;
+                        
+                        return (
+                          <Button
+                            variant="light"
+                            size="sm"
+                            className="position-absolute rounded-circle d-flex align-items-center justify-content-center"
+                            style={{ 
+                              top: '8px',
+                              right: '8px',
+                              width: '35px', 
+                              height: '35px', 
+                              padding: 0,
+                              border: 'none',
+                              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                              zIndex: 10,
+                              transition: 'all 0.2s ease'
+                            }}
+                            onClick={(e) => handleToggleWishlist(product, e)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.1)';
+                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                            }}
+                          >
+                            <FaHeart
+                              className={isWishlisted ? "text-danger" : ""}
+                              style={{
+                                color: isWishlisted ? undefined : "#555",
+                                filter: !isWishlisted ? "drop-shadow(0 1px 2px rgba(0,0,0,0.10))" : "none"
+                              }}
+                              size={20}
+                              fill={isWishlisted ? "#dc3545" : "none"}
+                              stroke="#dc3545"
+                              strokeWidth={4}
+                            />
+                          </Button>
+                        );
+                      })()}
                     </div>
                     <Card.Body className={view === "list" ? "col-md-8" : "d-flex flex-column justify-content-between"} style={{ padding: "1.25rem" }}>
                       <div>

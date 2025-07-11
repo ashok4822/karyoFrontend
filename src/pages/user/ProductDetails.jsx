@@ -1359,11 +1359,82 @@ const ProductDetails = () => {
                     style={{ cursor: "pointer" }}
                     onClick={() => navigate(`/products/${rel._id}`)}
                   >
-                    <Card.Img
-                      src={relImage}
-                      alt={rel.name}
-                      style={{ height: 200, objectFit: "cover" }}
-                    />
+                    <div className="position-relative">
+                      <Card.Img
+                        src={relImage}
+                        alt={rel.name}
+                        style={{ height: 200, objectFit: "cover" }}
+                      />
+                      {/* Wishlist Icon for Related Products */}
+                      {(() => {
+                        const variant = rel.variantDetails && rel.variantDetails.length > 0 ? rel.variantDetails[0] : 
+                                       rel.variants && rel.variants.length > 0 ? rel.variants[0] : null;
+                        const variantId = variant?._id || variant?.id;
+                        const isWishlisted = variantId ? wishlist.some(item => 
+                          item.id === rel._id && item.variant === variantId
+                        ) : false;
+                        
+                                                  return (
+                            <Button
+                              variant="light"
+                              size="sm"
+                              className="position-absolute rounded-circle d-flex align-items-center justify-content-center"
+                              style={{ 
+                                top: '8px',
+                                right: '8px',
+                                width: '30px', 
+                                height: '30px', 
+                                padding: 0,
+                                border: 'none',
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                zIndex: 10,
+                                transition: 'all 0.2s ease'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (variantId) {
+                                  if (isWishlisted) {
+                                    dispatch(removeFromWishlist({ 
+                                      id: rel._id, 
+                                      variant: variantId 
+                                    }));
+                                  } else {
+                                    dispatch(addToWishlist({
+                                      id: rel._id,
+                                      name: rel.name,
+                                      price: variant.price || relPrice,
+                                      image: relImage,
+                                      variant: variantId,
+                                      variantName: variant ? `${variant.colour || ''} - ${variant.capacity || ''}`.trim() : "",
+                                    }));
+                                  }
+                                }
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                              }}
+                            >
+                              <FaHeart
+                                className={isWishlisted ? "text-danger" : ""}
+                                style={{
+                                  color: isWishlisted ? undefined : "#555",
+                                  filter: !isWishlisted ? "drop-shadow(0 1px 2px rgba(0,0,0,0.10))" : "none"
+                                }}
+                                size={20}
+                                fill={isWishlisted ? "#dc3545" : "none"}
+                                stroke="#dc3545"
+                                strokeWidth={4}
+                              />
+                            </Button>
+                          );
+                      })()}
+                    </div>
                     <Card.Body>
                       <Card.Title className="h6 mb-2">{rel.name}</Card.Title>
                       <div className="d-flex align-items-center gap-2 mb-2">

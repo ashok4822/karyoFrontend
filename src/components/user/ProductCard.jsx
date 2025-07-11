@@ -1,13 +1,20 @@
 import { Link } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../store/slices/cartSlice';
+import { addToWishlist, removeFromWishlist } from '../../redux/reducers/wishlistSlice';
 import { Card, Badge, Button } from 'react-bootstrap';
-import { FaShoppingCart, FaStar, FaRegStar, FaStarHalfAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaStar, FaRegStar, FaStarHalfAlt, FaHeart } from 'react-icons/fa';
 import './ProductCard.css';
 
 const ProductCard = ({ product }) => {
   const dispatch = useDispatch();
+  const wishlist = useSelector((state) => state.wishlist.items);
   const primaryVariant = product.variants[0];
+
+  // Check if this product is in wishlist
+  const isWishlisted = wishlist.some(item => 
+    item.id === product.id && item.variant === primaryVariant.id
+  );
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -24,6 +31,27 @@ const ProductCard = ({ product }) => {
         image: primaryVariant.mainImage,
         color: primaryVariant.color,
         size: primaryVariant.size,
+      }));
+    }
+  };
+
+  const handleToggleWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isWishlisted) {
+      dispatch(removeFromWishlist({ 
+        id: product.id, 
+        variant: primaryVariant.id 
+      }));
+    } else {
+      dispatch(addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: primaryVariant.price,
+        image: primaryVariant.mainImage,
+        variant: primaryVariant.id,
+        variantName: `${primaryVariant.color} - ${primaryVariant.size}`,
       }));
     }
   };
@@ -49,7 +77,7 @@ const ProductCard = ({ product }) => {
   return (
     <Card className="h-100 product-card border-0 shadow-sm hover-shadow transition">
       <Link to={`/products/${product.id}`} className="text-decoration-none">
-        <div className="position-relative overflow-hidden rounded-top">
+        <div className="position-relative overflow-hidden rounded-top product-image-container">
           <Card.Img
             variant="top"
             src={primaryVariant.mainImage}
@@ -71,6 +99,25 @@ const ProductCard = ({ product }) => {
               <Badge bg="danger" className="fs-6">Sold Out</Badge>
             </div>
           )}
+          {/* Wishlist Icon */}
+          <Button
+            variant="light"
+            size="sm"
+            className="wishlist-icon"
+            onClick={handleToggleWishlist}
+          >
+            <FaHeart
+              className={isWishlisted ? "text-danger" : ""}
+              style={{
+                color: isWishlisted ? undefined : "#555",
+                filter: !isWishlisted ? "drop-shadow(0 1px 2px rgba(0,0,0,0.10))" : "none"
+              }}
+              size={20}
+              fill={isWishlisted ? "#dc3545" : "none"}
+              stroke="#dc3545"
+              strokeWidth={4}
+            />
+          </Button>
         </div>
       </Link>
       
