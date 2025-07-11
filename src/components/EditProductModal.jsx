@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
-import adminAxios from "../lib/adminAxios";
+import { updateProduct } from "../services/admin/adminProductService";
 
 const EditProductModal = ({ show, onHide, onProductUpdated, categories, product, variants = [] }) => {
   const [formData, setFormData] = useState({
@@ -107,11 +107,7 @@ const EditProductModal = ({ show, onHide, onProductUpdated, categories, product,
       formDataToSend.append("brand", formData.brand);
       formDataToSend.append("status", formData.status);
 
-      const response = await adminAxios.put(`/products/${product._id}`, formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await updateProduct(product._id, formDataToSend);
 
       setSuccess("Product updated successfully!");
       setTimeout(() => {

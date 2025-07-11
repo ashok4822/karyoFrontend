@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, Form, Button, Accordion, Badge } from "react-bootstrap";
 import { FaFilter, FaTimes, FaCheck } from "react-icons/fa";
-import userAxios from "../lib/userAxios";
+import { fetchCategories, fetchBrandOptions, fetchVariantOptions } from "../services/user/productService";
 import "./ProductFilters.css";
 
 const ProductFilters = ({ onApplyFilters, currentFilters }) => {
@@ -29,17 +29,15 @@ const ProductFilters = ({ onApplyFilters, currentFilters }) => {
         setLoading(true);
 
         // Fetch categories
-        const categoriesResponse = await userAxios.get("/categories");
+        const categoriesResponse = await fetchCategories();
         const categories = categoriesResponse.data.categories || [];
 
         // Fetch brand options
-        const brandsResponse = await userAxios.get("/products/brand-options");
+        const brandsResponse = await fetchBrandOptions();
         const brands = brandsResponse.data.brands || [];
 
         // Fetch variant options
-        const variantsResponse = await userAxios.get(
-          "/products/variant-options"
-        );
+        const variantsResponse = await fetchVariantOptions();
         const variants = variantsResponse.data || {};
 
         setFilterData({

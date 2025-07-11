@@ -18,3 +18,8 @@ export const fetchAdminProfile = (token) => {
     })
   );
 };
+
+// Logout admin
+export const logoutAdminApi = () => {
+  return apiHandler(adminAxios.post("/logout"));
+};

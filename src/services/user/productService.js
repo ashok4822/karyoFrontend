@@ -22,3 +22,18 @@ export const fetchRelatedProductsByCategory = ({
     })
   );
 };
+
+// Fetch all categories
+export const fetchCategories = () => {
+  return apiHandler(userAxios.get("/categories"));
+};
+
+// Fetch all brand options
+export const fetchBrandOptions = () => {
+  return apiHandler(userAxios.get("/products/brand-options"));
+};
+
+// Fetch all variant options
+export const fetchVariantOptions = () => {
+  return apiHandler(userAxios.get("/products/variant-options"));
+};

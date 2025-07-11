@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { X } from "lucide-react";
-import adminAxios from "../lib/adminAxios";
+import { createVariant } from "../services/admin/adminProductService";
 
 const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
   const [formData, setFormData] = useState({
@@ -133,11 +133,7 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
         formDataToSend.append("images", image);
       });
 
-      const response = await adminAxios.post(`/products/${product._id}/variants`, formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await createVariant(product._id, formDataToSend);
 
       setSuccess("Variant added successfully!");
       setTimeout(() => {
@@ -180,7 +176,7 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
                   value={formData.colour}
                   onChange={handleInputChange}
                   placeholder="e.g., Red, Blue"
-                  required
+                  
                 />
               </Form.Group>
             </Col>
@@ -194,7 +190,7 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
                   value={formData.capacity}
                   onChange={handleInputChange}
                   placeholder="e.g., 128GB, 256GB"
-                  required
+                  
                 />
               </Form.Group>
             </Col>
@@ -212,7 +208,7 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
                   placeholder="0.00"
                   min="0"
                   step="0.01"
-                  required
+                  
                 />
               </Form.Group>
             </Col>
@@ -227,7 +223,7 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
                   onChange={handleInputChange}
                   placeholder="0"
                   min="0"
-                  required
+                  
                 />
               </Form.Group>
             </Col>
@@ -255,7 +251,7 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
               multiple
               accept="image/*"
               onChange={handleImageChange}
-              required
+              
             />
             <Form.Text className="text-muted">
               Select at least 3 images for this variant. First image will be the main image.

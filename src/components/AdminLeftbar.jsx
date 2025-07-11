@@ -16,7 +16,7 @@ import {
 import "./AdminLeftbar.css";
 import { useDispatch } from "react-redux";
 import { logoutAdmin } from "../redux/reducers/authSlice";
-import adminAxios from "../lib/adminAxios";
+import { logoutAdminApi } from "../services/admin/adminAuthService";
 
 const admin = {
   name: "Admin Name",
@@ -44,7 +44,7 @@ const AdminLeftbar = () => {
 
   const handleLogout = async () => {
     try {
-      await adminAxios.post("/logout");
+      await logoutAdminApi();
     } catch (e) {}
     dispatch(logoutAdmin());
     localStorage.removeItem("adminAccessToken");

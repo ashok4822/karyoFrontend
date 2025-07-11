@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { X } from "lucide-react";
-import adminAxios from "../lib/adminAxios";
+import { updateVariant } from "../services/admin/adminProductService";
 
 const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) => {
   const [formData, setFormData] = useState({
@@ -128,11 +128,7 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
       selectedImages.forEach((file) => {
         form.append("images", file);
       });
-      const response = await adminAxios.put(
-        `/products/${product._id}/variants/${variant._id}`,
-        form,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      const response = await updateVariant(product._id, variant._id, form);
 
       setSuccess("Variant updated successfully!");
       setTimeout(() => {

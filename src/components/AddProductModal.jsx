@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
 import { Plus, X, Upload } from "lucide-react";
-import adminAxios from "../lib/adminAxios";
+import { createProduct, getAllProducts } from "../services/admin/adminProductService";
+import { getAllActiveCategories } from "../services/admin/adminCategoryService";
 
 const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   const [formData, setFormData] = useState({
@@ -244,9 +245,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
 
       // Test categories endpoint
       console.log("Testing categories endpoint...");
-      const categoriesResponse = await adminAxios.get(
-        "/categories?status=active"
-      );
+      const categoriesResponse = await getAllActiveCategories();
       console.log("Categories response:", categoriesResponse);
       console.log("Categories data:", categoriesResponse.data);
       console.log("Categories data type:", typeof categoriesResponse.data);
@@ -264,7 +263,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
 
       // Test products endpoint
       console.log("Testing products endpoint...");
-      const productsResponse = await adminAxios.get("/products");
+      const productsResponse = await getAllProducts();
       console.log("Products response:", productsResponse);
       console.log("Products data:", productsResponse.data);
       console.log("Products data type:", typeof productsResponse.data);
@@ -434,11 +433,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
       }
 
       console.log("Sending request to /products...");
-      const response = await adminAxios.post("/products", formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await createProduct(formDataToSend);
 
       console.log("Product created successfully:", response.data);
       setSuccess("Product added successfully!");

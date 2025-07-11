@@ -8,7 +8,7 @@ import {
   logoutUser,
 } from "../redux/reducers/authSlice";
 import api from "../lib/utils";
-import userAxios from "../lib/userAxios";
+import { logoutUser as logoutUserApi } from "../services/user/authService";
 
 const Layout = () => {
   const dispatch = useDispatch();
@@ -40,7 +40,7 @@ const Layout = () => {
     console.log("=== LOGOUT CLICK DEBUG ===");
     console.log("Logout button clicked");
     try {
-      await userAxios.post("/auth/logout");
+      await logoutUserApi();
     } catch (err) {
       console.error("Logout error", err);
     }

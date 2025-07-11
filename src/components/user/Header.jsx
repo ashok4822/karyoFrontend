@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, ShoppingCart, User, Menu, X } from 'lucide-react';
-import userAxios from '../../lib/userAxios';
+import { logoutUser as logoutUserApi } from '../../services/user/authService';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,7 +27,7 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      await userAxios.post('auth/logout');
+      await logoutUserApi();
     } catch (e) {}
     dispatch(logoutUser());
     localStorage.removeItem('userAccessToken');
