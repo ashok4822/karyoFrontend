@@ -1,11 +1,27 @@
 import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useNavigate } from "react-router-dom/dist/umd/react-router-dom.development";
-import userAxios from "../lib/userAxios";
-import adminAxios from "../lib/adminAxios";
-import { loginSuccess, setUserAccessToken, logoutUser, setAdminAccessToken, loginSuccess as adminLoginSuccess, logoutAdmin } from '../redux/reducers/authSlice';
-import { fetchWishlist } from '../redux/reducers/wishlistSlice';
-import { fetchCart } from '../redux/reducers/cartSlice';
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom/dist/umd/react-router-dom.development";
+import {
+  loginSuccess,
+  setUserAccessToken,
+  logoutUser,
+  setAdminAccessToken,
+  loginSuccess as adminLoginSuccess,
+  logoutAdmin,
+} from "../redux/reducers/authSlice";
+import { fetchWishlist } from "../redux/reducers/wishlistSlice";
+import { fetchCart } from "../redux/reducers/cartSlice";
+import {
+  fetchUserProfile,
+  refreshUserToken,
+} from "../services/user/authService";
+import {
+  refreshAdminToken,
+  fetchAdminProfile,
+} from "../services/admin/adminAuthService";
 
 const AuthSync = ({ onRestored = () => {} }) => {
   const dispatch = useDispatch();
@@ -28,7 +44,10 @@ const AuthSync = ({ onRestored = () => {} }) => {
     ];
 
     // Skip sync on public routes and profile page (let profile page handle its own auth)
-    if (publicPaths.includes(location.pathname) || location.pathname === "/profile") {
+    if (
+      publicPaths.includes(location.pathname) ||
+      location.pathname === "/profile"
+    ) {
       onRestored();
       setLoading(false);
       return;
@@ -44,54 +63,65 @@ const AuthSync = ({ onRestored = () => {} }) => {
       if (location.pathname.startsWith("/admin")) return;
 
       let token = userAccessToken;
-      console.log("AuthSync: Starting user restoration, token exists:", !!token);
+      console.log(
+        "AuthSync: Starting user restoration, token exists:",
+        !!token
+      );
 
       try {
         // If we have a token, try to fetch the profile
         if (token) {
-          console.log("AuthSync: Attempting to fetch profile with existing token");
-          const profileRes = await userAxios.get("/users/profile", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          console.log(
+            "AuthSync: Attempting to fetch profile with existing token"
+          );
+          const profileRes = await fetchUserProfile(token);
           if (profileRes?.data?.user) {
             console.log("AuthSync: Profile fetch successful");
             if (profileRes.data.user.isDeleted) {
               console.log("AuthSync: User is deleted, logging out");
               dispatch(logoutUser());
-              navigate('/login', { replace: true });
+              navigate("/login", { replace: true });
               return;
             }
-            dispatch(loginSuccess({
-              user: profileRes.data.user,
-              userAccessToken: token,
-            }));
+            dispatch(
+              loginSuccess({
+                user: profileRes.data.user,
+                userAccessToken: token,
+              })
+            );
             return; // Success, no need to refresh
           }
         }
-        
+
         // No token or profile fetch failed, try to refresh
-        console.log("AuthSync: No token or profile fetch failed, attempting refresh");
+        console.log(
+          "AuthSync: No token or profile fetch failed, attempting refresh"
+        );
         try {
-          const { data } = await userAxios.post("/auth/refresh-token");
+          const { data } = await refreshUserToken();
           if (data?.token) {
-            console.log("AuthSync: Refresh successful, fetching profile with new token");
+            console.log(
+              "AuthSync: Refresh successful, fetching profile with new token"
+            );
             localStorage.setItem("userAccessToken", data.token);
             dispatch(setUserAccessToken(data.token));
             // Now fetch profile with new token
-            const profileRes = await userAxios.get("/users/profile", {
-              headers: { Authorization: `Bearer ${data.token}` },
-            });
+            const profileRes = await fetchUserProfile(data.token);
             if (profileRes?.data?.user) {
               if (profileRes.data.user.isDeleted) {
-                console.log("AuthSync: User is deleted after refresh, logging out");
+                console.log(
+                  "AuthSync: User is deleted after refresh, logging out"
+                );
                 dispatch(logoutUser());
-                navigate('/login', { replace: true });
+                navigate("/login", { replace: true });
                 return;
               }
-              dispatch(loginSuccess({
-                user: profileRes.data.user,
-                userAccessToken: data.token,
-              }));
+              dispatch(
+                loginSuccess({
+                  user: profileRes.data.user,
+                  userAccessToken: data.token,
+                })
+              );
             }
           } else {
             console.log("AuthSync: Refresh failed - no token in response");
@@ -99,20 +129,31 @@ const AuthSync = ({ onRestored = () => {} }) => {
           }
         } catch (refreshError) {
           // If refresh fails (including rate limiting), logout user
-          console.log("AuthSync: Refresh token failed:", refreshError.response?.status, refreshError.response?.data);
+          console.log(
+            "AuthSync: Refresh token failed:",
+            refreshError.response?.status,
+            refreshError.response?.data
+          );
           dispatch(logoutUser());
           if (refreshError.response?.status === 429) {
             // Rate limited - redirect to login with message
             console.log("AuthSync: Rate limited, redirecting to login");
-            navigate('/login', { 
+            navigate("/login", {
               replace: true,
-              state: { message: "Too many authentication attempts. Please try again later." }
+              state: {
+                message:
+                  "Too many authentication attempts. Please try again later.",
+              },
             });
           }
         }
       } catch (err) {
         // If profile fetch fails with 401, we already tried refresh above
-        console.log("AuthSync: Profile fetch failed:", err.response?.status, err.response?.data);
+        console.log(
+          "AuthSync: Profile fetch failed:",
+          err.response?.status,
+          err.response?.data
+        );
         dispatch(logoutUser());
       }
     };
@@ -120,14 +161,12 @@ const AuthSync = ({ onRestored = () => {} }) => {
     const restoreAdmin = async () => {
       if (!adminAccessToken && !location.pathname.startsWith("/admin")) return;
       try {
-        const { data } = await adminAxios.post("/refresh-token");
+        const { data } = await refreshAdminToken();
         if (data?.token) {
           localStorage.setItem("adminAccessToken", data.token);
           dispatch(setAdminAccessToken(data.token));
 
-          const profileRes = await adminAxios.get("/profile", {
-            headers: { Authorization: `Bearer ${data.token}` },
-          });
+          const profileRes = await fetchAdminProfile(data.token);
 
           if (profileRes?.data?.user) {
             if (profileRes.data.user.isDeleted) {
@@ -154,10 +193,10 @@ const AuthSync = ({ onRestored = () => {} }) => {
       if (syncInProgressRef.current) {
         return;
       }
-      
+
       syncInProgressRef.current = true;
       console.log("AuthSync: Starting sync process");
-      
+
       // Start a timer to show loading after 500ms
       timerRef.current = setTimeout(() => setLoading(true), 500);
       const tasks = [];
@@ -167,22 +206,28 @@ const AuthSync = ({ onRestored = () => {} }) => {
       if (!adminAccessToken) tasks.push(restoreAdmin());
 
       await Promise.allSettled(tasks);
-      
+
       // Restoration finished, clear timer and hide loading
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      
+
       // Fetch wishlist if user is logged in and not on admin route
-      if (!location.pathname.startsWith("/admin") && localStorage.getItem("userAccessToken")) {
+      if (
+        !location.pathname.startsWith("/admin") &&
+        localStorage.getItem("userAccessToken")
+      ) {
         dispatch(fetchWishlist());
       }
       // Fetch cart if user is logged in and not on admin route
-      if (!location.pathname.startsWith("/admin") && localStorage.getItem("userAccessToken")) {
+      if (
+        !location.pathname.startsWith("/admin") &&
+        localStorage.getItem("userAccessToken")
+      ) {
         dispatch(fetchCart());
       }
-      
+
       setLoading(false);
       syncInProgressRef.current = false;
       console.log("AuthSync: Sync process completed");

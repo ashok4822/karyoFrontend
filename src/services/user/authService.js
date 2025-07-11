@@ -10,6 +10,11 @@ export const fetchUserProfile = (token) => {
   );
 };
 
+// Refresh user token
+export const refreshUserToken = () => {
+  return apiHandler(userAxios.post("/auth/refresh-token"));
+};
+
 // Login service for user
 export const loginUser = (email, password) => {
   return apiHandler(userAxios.post("auth/login", { email, password }));
