@@ -22,14 +22,35 @@ import {
   FaTimesCircle,
   FaKey,
   FaCamera,
-  FaChevronDown,
-  FaChevronRight,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
-import userAxios from "../../lib/userAxios";
-import { loginSuccess } from "../../redux/reducers/authSlice";
+import { loginSuccess, logoutUser } from "../../redux/reducers/authSlice";
 import { OTP_EXPIRY_SECONDS } from "../../lib/utils";
-import { fetchUserOrders, cancelOrder } from "../../redux/reducers/orderSlice";
+import { cancelOrder } from "../../redux/reducers/orderSlice";
+import { fetchUserOrders } from "../../services/user/orderService";
+import { fetchWalletBalance } from "../../services/user/walletService";
+import {
+  updateUserProfile,
+  uploadProfileImage,
+} from "../../services/user/profileService";
+import {
+  addUserShippingAddress,
+  deleteUserShippingAddress,
+  fetchUserShippingAddresses,
+  setDefaultAddress,
+  updateUserShippingAddress,
+} from "../../services/user/addressService";
+import {
+  requestPasswordResetOtp,
+  resetPassword,
+  verifyPasswordResetOtp,
+} from "../../services/user/authService";
+import {
+  getUserProfile,
+  requestEmailChangeOtp,
+  verifyEmailChangeOtp,
+} from "../../services/user/userService";
+import { submitReturnRequest } from "../../services/user/orderService";
 
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
@@ -45,6 +66,11 @@ const UserProfile = () => {
   const { user, userAccessToken } = useSelector((state) => state.auth);
   console.log("(UserProfile.jsx) user : ", user);
   const dispatch = useDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Note: UserProtectedRoute handles basic authentication
+  // We'll handle deleted user case in the useEffect when fetching fresh data
   const [avatar, setAvatar] = useState(user?.profileImage || "/profile.png");
   const [uploading, setUploading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -117,9 +143,6 @@ const UserProfile = () => {
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordTimer, setForgotPasswordTimer] = useState(0);
 
-  const location = useLocation();
-  const navigate = useNavigate();
-
   const {
     orders,
     loading: ordersLoading,
@@ -130,9 +153,6 @@ const UserProfile = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelTarget, setCancelTarget] = useState(null); // { orderId, productVariantId (optional) }
-
-  // In showOrdersContent, update tbody:
-  const [expandedOrderId, setExpandedOrderId] = useState(null);
 
   // Add state for return modal
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -161,8 +181,6 @@ const UserProfile = () => {
   const [orderSearch, setOrderSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
 
-
-
   // Add state for edit field errors
   const [editFieldErrors, setEditFieldErrors] = useState({});
 
@@ -172,29 +190,41 @@ const UserProfile = () => {
   // Fetch paginated orders from backend
   useEffect(() => {
     if (activeIndex === 3) {
-      const fetchOrders = async () => {
+      const loadOrders = async () => {
         try {
-          const params = { page: currentPage, limit: ordersPerPage };
-          if (orderSearch.trim() !== "") params.search = orderSearch.trim();
-          const res = await userAxios.get("/orders", { params });
-          dispatch({
-            type: "order/fetchUserOrders/fulfilled",
-            payload: { orders: res.data.orders },
+          const result = await fetchUserOrders({
+            page: currentPage,
+            limit: ordersPerPage,
+            search: orderSearch,
           });
-          setTotal(res.data.total || 0);
-        } catch (err) {
-          // handle error if needed
+
+          if (result.success) {
+            // Update Redux state with the fetched orders
+            dispatch({
+              type: "order/fetchUserOrders/fulfilled",
+              payload: { orders: result.data.orders },
+            });
+            setTotal(result.data.total || 0);
+          } else {
+            console.error("Failed to fetch user orders:", result.error);
+            // Set error in Redux state
+            dispatch({
+              type: "order/fetchUserOrders/rejected",
+              payload: result.error,
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching user orders:", error);
+          dispatch({
+            type: "order/fetchUserOrders/rejected",
+            payload: "Failed to fetch orders",
+          });
         }
       };
-      fetchOrders();
+
+      loadOrders();
     }
-  }, [
-    activeIndex,
-    currentPage,
-    ordersPerPage,
-    orderSearch,
-    dispatch,
-  ]);
+  }, [activeIndex, currentPage, ordersPerPage, orderSearch, dispatch]);
 
   // Calculate correct start and end indices for the current page
   const startOrder =
@@ -218,20 +248,30 @@ const UserProfile = () => {
   }, [activeIndex]);
 
   useEffect(() => {
-    const fetchWallet = async () => {
+    const getWallet = async () => {
       setWalletLoading(true);
       setWalletError("");
-      try {
-        const res = await userAxios.get("/users/wallet");
-        setWalletBalance(res.data.balance);
-      } catch (err) {
+
+      const result = await fetchWalletBalance();
+
+      if (result.success) {
+        setWalletBalance(result.data.balance);
+      } else {
         setWalletError("Could not load wallet");
-      } finally {
-        setWalletLoading(false);
       }
+
+      setWalletLoading(false);
     };
-    fetchWallet();
+
+    getWallet();
   }, []);
+
+  // Clear filters function for orders
+  const clearFilters = () => {
+    setOrderSearch("");
+    setSearchInput("");
+    setCurrentPage(1);
+  };
 
   const handleAvatarClick = () => {
     fileInputRef.current.click();
@@ -239,30 +279,26 @@ const UserProfile = () => {
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setUploading(true);
-      const formData = new FormData();
-      formData.append("image", file);
-      try {
-        const res = await userAxios.put("/users/profile-image", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        if (res.data?.profileImage) {
-          setAvatar(res.data.profileImage);
-          // Update Redux user state with new image
-          dispatch(
-            loginSuccess({
-              user: { ...user, profileImage: res.data.profileImage },
-              userAccessToken,
-            })
-          );
-        }
-      } catch (err) {
-        alert("Image upload failed");
-      } finally {
-        setUploading(false);
-      }
+    if (!file) return;
+
+    setUploading(true);
+
+    const result = await uploadProfileImage(file);
+
+    if (result.success && result.data?.profileImage) {
+      setAvatar(result.data.profileImage);
+
+      dispatch(
+        loginSuccess({
+          user: { ...user, profileImage: result.data.profileImage },
+          userAccessToken,
+        })
+      );
+    } else {
+      alert("Image upload failed");
     }
+
+    setUploading(false);
   };
 
   const formatDate = (dateString) => {
@@ -356,25 +392,23 @@ const UserProfile = () => {
     e.preventDefault();
     setEditError("");
     setEditSuccess("");
+
     const errors = validateEditForm();
     setEditFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
+    if (Object.keys(errors).length > 0) return;
+
     setEditLoading(true);
-    try {
-      const res = await userAxios.put("/users/profile", editForm, {
-        headers: { Authorization: `Bearer ${userAccessToken}` },
-      });
-      if (res.data?.user) {
-        dispatch(loginSuccess({ user: res.data.user, userAccessToken }));
-        setEditSuccess("Profile updated successfully");
-      }
-    } catch (err) {
-      setEditError(err.response?.data?.message || "Failed to update profile");
-    } finally {
-      setEditLoading(false);
+
+    const result = await updateUserProfile(editForm, userAccessToken);
+
+    if (result.success && result.data?.user) {
+      dispatch(loginSuccess({ user: result.data.user, userAccessToken }));
+      setEditSuccess("Profile updated successfully");
+    } else {
+      setEditError(result.error || "Failed to update profile");
     }
+
+    setEditLoading(false);
   };
 
   // Fade out success message after 5 seconds
@@ -390,17 +424,20 @@ const UserProfile = () => {
     if (activeIndex === 2) {
       setShippingLoading(true);
       setShippingError("");
-      userAxios
-        .get("/users/shipping-addresses", {
-          headers: { Authorization: `Bearer ${userAccessToken}` },
-        })
-        .then((res) => {
-          setShippingAddresses(res.data.addresses || []);
-        })
-        .catch((err) => {
+
+      const getAddresses = async () => {
+        const result = await fetchUserShippingAddresses(userAccessToken);
+
+        if (result.success) {
+          setShippingAddresses(result.data.addresses || []);
+        } else {
           setShippingError("Failed to load addresses");
-        })
-        .finally(() => setShippingLoading(false));
+        }
+
+        setShippingLoading(false);
+      };
+
+      getAddresses();
     }
   }, [activeIndex, userAccessToken]);
 
@@ -440,16 +477,19 @@ const UserProfile = () => {
     setAddLoading(true);
     setAddError("");
     setAddSuccess("");
+
     const errors = validateAddAddressForm();
     setAddFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setAddLoading(false);
       return;
     }
-    try {
-      const res = await userAxios.post("/users/shipping-address", newAddress, {
-        headers: { Authorization: `Bearer ${userAccessToken}` },
-      });
+
+    const result = await addUserShippingAddress(newAddress, userAccessToken);
+
+    if (result.success && result.data?.address) {
+      const newAddr = result.data.address;
+
       setAddSuccess("Address added successfully");
       setShowAddressModal(false);
       setNewAddress({
@@ -464,52 +504,40 @@ const UserProfile = () => {
         isDefault: false,
       });
       setAddFieldErrors({});
-      // Refresh address list
-      setShippingAddresses((prev) => [
-        res.data.address,
-        ...prev.filter((a) => !a.isDefault),
-      ]);
-      // If new address is default, update others
-      if (res.data.address.isDefault) {
-        setShippingAddresses((prev) => [
-          res.data.address,
-          ...prev.filter((a) => !a.isDefault),
-        ]);
-      } else {
-        setShippingAddresses((prev) => [...prev, res.data.address]);
-      }
-    } catch (err) {
-      if (err.response && err.response.status === 400 && err.response.data && err.response.data.errors) {
-        setAddFieldErrors(err.response.data.errors);
-      } else {
-        setAddError(err.response?.data?.message || "Failed to add address");
-      }
-    } finally {
-      setAddLoading(false);
+
+      // Update address list
+      setShippingAddresses((prev) =>
+        newAddr.isDefault
+          ? [newAddr, ...prev.filter((a) => !a.isDefault)]
+          : [...prev, newAddr]
+      );
+    } else if (result.status === 400 && result.data?.errors) {
+      setAddFieldErrors(result.data.errors);
+    } else {
+      setAddError(result.error || "Failed to add address");
     }
+
+    setAddLoading(false);
   };
 
   // Set default shipping address
   const handleSetDefault = async (addressId) => {
     setSetDefaultLoadingId(addressId);
-    try {
-      await userAxios.put(
-        `/users/shipping-address/${addressId}/default`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${userAccessToken}` },
-        }
-      );
-      // Refresh addresses
-      const res = await userAxios.get("/users/shipping-addresses", {
-        headers: { Authorization: `Bearer ${userAccessToken}` },
-      });
-      setShippingAddresses(res.data.addresses || []);
-    } catch (err) {
-      console.error("Failed to set default address:", err);
-    } finally {
-      setSetDefaultLoadingId(null);
+
+    const result = await setDefaultAddress(addressId, userAccessToken);
+
+    if (result.success) {
+      const fetchResult = await fetchUserShippingAddresses(userAccessToken);
+      if (fetchResult.success) {
+        setShippingAddresses(fetchResult.data.addresses || []);
+      } else {
+        console.error("Failed to refresh addresses:", fetchResult.error);
+      }
+    } else {
+      console.error("Failed to set default address:", result.error);
     }
+
+    setSetDefaultLoadingId(null);
   };
 
   const handleEditAddress = (address) => {
@@ -535,28 +563,28 @@ const UserProfile = () => {
     setEditAddressLoading(true);
     setEditAddressError("");
     setEditAddressSuccess("");
-    try {
-      await userAxios.put(
-        `/users/shipping-address/${editingAddress._id}`,
-        editAddressForm,
-        {
-          headers: { Authorization: `Bearer ${userAccessToken}` },
-        }
-      );
+
+    const result = await updateUserShippingAddress(
+      editingAddress._id,
+      editAddressForm,
+      userAccessToken
+    );
+
+    if (result.success) {
       setEditAddressSuccess("Address updated successfully");
       setEditAddressModal(false);
-      // Refresh addresses
-      const res = await userAxios.get("/users/shipping-addresses", {
-        headers: { Authorization: `Bearer ${userAccessToken}` },
-      });
-      setShippingAddresses(res.data.addresses || []);
-    } catch (err) {
-      setEditAddressError(
-        err.response?.data?.message || "Failed to update address"
-      );
-    } finally {
-      setEditAddressLoading(false);
+
+      const refreshResult = await fetchUserShippingAddresses(userAccessToken);
+      if (refreshResult.success) {
+        setShippingAddresses(refreshResult.data.addresses || []);
+      } else {
+        setEditAddressError("Updated but failed to refresh address list");
+      }
+    } else {
+      setEditAddressError(result.error || "Failed to update address");
     }
+
+    setEditAddressLoading(false);
   };
 
   const handleDeleteAddress = async (addressId) => {
@@ -572,44 +600,43 @@ const UserProfile = () => {
       reverseButtons: true,
     });
 
-    if (result.isConfirmed) {
-      setDeleteAddressLoading(addressId);
-      setDeleteAddressError("");
-      try {
-        await userAxios.delete(`/users/shipping-address/${addressId}`, {
-          headers: { Authorization: `Bearer ${userAccessToken}` },
-        });
+    if (!result.isConfirmed) return;
 
-        // Show success message
-        Swal.fire({
-          title: "Deleted!",
-          text: "Address has been deleted successfully.",
-          icon: "success",
-          timer: 2000,
-          showConfirmButton: false,
-        });
+    setDeleteAddressLoading(addressId);
+    setDeleteAddressError("");
 
-        // Refresh addresses
-        const res = await userAxios.get("/users/shipping-addresses", {
-          headers: { Authorization: `Bearer ${userAccessToken}` },
-        });
-        setShippingAddresses(res.data.addresses || []);
-      } catch (err) {
-        const errorMessage =
-          err.response?.data?.message || "Failed to delete address";
-        setDeleteAddressError(errorMessage);
+    const deleteResult = await deleteUserShippingAddress(
+      addressId,
+      userAccessToken
+    );
 
-        // Show error message
-        Swal.fire({
-          title: "Error!",
-          text: errorMessage,
-          icon: "error",
-          confirmButtonColor: "#3085d6",
-        });
-      } finally {
-        setDeleteAddressLoading(null);
+    if (deleteResult.success) {
+      Swal.fire({
+        title: "Deleted!",
+        text: "Address has been deleted successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+
+      const refreshResult = await fetchUserShippingAddresses(userAccessToken);
+      if (refreshResult.success) {
+        setShippingAddresses(refreshResult.data.addresses || []);
+      } else {
+        setDeleteAddressError("Deleted but failed to refresh address list");
       }
+    } else {
+      const errorMessage = deleteResult.error || "Failed to delete address";
+      setDeleteAddressError(errorMessage);
+      Swal.fire({
+        title: "Error!",
+        text: errorMessage,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
     }
+
+    setDeleteAddressLoading(null);
   };
 
   // Fade out forgot password success message
@@ -625,78 +652,84 @@ const UserProfile = () => {
     if (e) e.preventDefault();
     setForgotPasswordError("");
     setForgotPasswordSuccess("");
+
     if (!forgotPasswordEmail || !/\S+@\S+\.\S+/.test(forgotPasswordEmail)) {
       setForgotPasswordError("Please enter a valid email");
       return;
     }
+
     setForgotPasswordLoading(true);
-    try {
-      await userAxios.post("auth/request-password-reset-otp", {
-        email: forgotPasswordEmail,
-      });
+
+    const result = await requestPasswordResetOtp(forgotPasswordEmail);
+
+    if (result.success) {
       setForgotPasswordSuccess(
         isResend ? "OTP resent to your email." : "OTP sent to your email."
       );
       setForgotPasswordStep(2);
       setForgotPasswordTimer(OTP_EXPIRY_SECONDS);
-    } catch (error) {
-      setForgotPasswordError(
-        error.response?.data?.message || "Failed to send OTP"
-      );
-    } finally {
-      setForgotPasswordLoading(false);
+    } else {
+      setForgotPasswordError(result.error || "Failed to send OTP");
     }
+
+    setForgotPasswordLoading(false);
   };
 
   const handleForgotPasswordVerifyOtp = async (e) => {
     e.preventDefault();
     setForgotPasswordError("");
     setForgotPasswordSuccess("");
+
     if (!forgotPasswordOtp) {
       setForgotPasswordError("Please enter the OTP");
       return;
     }
+
     setForgotPasswordLoading(true);
-    try {
-      const res = await userAxios.post("auth/verify-password-reset-otp", {
-        email: forgotPasswordEmail,
-        otp: forgotPasswordOtp,
-      });
+
+    const result = await verifyPasswordResetOtp(
+      forgotPasswordEmail,
+      forgotPasswordOtp
+    );
+
+    if (result.success) {
       setForgotPasswordSuccess("OTP verified. Please enter your new password.");
       setForgotPasswordStep(3);
-      setForgotPasswordTimer(0); // <-- Stop timer after OTP verified
-      // Store the reset token from the response
-      if (res.data && res.data.resetToken) {
-        setForgotPasswordResetToken(res.data.resetToken);
+      setForgotPasswordTimer(0); // Stop timer
+      if (result.data?.resetToken) {
+        setForgotPasswordResetToken(result.data.resetToken);
       }
-    } catch (error) {
-      setForgotPasswordError(
-        error.response?.data?.message || "OTP verification failed"
-      );
-    } finally {
-      setForgotPasswordLoading(false);
+    } else {
+      setForgotPasswordError(result.error || "OTP verification failed");
     }
+
+    setForgotPasswordLoading(false);
   };
 
   const handleForgotPasswordReset = async (e) => {
     e.preventDefault();
     setForgotPasswordError("");
     setForgotPasswordSuccess("");
+
     if (!forgotPasswordNewPassword || forgotPasswordNewPassword.length < 8) {
       setForgotPasswordError("Password must be at least 8 characters");
       return;
     }
+
     if (forgotPasswordNewPassword !== forgotPasswordConfirmPassword) {
       setForgotPasswordError("Passwords do not match");
       return;
     }
+
     setForgotPasswordLoading(true);
-    try {
-      await userAxios.post("auth/reset-password", {
-        email: forgotPasswordEmail,
-        resetToken: forgotPasswordResetToken,
-        newPassword: forgotPasswordNewPassword,
-      });
+
+    const result = await resetPassword(
+      forgotPasswordEmail,
+      forgotPasswordResetToken,
+      forgotPasswordNewPassword
+    );
+
+    if (result.success) {
       setForgotPasswordSuccess("Password reset successful!");
       // Reset form
       setForgotPasswordStep(1);
@@ -706,13 +739,11 @@ const UserProfile = () => {
       setForgotPasswordConfirmPassword("");
       setForgotPasswordResetToken("");
       setForgotPasswordTimer(0);
-    } catch (error) {
-      setForgotPasswordError(
-        error.response?.data?.message || "Password reset failed"
-      );
-    } finally {
-      setForgotPasswordLoading(false);
+    } else {
+      setForgotPasswordError(result.error || "Password reset failed");
     }
+
+    setForgotPasswordLoading(false);
   };
 
   // User Details content
@@ -1331,51 +1362,54 @@ const UserProfile = () => {
     setEditEmailError("");
     setEditEmailSuccess("");
     setEditEmailLoading(true);
-    try {
-      const res = await userAxios.post(
-        "/users/request-email-change-otp",
-        { email: editEmail },
-        { headers: { Authorization: `Bearer ${userAccessToken}` } }
-      );
-      setEditEmailSuccess(res.data.message || "OTP sent to email");
+
+    const result = await requestEmailChangeOtp(editEmail, userAccessToken);
+
+    if (result.success) {
+      setEditEmailSuccess(result.data?.message || "OTP sent to email");
       setOtpTimer(OTP_EXPIRY_SECONDS);
-    } catch (err) {
-      const msg = err.response?.data?.message || "Failed to send OTP. Please try again.";
-      setEditEmailError(msg);
-      // Optionally, you could focus the input or highlight it here
-    } finally {
-      setEditEmailLoading(false);
+    } else {
+      setEditEmailError(
+        result.error || "Failed to send OTP. Please try again."
+      );
     }
+
+    setEditEmailLoading(false);
   };
 
   const handleVerifyEmailOtp = async () => {
     setEditEmailError("");
     setEditEmailSuccess("");
     setEditEmailVerifyLoading(true);
-    try {
-      const res = await userAxios.post(
-        "/users/verify-email-change-otp",
-        { email: editEmail, otp: editEmailOtp },
-        { headers: { Authorization: `Bearer ${userAccessToken}` } }
-      );
-      setEditEmailSuccess(res.data.message || "Email updated successfully");
-      // Update Redux user state with new email
+
+    const result = await verifyEmailChangeOtp(
+      editEmail,
+      editEmailOtp,
+      userAccessToken
+    );
+
+    if (result.success) {
+      setEditEmailSuccess(result.data.message || "Email updated successfully");
+
+      // Update Redux state with new email
       dispatch(
         loginSuccess({
-          user: { ...user, email: res.data.email },
+          user: { ...user, email: result.data.email },
           userAccessToken,
         })
       );
-      setOtpTimer(0); // <-- Stop timer after OTP verified
+
+      // Cleanup
+      setOtpTimer(0);
       setEditEmail("");
       setEditEmailOtp("");
-    } catch (err) {
+    } else {
       setEditEmailError(
-        err.response?.data?.message || "Failed to verify OTP. Please try again."
+        result.error || "Failed to verify OTP. Please try again."
       );
-    } finally {
-      setEditEmailVerifyLoading(false);
     }
+
+    setEditEmailVerifyLoading(false);
   };
 
   // Edit Email content
@@ -1652,268 +1686,221 @@ const UserProfile = () => {
             <table className="table table-hover align-middle">
               <thead>
                 <tr>
-                  <th></th>
+                  <th>Product</th>
                   <th>Order #</th>
-                  <th>Total</th>
-                  <th>Items</th>
-                  <th>Payment Method</th>
-                  <th>Order Details</th>
+                  <th>Order Date</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th>Payment Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => {
-                  const rows = [
-                    <tr
-                      key={order._id}
-                      style={{ cursor: "pointer" }}
-                      onClick={(e) => {
-                        // Prevent row click if clicking a button or link
-                        if (
-                          e.target.tagName === "BUTTON" ||
-                          e.target.tagName === "A" ||
-                          e.target.closest("button") ||
-                          e.target.closest("a")
-                        )
-                          return;
-                        setExpandedOrderId(
-                          expandedOrderId === order._id ? null : order._id
-                        );
-                      }}
-                    >
-                      <td style={{ width: 32 }}>
-                        {expandedOrderId === order._id ? (
-                          <FaChevronDown />
-                        ) : (
-                          <FaChevronRight />
-                        )}
-                      </td>
-                      <td className="fw-semibold">{order.orderNumber}</td>
-                      <td className="fw-bold">
-                        ₹{(order.total ?? 0).toFixed(2)}
-                      </td>
-                      <td>{order.items.length}</td>
-                      <td>
-                        <span
-                          className={`badge bg-${
-                            order.paymentMethod === "cod"
-                              ? "warning"
-                              : order.paymentMethod === "online"
-                              ? "success"
-                              : order.paymentMethod === "wallet"
-                              ? "info"
-                              : "secondary"
-                          } bg-opacity-25 text-${
-                            order.paymentMethod === "cod"
-                              ? "warning"
-                              : order.paymentMethod === "online"
-                              ? "success"
-                              : order.paymentMethod === "wallet"
-                              ? "info"
-                              : "secondary"
-                          }`}
-                        >
-                          {order.paymentMethod === "cod"
-                            ? "COD"
-                            : order.paymentMethod === "online"
-                            ? "Online"
-                            : order.paymentMethod === "wallet"
-                            ? "Wallet"
-                            : "N/A"}
-                        </span>
-                      </td>
-                      <td>
-                        <a
-                          href={`/order-confirmation/${order._id}`}
-                          className="btn btn-sm btn-outline-primary ms-2"
-                        >
-                          View
-                        </a>
-                      </td>
-                    </tr>,
-                  ];
-                  if (expandedOrderId === order._id) {
-                    rows.push(
-                      <tr key={order._id + "-expanded"}>
-                        <td colSpan={9} style={{ background: "#f8f9fa" }}>
-                          <div className="p-3">
-                            <h6 className="fw-bold mb-3">Order Items</h6>
-                            <div className="row g-3">
-                              {order.items.map((item, idx) => (
+                {(() => {
+                  // Flatten all order items and sort by order date (newest first)
+                  const allItems = [];
+                  orders.forEach((order) => {
+                    order.items.forEach((item) => {
+                      allItems.push({
+                        ...item,
+                        order,
+                        orderDate: new Date(order.createdAt),
+                      });
+                    });
+                  });
+
+                  // Sort by order date (newest first)
+                  allItems.sort((a, b) => b.orderDate - a.orderDate);
+
+                  return allItems.map((item, index) => {
+                    const order = item.order;
+                    const itemStatus = item.itemStatus || "pending";
+                    const payStatus =
+                      item.itemPaymentStatus ||
+                      order.paymentStatus ||
+                      "pending";
+
+                    return (
+                      <tr
+                        key={`${order._id}-${
+                          item.productVariantId._id || item.productVariantId
+                        }-${index}`}
+                      >
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div
+                              style={{
+                                width: 48,
+                                height: 48,
+                                cursor: "pointer",
+                              }}
+                              className="me-3 flex-shrink-0"
+                              onClick={() => {
+                                const productId =
+                                  item.productVariantId?.product?._id ||
+                                  item.productVariantId?.product ||
+                                  item.productVariantId;
+                                if (productId)
+                                  navigate(`/products/${productId}`);
+                              }}
+                            >
+                              {item.productVariantId?.imageUrls?.[0] ? (
+                                <img
+                                  src={item.productVariantId.imageUrls[0]}
+                                  alt={item.productVariantId.product?.name}
+                                  className="img-fluid rounded-3"
+                                  style={{
+                                    width: 48,
+                                    height: 48,
+                                    objectFit: "cover",
+                                    cursor: "pointer",
+                                  }}
+                                />
+                              ) : (
                                 <div
-                                  key={
-                                    item.productVariantId._id ||
-                                    item.productVariantId
-                                  }
-                                  className="col-md-6 col-lg-4"
-                                >
-                                  <div className="d-flex align-items-center border rounded-3 p-2 bg-white">
-                                    <div
-                                      style={{
-                                        width: 56,
-                                        height: 56,
-                                        cursor: "pointer",
-                                      }}
-                                      className="me-3 flex-shrink-0"
-                                      onClick={() => {
-                                        const productId =
-                                          item.productVariantId?.product?._id ||
-                                          item.productVariantId?.product ||
-                                          item.productVariantId;
-                                        if (productId)
-                                          navigate(`/products/${productId}`);
-                                      }}
-                                    >
-                                      {item.productVariantId?.imageUrls?.[0] ? (
-                                        <img
-                                          src={
-                                            item.productVariantId.imageUrls[0]
-                                          }
-                                          alt={
-                                            item.productVariantId.product?.name
-                                          }
-                                          className="img-fluid rounded-3"
-                                          style={{
-                                            width: 56,
-                                            height: 56,
-                                            objectFit: "cover",
-                                            cursor: "pointer",
-                                          }}
-                                        />
-                                      ) : (
-                                        <div
-                                          className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
-                                          style={{ width: 56, height: 56 }}
-                                        ></div>
-                                      )}
-                                    </div>
-                                    <div className="flex-grow-1">
-                                      <div
-                                        className="fw-semibold text-dark"
-                                        style={{
-                                          cursor: "pointer",
-                                          textDecoration: "underline",
-                                        }}
-                                        onClick={() => {
-                                          const productId =
-                                            item.productVariantId?.product
-                                              ?._id ||
-                                            item.productVariantId?.product ||
-                                            item.productVariantId;
-                                          if (productId)
-                                            navigate(`/products/${productId}`);
-                                        }}
-                                      >
-                                        {item.productVariantId?.product?.name ||
-                                          "Product"}
-                                      </div>
-                                      <div className="text-muted small">
-                                        {item.productVariantId?.colour}{" "}
-                                        {item.productVariantId?.capacity &&
-                                          `- ${item.productVariantId.capacity}`}
-                                      </div>
-                                      <div className="text-muted small">
-                                        Qty: {item.quantity}
-                                      </div>
-                                      <div className="text-muted small">
-                                        Price: ₹
-                                        {(item.price * item.quantity).toFixed(
-                                          2
-                                        )}
-                                      </div>
-                                      <div className="mt-1">
-                                        {(() => {
-                                          const itemStatus = item.itemStatus || "pending";
-                                          if (item.cancelled) {
-                                            return (
-                                              <span className="badge bg-danger bg-opacity-25 text-danger">Cancelled</span>
-                                            );
-                                          } else if (itemStatus === "return_verified") {
-                                            return (
-                                              <span className="badge bg-success bg-opacity-25 text-success">Return Verified</span>
-                                            );
-                                          } else if (itemStatus === "returned" || (item.returned && itemStatus !== "return_verified")) {
-                                            return (
-                                              <span className="badge bg-warning bg-opacity-25 text-warning">Return Requested</span>
-                                            );
-                                          } else if (itemStatus === "delivered") {
-                                            return (
-                                              <>
-                                                <span className="badge bg-info bg-opacity-25 text-info me-2">Delivered</span>
-                                                <Button
-                                                  variant="outline-warning"
-                                                  size="sm"
-                                                  onClick={() =>
-                                                    handleOpenReturnModal(order._id, item.productVariantId._id || item.productVariantId)
-                                                  }
-                                                  disabled={item.cancelled || item.returned || itemStatus === "return_verified"}
-                                                >
-                                                  Return Product
-                                                </Button>
-                                              </>
-                                            );
-                                          } else {
-                                            return (
-                                              <span className="badge bg-secondary bg-opacity-25 text-secondary">
-                                                {itemStatus.charAt(0).toUpperCase() + itemStatus.slice(1)}
-                                              </span>
-                                            );
-                                          }
-                                        })()}
-                                      </div>
-                                      {item.cancellationReason &&
-                                        item.cancelled && (
-                                          <div className="text-muted small mt-1">
-                                            Reason: {item.cancellationReason}
-                                          </div>
-                                        )}
-                                      <div className="text-muted small">
-                                        Payment Status: {(() => {
-                                          const payStatus = item.itemPaymentStatus || order.paymentStatus || "pending";
-                                          let color = "warning";
-                                          if (payStatus === "paid") color = "success";
-                                          else if (payStatus === "failed") color = "danger";
-                                          else if (payStatus === "refunded") color = "info";
-                                          return (
-                                            <span className={`badge bg-${color} bg-opacity-25 text-${color}`}>{payStatus.charAt(0).toUpperCase() + payStatus.slice(1)}</span>
-                                          );
-                                        })()}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
+                                  className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
+                                  style={{ width: 48, height: 48 }}
+                                ></div>
+                              )}
                             </div>
-                            <div className="mt-4">
+                            <div>
+                              <div
+                                className="fw-semibold text-dark"
+                                style={{
+                                  cursor: "pointer",
+                                  textDecoration: "underline",
+                                }}
+                                onClick={() => {
+                                  const productId =
+                                    item.productVariantId?.product?._id ||
+                                    item.productVariantId?.product ||
+                                    item.productVariantId;
+                                  if (productId)
+                                    navigate(`/products/${productId}`);
+                                }}
+                              >
+                                {item.productVariantId?.product?.name ||
+                                  "Product"}
+                              </div>
                               <div className="text-muted small">
-                                Order Date:{" "}
-                                {(() => {
-                                  const d = new Date(order.createdAt);
-                                  const day = String(d.getDate()).padStart(
-                                    2,
-                                    "0"
-                                  );
-                                  const month = String(
-                                    d.getMonth() + 1
-                                  ).padStart(2, "0");
-                                  const year = d.getFullYear();
-                                  const hours = String(d.getHours()).padStart(
-                                    2,
-                                    "0"
-                                  );
-                                  const minutes = String(
-                                    d.getMinutes()
-                                  ).padStart(2, "0");
-                                  return `${day}/${month}/${year}, ${hours}:${minutes}`;
-                                })()}
+                                {item.productVariantId?.colour}{" "}
+                                {item.productVariantId?.capacity &&
+                                  `- ${item.productVariantId.capacity}`}
                               </div>
                             </div>
                           </div>
                         </td>
+                        <td className="fw-semibold">{order.orderNumber}</td>
+                        <td>
+                          {(() => {
+                            const d = new Date(order.createdAt);
+                            const day = String(d.getDate()).padStart(2, "0");
+                            const month = String(d.getMonth() + 1).padStart(
+                              2,
+                              "0"
+                            );
+                            const year = d.getFullYear();
+                            const hours = String(d.getHours()).padStart(2, "0");
+                            const minutes = String(d.getMinutes()).padStart(
+                              2,
+                              "0"
+                            );
+                            return `${day}/${month}/${year}, ${hours}:${minutes}`;
+                          })()}
+                        </td>
+                        <td>{item.quantity}</td>
+                        <td className="fw-bold">
+                          ₹{(item.price * item.quantity).toFixed(2)}
+                        </td>
+                        <td>
+                          {(() => {
+                            if (item.cancelled) {
+                              return (
+                                <span className="badge bg-danger bg-opacity-25 text-danger">
+                                  Cancelled
+                                </span>
+                              );
+                            } else if (itemStatus === "return_verified") {
+                              return (
+                                <span className="badge bg-success bg-opacity-25 text-success">
+                                  Return Verified
+                                </span>
+                              );
+                            } else if (
+                              itemStatus === "returned" ||
+                              (item.returned &&
+                                itemStatus !== "return_verified")
+                            ) {
+                              return (
+                                <span className="badge bg-warning bg-opacity-25 text-warning">
+                                  Return Requested
+                                </span>
+                              );
+                            } else if (itemStatus === "delivered") {
+                              return (
+                                <span className="badge bg-info bg-opacity-25 text-info">
+                                  Delivered
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="badge bg-secondary bg-opacity-25 text-secondary">
+                                  {itemStatus.charAt(0).toUpperCase() +
+                                    itemStatus.slice(1)}
+                                </span>
+                              );
+                            }
+                          })()}
+                        </td>
+                        <td>
+                          {(() => {
+                            let color = "warning";
+                            if (payStatus === "paid") color = "success";
+                            else if (payStatus === "failed") color = "danger";
+                            else if (payStatus === "refunded") color = "info";
+                            return (
+                              <span
+                                className={`badge bg-${color} bg-opacity-25 text-${color}`}
+                              >
+                                {payStatus.charAt(0).toUpperCase() +
+                                  payStatus.slice(1)}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td>
+                          <div className="d-flex gap-2">
+                            <a
+                              href={`/order-confirmation/${order._id}`}
+                              className="btn btn-sm btn-outline-primary"
+                            >
+                              View Order
+                            </a>
+                            {itemStatus === "delivered" &&
+                              !item.cancelled &&
+                              !item.returned &&
+                              itemStatus !== "return_verified" && (
+                                <Button
+                                  variant="outline-warning"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleOpenReturnModal(
+                                      order._id,
+                                      item.productVariantId._id ||
+                                        item.productVariantId
+                                    )
+                                  }
+                                >
+                                  Return
+                                </Button>
+                              )}
+                          </div>
+                        </td>
                       </tr>
                     );
-                  }
-                  return rows;
-                })}
+                  });
+                })()}
               </tbody>
             </table>
           </div>
@@ -2043,7 +2030,9 @@ const UserProfile = () => {
     let itemsToReturn = order.items;
     if (productVariantId) {
       itemsToReturn = order.items.filter(
-        (item) => (item.productVariantId._id || item.productVariantId) === productVariantId
+        (item) =>
+          (item.productVariantId._id || item.productVariantId) ===
+          productVariantId
       );
     }
     setReturnTarget({ orderId, items: itemsToReturn });
@@ -2053,7 +2042,9 @@ const UserProfile = () => {
         checked: true,
         reason: "",
         name: item.productVariantId?.product?.name || "Product",
-        details: `${item.productVariantId?.colour || ''} ${item.productVariantId?.capacity || ''}`.trim(),
+        details: `${item.productVariantId?.colour || ""} ${
+          item.productVariantId?.capacity || ""
+        }`.trim(),
       }))
     );
     setShowReturnModal(true);
@@ -2061,54 +2052,92 @@ const UserProfile = () => {
 
   const handleSubmitReturn = async () => {
     if (!returnTarget) return;
-    // Only one item in returnItems, always checked
-    const item = returnItems[0];
-    try {
-      await userAxios.post(`/users/orders/${returnTarget.orderId}/return`, {
-        items: [{
-          productVariantId: item.productVariantId,
-          reason: item.reason,
-        }],
-      });
+
+    const item = returnItems[0]; // only one item, always checked
+
+    const result = await submitReturnRequest(returnTarget.orderId, [
+      {
+        productVariantId: item.productVariantId,
+        reason: item.reason,
+      },
+    ]);
+
+    if (result.success) {
       setShowReturnModal(false);
       setReturnTarget(null);
       setReturnItems([]);
-      dispatch(fetchUserOrders());
-      Swal.fire({
-        icon: 'success',
-        title: 'Return Requested',
-        text: 'Your return request has been submitted successfully.',
-        timer: 2000,
-        showConfirmButton: false
+      // Refresh orders after return request
+      const refreshResult = await fetchUserOrders({
+        page: currentPage,
+        limit: ordersPerPage,
+        search: orderSearch,
       });
-    } catch (err) {
+      
+      if (refreshResult.success) {
+        dispatch({
+          type: "order/fetchUserOrders/fulfilled",
+          payload: { orders: refreshResult.data.orders },
+        });
+        setTotal(refreshResult.data.total || 0);
+      }
       Swal.fire({
-        icon: 'error',
-        title: 'Return Failed',
-        text: err?.response?.data?.message || err?.message || 'An error occurred while submitting your return request.',
+        icon: "success",
+        title: "Return Requested",
+        text: "Your return request has been submitted successfully.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Return Failed",
+        text:
+          result.error ||
+          "An error occurred while submitting your return request.",
       });
     }
   };
 
   useEffect(() => {
-    // Fetch latest user profile from backend on mount
     const fetchUserProfile = async () => {
+      console.log("UserProfile: Starting to fetch user profile");
       try {
-        const res = await userAxios.get("/users/profile");
-        if (res.data && res.data.user) {
-          // Check if user is blocked
-          if (res.data.user.isDeleted) {
+        const { success, data, error } = await getUserProfile();
+        console.log("UserProfile: getUserProfile result:", { success, hasData: !!data, error });
+
+        if (!success) {
+          // Check if it's a 401 error (user deleted or token invalid)
+          if (error && (error.includes("deleted") || error.includes("401"))) {
+            console.log("UserProfile: User is deleted or unauthorized, logging out");
             dispatch(logoutUser());
-            navigate('/login', { replace: true });
+            navigate("/login", { replace: true });
             return;
           }
-          dispatch(loginSuccess({ user: res.data.user, userAccessToken }));
+          // For other errors, just log them but don't logout
+          console.error("UserProfile: Failed to fetch user profile:", error);
+          return;
+        }
+
+        const user = data.user;
+        console.log("UserProfile: Received user data:", { hasUser: !!user, isDeleted: user?.isDeleted });
+        
+        if (user && user.isDeleted) {
+          console.log("UserProfile: User is deleted, logging out");
+          dispatch(logoutUser());
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        if (user && !user.isDeleted) {
+          console.log("UserProfile: Updating Redux state with user data");
+          dispatch(loginSuccess({ user, userAccessToken }));
         }
       } catch (err) {
-        // Optionally handle error (e.g., show notification)
-        // console.error("Failed to fetch user profile", err);
+        console.error("UserProfile: Error fetching user profile:", err);
+        // Don't automatically logout on network errors
       }
     };
+
     fetchUserProfile();
     // eslint-disable-next-line
   }, []);
@@ -2123,7 +2152,11 @@ const UserProfile = () => {
   // Add useEffect to reset otpTimer if not in email OTP entry state
   useEffect(() => {
     // Assuming editEmailSuccess is set to a string containing 'updated' after success
-    if (editEmailSuccess && editEmailSuccess.includes("updated") && otpTimer !== 0) {
+    if (
+      editEmailSuccess &&
+      editEmailSuccess.includes("updated") &&
+      otpTimer !== 0
+    ) {
       setOtpTimer(0);
     }
   }, [editEmailSuccess]);
@@ -2269,7 +2302,11 @@ const UserProfile = () => {
             <div className="border rounded-3 p-2 mb-2">
               <div>
                 <strong>{returnItems[0].name}</strong>
-                {returnItems[0].details && <span className="text-muted small ms-2">{returnItems[0].details}</span>}
+                {returnItems[0].details && (
+                  <span className="text-muted small ms-2">
+                    {returnItems[0].details}
+                  </span>
+                )}
               </div>
               <Form.Group className="mt-2">
                 <Form.Label>Reason for return (optional)</Form.Label>

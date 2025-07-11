@@ -19,7 +19,26 @@ const Layout = () => {
 
   console.log(user);
 
-  const handleLogout = async () => {
+  const handleProfileClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("=== PROFILE CLICK DEBUG ===");
+    console.log("Event target:", e.target);
+    console.log("Event type:", e.type);
+    console.log("Current user:", user);
+    console.log("User access token exists:", !!userAccessToken);
+    console.log("Current location:", window.location.pathname);
+    
+    // Navigate to profile page
+    console.log("Navigating to /profile...");
+    navigate("/profile");
+  };
+
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("=== LOGOUT CLICK DEBUG ===");
+    console.log("Logout button clicked");
     try {
       await userAxios.post("/auth/logout");
     } catch (err) {
@@ -36,7 +55,7 @@ const Layout = () => {
   return (
     <div className="d-flex flex-column min-vh-100">
       {/* Header */}
-      <Navbar bg="light" expand="lg" className="shadow-sm">
+      <Navbar bg="light" expand="lg" className="shadow-sm" style={{ position: 'relative', zIndex: 1000 }}>
         <Container>
           <Navbar.Brand as={Link} to="/" className="fw-bold text-primary">
             CARYO
@@ -57,18 +76,22 @@ const Layout = () => {
                 Contact
               </Nav.Link>
             </Nav>
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-3" style={{ position: 'relative' }}>
               {user && userAccessToken && (
-                <span className="fw-semibold text-primary me-2 d-flex align-items-center gap-2">
+                <div className="d-flex align-items-center gap-2 me-3" style={{ position: 'relative', zIndex: 1001 }}>
                   <span 
                     style={{ 
                       cursor: "pointer",
-                      transition: "color 0.2s ease"
+                      transition: "color 0.2s ease",
+                      userSelect: "none",
+                      position: 'relative',
+                      zIndex: 1002
                     }}
-                    onClick={() => navigate("/profile")}
+                    onClick={handleProfileClick}
                     title="Click to view profile"
                     onMouseEnter={(e) => e.target.style.color = "#0056b3"}
                     onMouseLeave={(e) => e.target.style.color = ""}
+                    className="fw-semibold text-primary"
                   >
                     {user.username || user.email}
                   </span>
@@ -82,12 +105,16 @@ const Layout = () => {
                       objectFit: "cover",
                       border: "1px solid #ddd",
                       cursor: "pointer",
+                      userSelect: "none",
+                      position: 'relative',
+                      zIndex: 1002
                     }}
-                    onClick={() => navigate("/profile")}
+                    onClick={handleProfileClick}
+                    title="Click to view profile"
                   />
-                </span>
+                </div>
               )}
-              <Link to="/wishlist" className="text-dark position-relative">
+              <Link to="/wishlist" className="text-dark position-relative" style={{ zIndex: 1001 }}>
                 <FaHeart size={20} />
                 {wishlistCount > 0 && (
                   <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -95,7 +122,7 @@ const Layout = () => {
                   </span>
                 )}
               </Link>
-              <Link to="/cart" className="text-dark position-relative me-3">
+              <Link to="/cart" className="text-dark position-relative me-3" style={{ zIndex: 1001 }}>
                 <FaShoppingCart size={20} />
                 <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                   {cartCount}
@@ -107,6 +134,7 @@ const Layout = () => {
                   className="d-flex align-items-center gap-2"
                   onClick={handleLogout}
                   title="Logout"
+                  style={{ position: 'relative', zIndex: 1000 }}
                 >
                   <FaSignOutAlt /> Logout
                 </Button>

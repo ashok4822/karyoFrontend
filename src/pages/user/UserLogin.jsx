@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../redux/reducers/authSlice";
-import userAxios from "../../lib/userAxios";
 import {
   Container,
   Row,
@@ -14,6 +13,7 @@ import {
   InputGroup,
 } from "react-bootstrap";
 import { FaEnvelope, FaLock, FaGoogle } from "react-icons/fa";
+import { loginUser } from "../../services/user/authService";
 
 const UserLogin = () => {
   const navigate = useNavigate();
@@ -28,10 +28,12 @@ const UserLogin = () => {
   // Check for error messages from URL params or navigation state
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
-    const errorParam = urlParams.get('error');
-    
-    if (errorParam === 'rate_limit') {
-      setServerError("Too many authentication attempts. Please wait a while before trying again.");
+    const errorParam = urlParams.get("error");
+
+    if (errorParam === "rate_limit") {
+      setServerError(
+        "Too many authentication attempts. Please wait a while before trying again."
+      );
     } else if (location.state?.message) {
       setServerError(location.state.message);
     }
@@ -41,27 +43,36 @@ const UserLogin = () => {
     e.preventDefault();
     setServerError("");
     setSuccessMsg("");
+
+    // Basic validation
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
       setServerError("Please enter a valid email");
       return;
     }
+
     if (!password) {
       setServerError("Please enter your password");
       return;
     }
+
     setLoading(true);
-    try {
-      const res = await userAxios.post("auth/login", { email, password });
+
+    const result = await loginUser(email, password);
+
+    if (result.success) {
       dispatch(
-        loginSuccess({ user: res.data.user, userAccessToken: res.data.token })
+        loginSuccess({
+          user: result.data.user,
+          userAccessToken: result.data.token,
+        })
       );
       setSuccessMsg("Login successful! Redirecting...");
       setTimeout(() => navigate("/"), 1500);
-    } catch (error) {
-      setServerError(error.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
+    } else {
+      setServerError(result.error || "Login failed");
     }
+
+    setLoading(false);
   };
 
   return (

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Container,
   Row,
@@ -11,21 +11,18 @@ import {
   Alert,
   Spinner,
   Badge,
-} from 'react-bootstrap';
+} from "react-bootstrap";
 import {
   FaSearch,
   FaSort,
   FaSortUp,
   FaSortDown,
   FaChartBar,
-} from 'react-icons/fa';
-import AdminLeftbar from '../../components/AdminLeftbar';
-import {
-  fetchDiscounts,
-  clearError,
-} from '../../redux/reducers/discountSlice';
-import adminAxios from '../../lib/adminAxios';
-import Swal from 'sweetalert2';
+} from "react-icons/fa";
+import AdminLeftbar from "../../components/AdminLeftbar";
+import { fetchDiscounts, clearError } from "../../redux/reducers/discountSlice";
+import Swal from "sweetalert2";
+import { getUsageStats } from "../../services/admin/adminDiscountUsageServices";
 
 // Debounce hook
 function useDebounce(value, delay) {
@@ -47,7 +44,7 @@ const AdminDiscountUsage = () => {
   const [usageStats, setUsageStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const inputRef = useRef(null);
@@ -70,37 +67,34 @@ const AdminDiscountUsage = () => {
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
-    console.log('AdminDiscountUsage mounted');
+    console.log("AdminDiscountUsage mounted");
   }, []);
 
   const fetchUsageStats = async () => {
     setLoading(true);
-    try {
-      const response = await adminAxios.get('/discounts/usage-stats', {
-        params: {
-          page: currentPage,
-          limit: 10,
-          search: debouncedSearchQuery,
-        }
-      });
-      setUsageStats(response.data);
-      setTotalPages(response.data.totalPages);
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to fetch usage statistics');
-    } finally {
-      setLoading(false);
+
+    const result = await getUsageStats(currentPage, debouncedSearchQuery);
+    console.log("admin discount result: ", result);
+
+    if (result.success) {
+      setUsageStats(result.data);
+      setTotalPages(result.data.totalPages);
+    } else {
+      setError(result.error);
     }
+
+    setLoading(false);
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   };
 
@@ -143,9 +137,9 @@ const AdminDiscountUsage = () => {
                         placeholder="Search by discount name..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        ref={el => {
+                        ref={(el) => {
                           inputRef.current = el;
-                          if (el) console.log('Search input mounted');
+                          if (el) console.log("Search input mounted");
                         }}
                       />
                     </div>
@@ -172,7 +166,10 @@ const AdminDiscountUsage = () => {
                       <tbody>
                         {usageStats.discountSummary?.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="text-center text-muted py-4">
+                            <td
+                              colSpan={4}
+                              className="text-center text-muted py-4"
+                            >
                               No usage data found.
                             </td>
                           </tr>
@@ -208,7 +205,10 @@ const AdminDiscountUsage = () => {
                       <tbody>
                         {usageStats.usageStats?.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="text-center text-muted py-4">
+                            <td
+                              colSpan={5}
+                              className="text-center text-muted py-4"
+                            >
                               No detailed usage data found.
                             </td>
                           </tr>
@@ -217,8 +217,13 @@ const AdminDiscountUsage = () => {
                             <tr key={usage._id}>
                               <td>
                                 <div>
-                                  <div>{usage.user?.firstName} {usage.user?.lastName}</div>
-                                  <small className="text-muted">{usage.user?.email}</small>
+                                  <div>
+                                    {usage.user?.firstName}{" "}
+                                    {usage.user?.lastName}
+                                  </div>
+                                  <small className="text-muted">
+                                    {usage.user?.email}
+                                  </small>
                                 </div>
                               </td>
                               <td>{usage.discount?.name}</td>
@@ -226,10 +231,14 @@ const AdminDiscountUsage = () => {
                                 <Badge bg="primary">{usage.usageCount}</Badge>
                               </td>
                               <td>
-                                {usage.lastUsedAt ? formatDate(usage.lastUsedAt) : 'Never'}
+                                {usage.lastUsedAt
+                                  ? formatDate(usage.lastUsedAt)
+                                  : "Never"}
                               </td>
                               <td>
-                                {usage.discount?.maxUsagePerUser ? usage.discount.maxUsagePerUser : 'Unlimited'}
+                                {usage.discount?.maxUsagePerUser
+                                  ? usage.discount.maxUsagePerUser
+                                  : "Unlimited"}
                               </td>
                             </tr>
                           ))
@@ -240,7 +249,7 @@ const AdminDiscountUsage = () => {
                 </>
               ) : (
                 <div className="text-center py-4">
-                  <FaChartBar className="mb-2" style={{ fontSize: '2rem' }} />
+                  <FaChartBar className="mb-2" style={{ fontSize: "2rem" }} />
                   <p>No usage data available.</p>
                 </div>
               )}
@@ -252,4 +261,4 @@ const AdminDiscountUsage = () => {
   );
 };
 
-export default AdminDiscountUsage; 
+export default AdminDiscountUsage;

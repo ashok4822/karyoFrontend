@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import adminAxios from "../../lib/adminAxios";
 import {
   showSuccessAlert,
   showErrorAlert,
@@ -34,6 +33,13 @@ import {
   FaEnvelope,
   FaCreditCard,
 } from "react-icons/fa";
+import {
+  getOrderById,
+  updateOrderItemPaymentStatus,
+  updateOrderItemStatus,
+  updateOrderStatus,
+  updatePaymentStatus,
+} from "../../services/admin/adminOrderService";
 
 const AdminOrderDetails = () => {
   const { id } = useParams();
@@ -82,7 +88,7 @@ const AdminOrderDetails = () => {
   useEffect(() => {
     if (order && order.items && Array.isArray(order.items)) {
       const initialStates = {};
-      order.items.forEach(item => {
+      order.items.forEach((item) => {
         initialStates[item._id] = item.itemStatus || "pending";
       });
       setItemStatusStates(initialStates);
@@ -96,7 +102,7 @@ const AdminOrderDetails = () => {
   useEffect(() => {
     if (order && order.items && Array.isArray(order.items)) {
       const initialStates = {};
-      order.items.forEach(item => {
+      order.items.forEach((item) => {
         initialStates[item._id] = item.itemPaymentStatus || "pending";
       });
       setItemPaymentStatusStates(initialStates);
@@ -107,16 +113,17 @@ const AdminOrderDetails = () => {
     const fetchOrder = async () => {
       setLoading(true);
       setError("");
-      try {
-        const res = await adminAxios.get(`/orders/${id}`);
-        setOrder(res.data.order);
-      } catch (err) {
-        setError(
-          err.response?.data?.message || "Failed to fetch order details"
-        );
-      } finally {
-        setLoading(false);
+
+      const result = await getOrderById(id);
+
+      console.log("AdminOrder Details result: ", result);
+
+      if (result.success) {
+        setOrder(result.data.order);
+      } else {
+        setError(result.error);
       }
+      setLoading(false);
     };
     fetchOrder();
   }, [id]);
@@ -130,32 +137,45 @@ const AdminOrderDetails = () => {
   };
 
   const handleUpdateStatus = async () => {
-    try {
-      await adminAxios.put(`/orders/${id}/status`, { status: selectedStatus });
-      // Refetch order details to update UI
-      const res = await adminAxios.get(`/orders/${id}`);
-      setOrder(res.data.order);
+    const result = await updateOrderStatus(id, selectedStatus);
+
+    if (result.success) {
+      // Refetch updated order details
+      const orderResult = await getOrderById(id);
+
+      if (orderResult.success) {
+        setOrder(orderResult.data.order);
+      }
+
       setShowStatusModal(false);
       showSuccessAlert("Success", "Order status updated successfully!");
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      showErrorAlert("Error", "Failed to update order status. Please try again.");
+    } else {
+      console.error("Error updating order status:", result.error);
+      showErrorAlert(
+        "Error",
+        result.error || "Failed to update order status. Please try again."
+      );
     }
   };
 
   const handleUpdatePaymentStatus = async () => {
-    try {
-      await adminAxios.put(`/orders/${id}/payment-status`, { 
-        paymentStatus: selectedPaymentStatus 
-      });
-      // Refetch order details to update UI
-      const res = await adminAxios.get(`/orders/${id}`);
-      setOrder(res.data.order);
+    const result = await updatePaymentStatus(id, selectedPaymentStatus);
+
+    if (result.success) {
+      const orderResult = await getOrderById(id);
+
+      if (orderResult.success) {
+        setOrder(orderResult.data.order);
+      }
+
       setShowPaymentStatusModal(false);
       showSuccessAlert("Success", "Payment status updated successfully!");
-    } catch (error) {
-      console.error("Error updating payment status:", error);
-      showErrorAlert("Error", "Failed to update payment status. Please try again.");
+    } else {
+      console.error("Error updating payment status:", result.error);
+      showErrorAlert(
+        "Error",
+        result.error || "Failed to update payment status. Please try again."
+      );
     }
   };
 
@@ -252,32 +272,50 @@ const AdminOrderDetails = () => {
           <Card className="border-0 shadow-sm">
             <Card.Header className="bg-transparent d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Order #{order.orderNumber}</h5>
-              <span className="fw-bold text-uppercase text-primary" style={{ fontSize: '1rem' }}>
-                {order.paymentMethod === 'cod' ? 'COD' : order.paymentMethod === 'online' ? 'Online' : '-'}
+              <span
+                className="fw-bold text-uppercase text-primary"
+                style={{ fontSize: "1rem" }}
+              >
+                {order.paymentMethod === "cod"
+                  ? "COD"
+                  : order.paymentMethod === "online"
+                  ? "Online"
+                  : "-"}
               </span>
             </Card.Header>
             {/* Customer Information (detailed, below order number) */}
             <div className="px-4 pt-3 pb-2">
               <div className="d-flex align-items-center mb-2 gap-3">
-                <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style={{ width: 40, height: 40 }}>
+                <div
+                  className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+                  style={{ width: 40, height: 40 }}
+                >
                   <FaUser className="text-primary" size={22} />
                 </div>
-                <div className="d-flex flex-wrap align-items-center gap-4" style={{ fontSize: '1.05rem', rowGap: '0.5rem' }}>
+                <div
+                  className="d-flex flex-wrap align-items-center gap-4"
+                  style={{ fontSize: "1.05rem", rowGap: "0.5rem" }}
+                >
                   <span className="fw-bold">
                     {order.user
                       ? order.user.firstName || order.user.lastName
-                        ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
+                        ? `${order.user.firstName || ""} ${
+                            order.user.lastName || ""
+                          }`.trim()
                         : order.user.username || order.user.email || "-"
                       : "-"}
                   </span>
                   <span className="text-muted d-flex align-items-center">
-                    <FaEnvelope className="me-1" />{order.user?.email || "-"}
+                    <FaEnvelope className="me-1" />
+                    {order.user?.email || "-"}
                   </span>
                   <span className="text-muted d-flex align-items-center">
-                    <FaPhone className="me-1" />{order.user?.mobileNo || "-"}
+                    <FaPhone className="me-1" />
+                    {order.user?.mobileNo || "-"}
                   </span>
                   <span className="text-muted d-flex align-items-center">
-                    <FaMapMarkerAlt className="me-1" />{order.user?.address || "-"}
+                    <FaMapMarkerAlt className="me-1" />
+                    {order.user?.address || "-"}
                   </span>
                 </div>
               </div>
@@ -304,11 +342,16 @@ const AdminOrderDetails = () => {
                       const product = variant.product || {};
                       const isCancelled = item.cancelled;
                       const itemStatus = item.itemStatus || "pending";
-                      const itemPaymentStatus = item.itemPaymentStatus || "pending";
+                      const itemPaymentStatus =
+                        item.itemPaymentStatus || "pending";
                       return (
                         <tr
                           key={item._id || variant._id || idx}
-                          style={isCancelled ? { opacity: 0.5, textDecoration: "line-through" } : {}}
+                          style={
+                            isCancelled
+                              ? { opacity: 0.5, textDecoration: "line-through" }
+                              : {}
+                          }
                         >
                           <td>
                             <div className="d-flex align-items-center">
@@ -340,30 +383,40 @@ const AdminOrderDetails = () => {
                               <Badge bg="danger">Cancelled</Badge>
                             ) : itemStatus === "return_verified" ? (
                               <Badge bg="success">Return Verified</Badge>
-                            ) : itemStatus === "returned" || (item.returned && itemStatus !== "return_verified") ? (
+                            ) : itemStatus === "returned" ||
+                              (item.returned &&
+                                itemStatus !== "return_verified") ? (
                               <Badge bg="warning">Return Requested</Badge>
                             ) : ["delivered"].includes(itemStatus) ? (
                               <Badge bg="info">Delivered</Badge>
                             ) : (
-                              <Badge bg="success">{itemStatus.charAt(0).toUpperCase() + itemStatus.slice(1)}</Badge>
+                              <Badge bg="success">
+                                {itemStatus.charAt(0).toUpperCase() +
+                                  itemStatus.slice(1)}
+                              </Badge>
                             )}
                           </td>
                           <td>
-                            <Badge bg={
-                              itemPaymentStatus === "paid"
-                                ? "success"
-                                : itemPaymentStatus === "failed"
-                                ? "danger"
-                                : itemPaymentStatus === "refunded"
-                                ? "info"
-                                : "warning"
-                            }>
-                              {itemPaymentStatus.charAt(0).toUpperCase() + itemPaymentStatus.slice(1)}
+                            <Badge
+                              bg={
+                                itemPaymentStatus === "paid"
+                                  ? "success"
+                                  : itemPaymentStatus === "failed"
+                                  ? "danger"
+                                  : itemPaymentStatus === "refunded"
+                                  ? "info"
+                                  : "warning"
+                              }
+                            >
+                              {itemPaymentStatus.charAt(0).toUpperCase() +
+                                itemPaymentStatus.slice(1)}
                             </Badge>
                           </td>
                           <td>
                             {isCancelled && item.cancellationReason ? (
-                              <span className="text-danger small">{item.cancellationReason}</span>
+                              <span className="text-danger small">
+                                {item.cancellationReason}
+                              </span>
                             ) : (
                               "-"
                             )}
@@ -371,7 +424,12 @@ const AdminOrderDetails = () => {
                           <td>
                             <Form.Select
                               value={itemStatusStates[item._id] || itemStatus}
-                              onChange={e => setItemStatusStates(s => ({ ...s, [item._id]: e.target.value }))}
+                              onChange={(e) =>
+                                setItemStatusStates((s) => ({
+                                  ...s,
+                                  [item._id]: e.target.value,
+                                }))
+                              }
                               size="sm"
                               disabled={isCancelled}
                             >
@@ -381,21 +439,47 @@ const AdminOrderDetails = () => {
                               <option value="delivered">Delivered</option>
                               <option value="cancelled">Cancelled</option>
                               <option value="returned">Returned</option>
-                              <option value="return_verified">Return Verified</option>
+                              <option value="return_verified">
+                                Return Verified
+                              </option>
                             </Form.Select>
                             <Button
                               variant="primary"
                               size="sm"
                               className="mt-1"
-                              disabled={isCancelled || (itemStatusStates[item._id] || itemStatus) === itemStatus}
+                              disabled={
+                                isCancelled ||
+                                (itemStatusStates[item._id] || itemStatus) ===
+                                  itemStatus
+                              }
                               onClick={async () => {
-                                try {
-                                  await adminAxios.put(`/orders/${order._id}/items/${item._id}/status`, { status: itemStatusStates[item._id] });
-                                  const res = await adminAxios.get(`/orders/${order._id}`);
-                                  setOrder(res.data.order);
-                                  showSuccessAlert("Success", "Item status updated successfully!");
-                                } catch (err) {
-                                  showErrorAlert("Error", "Failed to update item status.");
+                                const status = itemStatusStates[item._id];
+
+                                const result = await updateOrderItemStatus(
+                                  order._id,
+                                  item._id,
+                                  status
+                                );
+
+                                if (result.success) {
+                                  const orderResult = await getOrderById(
+                                    order._id
+                                  );
+
+                                  if (orderResult.success) {
+                                    setOrder(orderResult.data.order);
+                                  }
+
+                                  showSuccessAlert(
+                                    "Success",
+                                    "Item status updated successfully!"
+                                  );
+                                } else {
+                                  showErrorAlert(
+                                    "Error",
+                                    result.error ||
+                                      "Failed to update item status."
+                                  );
                                 }
                               }}
                             >
@@ -404,8 +488,16 @@ const AdminOrderDetails = () => {
                           </td>
                           <td>
                             <Form.Select
-                              value={itemPaymentStatusStates?.[item._id] || itemPaymentStatus}
-                              onChange={e => setItemPaymentStatusStates(s => ({ ...s, [item._id]: e.target.value }))}
+                              value={
+                                itemPaymentStatusStates?.[item._id] ||
+                                itemPaymentStatus
+                              }
+                              onChange={(e) =>
+                                setItemPaymentStatusStates((s) => ({
+                                  ...s,
+                                  [item._id]: e.target.value,
+                                }))
+                              }
                               size="sm"
                               disabled={isCancelled}
                             >
@@ -418,15 +510,41 @@ const AdminOrderDetails = () => {
                               variant="primary"
                               size="sm"
                               className="mt-1"
-                              disabled={isCancelled || (itemPaymentStatusStates?.[item._id] || itemPaymentStatus) === itemPaymentStatus}
+                              disabled={
+                                isCancelled ||
+                                (itemPaymentStatusStates?.[item._id] ||
+                                  itemPaymentStatus) === itemPaymentStatus
+                              }
                               onClick={async () => {
-                                try {
-                                  await adminAxios.put(`/orders/${order._id}/items/${item._id}/status`, { paymentStatus: itemPaymentStatusStates[item._id] });
-                                  const res = await adminAxios.get(`/orders/${order._id}`);
-                                  setOrder(res.data.order);
-                                  showSuccessAlert("Success", "Item payment status updated successfully!");
-                                } catch (err) {
-                                  showErrorAlert("Error", "Failed to update item payment status.");
+                                const paymentStatus =
+                                  itemPaymentStatusStates[item._id];
+
+                                const result =
+                                  await updateOrderItemPaymentStatus(
+                                    order._id,
+                                    item._id,
+                                    paymentStatus
+                                  );
+
+                                if (result.success) {
+                                  const orderResult = await getOrderById(
+                                    order._id
+                                  );
+
+                                  if (orderResult.success) {
+                                    setOrder(orderResult.data.order);
+                                  }
+
+                                  showSuccessAlert(
+                                    "Success",
+                                    "Item payment status updated successfully!"
+                                  );
+                                } else {
+                                  showErrorAlert(
+                                    "Error",
+                                    result.error ||
+                                      "Failed to update item payment status."
+                                  );
                                 }
                               }}
                             >
@@ -446,7 +564,10 @@ const AdminOrderDetails = () => {
                         ₹
                         {order.items
                           .filter((item) => !item.cancelled)
-                          .reduce((sum, item) => sum + (item.price * item.quantity), 0)
+                          .reduce(
+                            (sum, item) => sum + item.price * item.quantity,
+                            0
+                          )
                           .toFixed(2)}
                       </td>
                       <td colSpan="2"></td>
@@ -464,9 +585,10 @@ const AdminOrderDetails = () => {
                       (order.discount.discountName || order.discount.code) && (
                         <tr>
                           <td colSpan="6" className="text-end text-muted">
-                            Discount Availed: {" "}
+                            Discount Availed:{" "}
                             <strong>
-                              {order.discount.discountName || order.discount.code}
+                              {order.discount.discountName ||
+                                order.discount.code}
                             </strong>
                           </td>
                         </tr>
@@ -486,7 +608,12 @@ const AdminOrderDetails = () => {
                         <strong>
                           ₹
                           {(
-                            order.items.filter((item) => !item.cancelled).reduce((sum, item) => sum + (item.price * item.quantity), 0) - getDiscountAmount()
+                            order.items
+                              .filter((item) => !item.cancelled)
+                              .reduce(
+                                (sum, item) => sum + item.price * item.quantity,
+                                0
+                              ) - getDiscountAmount()
                           ).toFixed(2)}
                         </strong>
                       </td>
@@ -596,17 +723,24 @@ const AdminOrderDetails = () => {
       </Modal>
 
       {/* Payment Status Update Modal */}
-      <Modal show={showPaymentStatusModal} onHide={() => setShowPaymentStatusModal(false)}>
+      <Modal
+        show={showPaymentStatusModal}
+        onHide={() => setShowPaymentStatusModal(false)}
+      >
         <Modal.Header closeButton>
           <Modal.Title>Update Payment Status</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="alert alert-info mb-3">
-            <strong>Note:</strong> This option is only available for Cash on Delivery (COD) orders.
+            <strong>Note:</strong> This option is only available for Cash on
+            Delivery (COD) orders.
           </div>
           <Form.Group>
             <Form.Label>Payment Status</Form.Label>
-            <Form.Select value={selectedPaymentStatus} onChange={handlePaymentStatusChange}>
+            <Form.Select
+              value={selectedPaymentStatus}
+              onChange={handlePaymentStatusChange}
+            >
               <option value="">Select payment status</option>
               <option value="pending">Pending</option>
               <option value="paid">Paid</option>
@@ -618,20 +752,33 @@ const AdminOrderDetails = () => {
             <small className="text-muted">
               <strong>Status Descriptions:</strong>
               <ul className="mb-0 mt-1">
-                <li><strong>Pending:</strong> Payment is expected upon delivery</li>
-                <li><strong>Paid:</strong> Customer has paid the amount</li>
-                <li><strong>Failed:</strong> Customer refused to pay or payment failed</li>
-                <li><strong>Refunded:</strong> Amount has been refunded to customer</li>
+                <li>
+                  <strong>Pending:</strong> Payment is expected upon delivery
+                </li>
+                <li>
+                  <strong>Paid:</strong> Customer has paid the amount
+                </li>
+                <li>
+                  <strong>Failed:</strong> Customer refused to pay or payment
+                  failed
+                </li>
+                <li>
+                  <strong>Refunded:</strong> Amount has been refunded to
+                  customer
+                </li>
               </ul>
             </small>
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPaymentStatusModal(false)}>
+          <Button
+            variant="secondary"
+            onClick={() => setShowPaymentStatusModal(false)}
+          >
             Cancel
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleUpdatePaymentStatus}
             disabled={!selectedPaymentStatus}
           >
@@ -644,4 +791,3 @@ const AdminOrderDetails = () => {
 };
 
 export default AdminOrderDetails;
-

@@ -10,8 +10,10 @@ userAxios.interceptors.request.use(
     const userAccessToken = localStorage.getItem('userAccessToken');
     if (userAccessToken) {
       config.headers['Authorization'] = `Bearer ${userAccessToken}`;
+      console.log('userAxios request with token:', config.method?.toUpperCase(), config.url);
+    } else {
+      console.log('userAxios request without token:', config.method?.toUpperCase(), config.url);
     }
-    console.log('userAxios request:', config.method?.toUpperCase(), config.url);
     return config;
   },
   (error) => Promise.reject(error)
@@ -48,6 +50,12 @@ userAxios.interceptors.response.use(
         localStorage.removeItem('userAccessToken');
         localStorage.removeItem('userRole');
         window.location.href = '/login';
+        return Promise.reject(error);
+      }
+      
+      // Check if it's a user deleted error - let the component handle this
+      if (error.response.data?.message && error.response.data.message.includes('deleted')) {
+        console.log('userAxios: User deleted error, letting component handle');
         return Promise.reject(error);
       }
       

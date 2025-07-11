@@ -5,7 +5,8 @@ import { Navigate } from "react-router-dom";
 const UserProtectedRoute = ({ children }) => {
   const { user, userAccessToken } = useSelector((state) => state.auth);
 
-  if (!user || user?.role !== "user" || !userAccessToken || user?.isDeleted) {
+  // Don't check isDeleted here - let the backend and individual components handle that
+  if (!user || user?.role !== "user" || !userAccessToken) {
     return <Navigate to="/login" replace />;
   }
 

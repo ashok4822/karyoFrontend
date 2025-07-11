@@ -29,7 +29,10 @@ import {
   FaSortDown,
 } from "react-icons/fa";
 import AdminLeftbar from "../../components/AdminLeftbar";
-import adminAxios from "../../lib/adminAxios";
+import {
+  deleteOrderById,
+  getAllOrders,
+} from "../../services/admin/adminOrderService";
 
 const AdminOrders = () => {
   const navigate = useNavigate();
@@ -57,26 +60,24 @@ const AdminOrders = () => {
     const fetchOrders = async () => {
       setLoading(true);
       setError("");
-      try {
-        const params = {
-          page: currentPage,
-          limit: ordersPerPage,
-          status: statusFilter || undefined,
-          search: searchTerm || undefined,
-          sortBy: sortField,
-          sortOrder: sortDirection,
-        };
-        const res = await adminAxios.get("/orders", { params });
-        setOrders(res.data.orders || []);
-        setTotalPages(res.data.totalPages || 1);
-        setTotal(res.data.total || 0);
-      } catch (err) {
-        setError(
-          err.response?.data?.message || "Failed to fetch orders from server"
-        );
-      } finally {
-        setLoading(false);
+      const result = await getAllOrders({
+        page: currentPage,
+        limit: ordersPerPage,
+        status: statusFilter || undefined,
+        search: searchTerm || undefined,
+        sortBy: sortField,
+        sortOrder: sortDirection,
+      });
+
+      if (result.success) {
+        const { orders = [], totalPages = 1, total = 0 } = result.data;
+        setOrders(orders);
+        setTotalPages(totalPages);
+        setTotal(total);
+      } else {
+        setError(result.error);
       }
+      setLoading(false);
     };
     fetchOrders();
   }, [currentPage, statusFilter, searchTerm, sortField, sortDirection]);
@@ -113,22 +114,29 @@ const AdminOrders = () => {
   };
 
   const handleDeleteOrder = async (orderId) => {
-    try {
-      await adminAxios.delete(`/orders/${orderId}`);
-      // Refresh orders list after delete
-      const params = {
+    const result = await deleteOrderById(orderId);
+
+    if (result.success) {
+      const ordersResult = await getAllOrders({
         page: currentPage,
         limit: ordersPerPage,
         status: statusFilter || undefined,
         search: searchTerm || undefined,
         sortBy: sortField,
         sortOrder: sortDirection,
-      };
-      const res = await adminAxios.get("/orders", { params });
-      setOrders(res.data.orders || []);
-      setShowDeleteModal(false);
-    } catch (error) {
-      console.error("Error deleting order:", error);
+      });
+
+      if (ordersResult.success) {
+        setOrders(ordersResult.data.orders || []);
+        setShowDeleteModal(false);
+      } else {
+        console.error(
+          "Failed to refresh orders after deletion:",
+          ordersResult.error
+        );
+      }
+    } else {
+      console.error("Error deleting order:", result.error);
     }
   };
 
@@ -238,7 +246,17 @@ const AdminOrders = () => {
                         <button
                           type="button"
                           onClick={() => handleSort("orderNumber")}
-                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            margin: 0,
+                            font: "inherit",
+                            color: "inherit",
+                            cursor: "pointer",
+                            width: "100%",
+                            textAlign: "left",
+                          }}
                         >
                           <div className="d-flex align-items-center gap-2">
                             Order ID
@@ -250,7 +268,17 @@ const AdminOrders = () => {
                         <button
                           type="button"
                           onClick={() => handleSort("createdAt")}
-                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            margin: 0,
+                            font: "inherit",
+                            color: "inherit",
+                            cursor: "pointer",
+                            width: "100%",
+                            textAlign: "left",
+                          }}
                         >
                           <div className="d-flex align-items-center gap-2">
                             Date
@@ -263,7 +291,17 @@ const AdminOrders = () => {
                         <button
                           type="button"
                           onClick={() => handleSort("total")}
-                          style={{ background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            margin: 0,
+                            font: "inherit",
+                            color: "inherit",
+                            cursor: "pointer",
+                            width: "100%",
+                            textAlign: "left",
+                          }}
                         >
                           <div className="d-flex align-items-center gap-2">
                             Total
@@ -446,27 +484,36 @@ const AdminOrders = () => {
                   variant="primary"
                   onClick={async () => {
                     if (!statusUpdatingOrder) return;
-                    try {
-                      await adminAxios.put(
-                        `/orders/${
-                          statusUpdatingOrder._id || statusUpdatingOrder.id
-                        }/status`,
-                        { status: newStatus }
-                      );
-                      // Refresh orders list
-                      const params = {
+                    const orderId =
+                      statusUpdatingOrder._id || statusUpdatingOrder.id;
+
+                    const updateResult = await updateOrderStatus(
+                      orderId,
+                      newStatus
+                    );
+
+                    if (updateResult.success) {
+                      const fetchResult = await getAllOrders({
                         page: currentPage,
                         limit: ordersPerPage,
                         status: statusFilter || undefined,
                         search: searchTerm || undefined,
                         sortBy: sortField,
                         sortOrder: sortDirection,
-                      };
-                      const res = await adminAxios.get("/orders", { params });
-                      setOrders(res.data.orders || []);
-                      setShowStatusModal(false);
-                    } catch (err) {
-                      alert("Failed to update status");
+                      });
+
+                      if (fetchResult.success) {
+                        setOrders(fetchResult.data.orders || []);
+                        setShowStatusModal(false);
+                        showSuccessAlert(
+                          "Success",
+                          "Order status updated successfully!"
+                        );
+                      } else {
+                        alert("Failed to refresh orders.");
+                      }
+                    } else {
+                      alert(updateResult.error || "Failed to update status.");
                     }
                   }}
                 >

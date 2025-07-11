@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom/dist/umd/react-router-dom.development";
-import userAxios from "../../lib/userAxios";
-import adminAxios from "../../lib/adminAxios";
-import { loginSuccess, setUserAccessToken, logoutUser, setAdminAccessToken, loginSuccess as adminLoginSuccess, logoutAdmin } from '../../redux/reducers/authSlice';
-import { fetchWishlist } from '../../redux/reducers/wishlistSlice';
-import { fetchCart } from '../../redux/reducers/cartSlice';
+import userAxios from "../lib/userAxios";
+import adminAxios from "../lib/adminAxios";
+import { loginSuccess, setUserAccessToken, logoutUser, setAdminAccessToken, loginSuccess as adminLoginSuccess, logoutAdmin } from '../redux/reducers/authSlice';
+import { fetchWishlist } from '../redux/reducers/wishlistSlice';
+import { fetchCart } from '../redux/reducers/cartSlice';
 
 const AuthSync = ({ onRestored = () => {} }) => {
   const dispatch = useDispatch();
@@ -27,8 +27,8 @@ const AuthSync = ({ onRestored = () => {} }) => {
       "/google-auth-success",
     ];
 
-    // Skip sync on public routes
-    if (publicPaths.includes(location.pathname)) {
+    // Skip sync on public routes and profile page (let profile page handle its own auth)
+    if (publicPaths.includes(location.pathname) || location.pathname === "/profile") {
       onRestored();
       setLoading(false);
       return;

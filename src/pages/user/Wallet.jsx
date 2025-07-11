@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import userAxios from "../../lib/userAxios";
 import { Modal, Button, Toast, ToastContainer, Spinner } from "react-bootstrap";
 import {
   FaWallet,
@@ -11,6 +10,12 @@ import {
   FaArrowLeft,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import {
+  addFunds,
+  deductFunds,
+  getWallet,
+} from "../../services/user/walletService";
+import { getWalletTransactions } from "../../services/user/transactionService";
 
 const Wallet = () => {
   const [wallet, setWallet] = useState(null);
@@ -30,27 +35,31 @@ const Wallet = () => {
   }, []);
 
   const fetchWallet = async () => {
-    try {
-      setLoading(true);
-      const res = await userAxios.get("/users/wallet");
-      setWallet(res.data);
-      setLoading(false);
-    } catch (err) {
+    setLoading(true);
+    const { success, data, error } = await getWallet();
+
+    if (success) {
+      setWallet(data);
+    } else {
       setToastMsg("Failed to fetch wallet");
       setToastVariant("danger");
       setShowToast(true);
-      setLoading(false);
+      console.error("Wallet fetch error:", error);
     }
+
+    setLoading(false);
   };
 
   const fetchTransactions = async () => {
-    try {
-      const res = await userAxios.get("/users/wallet/transactions");
-      setTransactions(res.data.reverse());
-    } catch (err) {
+    const { success, data, error } = await getWalletTransactions();
+
+    if (success) {
+      setTransactions(data.reverse());
+    } else {
       setToastMsg("Failed to fetch transactions");
       setToastVariant("danger");
       setShowToast(true);
+      console.error("Transaction fetch error:", error);
     }
   };
 
@@ -62,36 +71,32 @@ const Wallet = () => {
       setShowToast(true);
       return;
     }
+
     setLoading(true);
-    try {
-      if (type === "add") {
-        await userAxios.post("/users/wallet/add", {
-          amount: numAmount,
-          description,
-        });
-        setToastMsg("Funds added successfully");
-        setToastVariant("success");
-      } else {
-        await userAxios.post("/users/wallet/deduct", {
-          amount: numAmount,
-          description,
-        });
-        setToastMsg("Funds deducted successfully");
-        setToastVariant("success");
-      }
-      setShowToast(true);
+    const payload = { amount: numAmount, description };
+
+    const response =
+      type === "add" ? await addFunds(payload) : await deductFunds(payload);
+
+    if (response.success) {
+      setToastMsg(
+        type === "add"
+          ? "Funds added successfully"
+          : "Funds deducted successfully"
+      );
+      setToastVariant("success");
       setAmount("");
       setDescription("");
       setModalType(null);
       fetchWallet();
       fetchTransactions();
-    } catch (err) {
-      setToastMsg(err.response?.data?.message || `Failed to ${type} funds`);
+    } else {
+      setToastMsg(response.error || `Failed to ${type} funds`);
       setToastVariant("danger");
-      setShowToast(true);
-    } finally {
-      setLoading(false);
     }
+
+    setShowToast(true);
+    setLoading(false);
   };
 
   const formatDate = (date) => {

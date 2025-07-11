@@ -6,7 +6,6 @@ import {
   logoutAdmin,
   loginSuccess,
 } from "../../redux/reducers/authSlice";
-import adminAxios from "../../lib/adminAxios";
 import {
   Container,
   Row,
@@ -25,6 +24,7 @@ import {
   FaSignInAlt,
   FaExclamationTriangle,
 } from "react-icons/fa";
+import { adminLogin } from "../../services/admin/adminAuthService";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -59,26 +59,27 @@ const AdminLogin = () => {
     setLoading(true);
     setError("");
 
-    try {
-      const { data } = await adminAxios.post("/login", formData);
+    const result = await adminLogin(formData);
+
+    console.log("adminLogin result: ", result);
+
+    if (result.success) {
+      const data = result.data;
       localStorage.setItem("adminAccessToken", data.token);
 
-      // Dispatch admin login
       dispatch(
         loginSuccess({
-          user: data.user, // includes id, email, name, etc.
+          user: data.user,
           adminAccessToken: data.token,
         })
       );
 
       navigate("/admin");
-    } catch (error) {
-      setError(
-        error.response?.data?.message || error.message || "Login failed"
-      );
-    } finally {
-      setLoading(false);
+    } else {
+      setError(result.error);
     }
+
+    setLoading(false);
   };
 
   return (

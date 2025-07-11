@@ -10,8 +10,9 @@ import EditVariantModal from "../../components/EditVariantModal";
 import ViewVariantModal from "../../components/ViewVariantModal";
 import AddVariantModal from "../../components/AddVariantModal";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
-import adminAxios from "../../lib/adminAxios";
 import Swal from "sweetalert2";
+import { getAllActiveCategories } from "../../services/admin/adminCategoryService";
+import { getVariantOptions } from "../../services/admin/adminProductService";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
@@ -45,29 +46,35 @@ const ProductManagement = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      try {
-        const { data } = await adminAxios.get("/categories?status=active");
-        setCategories(data.categories || data);
-      } catch (err) {
+      const result = await getAllActiveCategories();
+
+      if (result.success) {
+        setCategories(result.data.categories || result.data);
+      } else {
         setCategories([]);
+        console.error("Failed to fetch categories:", result.error);
       }
     };
 
     const fetchVariantOptions = async () => {
-      try {
-        const { data } = await adminAxios.get("/products/variant-options");
-        setVariantOptions(data);
-      } catch (err) {
+      const result = await getVariantOptions();
+
+      if (result.success) {
+        setVariantOptions(result.data);
+      } else {
         setVariantOptions({ colours: [], capacities: [] });
+        console.error("Failed to fetch variant options:", result.error);
       }
     };
 
     const fetchBrands = async () => {
-      try {
-        const { data } = await adminAxios.get("/products/brand-options");
-        setBrands(data.brands);
-      } catch (err) {
+      const result = await getBrandOptions();
+
+      if (result.success) {
+        setBrands(result.data.brands || []);
+      } else {
         setBrands([]);
+        console.error("Failed to fetch brands:", result.error);
       }
     };
 
@@ -123,39 +130,39 @@ const ProductManagement = () => {
       confirmButtonText: "Yes, delete it!",
     });
 
-    if (result.isConfirmed) {
-      try {
-        await adminAxios.delete(`/products/${id}`);
-        Swal.fire("Deleted!", "Product has been deleted.", "success");
+    if (!result.isConfirmed) return;
 
-        // Refresh products after deletion
-        // If we're on the last page and it's the only item, go to previous page
-        if (products.length === 1 && currentPage > 1) {
-          setCurrentPage(currentPage - 1);
-        } else {
-          // Refresh current page
-          dispatch(
-            fetchProductsFromBackend({
-              page: currentPage,
-              limit: 5,
-              search: searchQuery,
-              category: categoryFilter !== "all" ? categoryFilter : "",
-              status: statusFilter !== "all" ? statusFilter : "",
-              brand: brandFilter !== "all" ? brandFilter : "",
-              variantColour:
-                variantColourFilter !== "all" ? variantColourFilter : "",
-              variantCapacity:
-                variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-            })
-          );
-        }
-      } catch (error) {
-        Swal.fire(
-          "Error!",
-          error.response?.data?.message || "Failed to delete product",
-          "error"
+    const deleteResult = await deleteProduct(id);
+
+    if (deleteResult.success) {
+      Swal.fire("Deleted!", "Product has been deleted.", "success");
+
+      // Go to previous page if current page has only 1 item left
+      if (products.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        // Refresh current page
+        dispatch(
+          fetchProductsFromBackend({
+            page: currentPage,
+            limit: 5,
+            search: searchQuery,
+            category: categoryFilter !== "all" ? categoryFilter : "",
+            status: statusFilter !== "all" ? statusFilter : "",
+            brand: brandFilter !== "all" ? brandFilter : "",
+            variantColour:
+              variantColourFilter !== "all" ? variantColourFilter : "",
+            variantCapacity:
+              variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+          })
         );
       }
+    } else {
+      Swal.fire(
+        "Error!",
+        deleteResult.error || "Failed to delete product",
+        "error"
+      );
     }
   };
 
@@ -234,49 +241,40 @@ const ProductManagement = () => {
       return;
     }
 
-    try {
-      const confirmed = await Swal.fire({
-        title: "Are you sure?",
-        text: "You won't be able to revert this!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Yes, delete it!",
-      });
+    const confirmed = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-      if (confirmed.isConfirmed) {
-        const response = await adminAxios.delete(
-          `/products/${productId}/variants/${variantId}`
-        );
+    if (!confirmed.isConfirmed) return;
 
-        if (response.status === 200) {
-          Swal.fire("Deleted!", "Variant has been deleted.", "success");
+    const result = await deleteVariant(productId, variantId);
 
-          // Refresh the product list with current pagination
-          dispatch(
-            fetchProductsFromBackend({
-              page: currentPage,
-              limit: 5,
-              search: searchQuery,
-              category: categoryFilter !== "all" ? categoryFilter : "",
-              status: statusFilter !== "all" ? statusFilter : "",
-              brand: brandFilter !== "all" ? brandFilter : "",
-              variantColour:
-                variantColourFilter !== "all" ? variantColourFilter : "",
-              variantCapacity:
-                variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-            })
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error deleting variant:", error);
-      Swal.fire(
-        "Error!",
-        error.response?.data?.message || "Failed to delete variant",
-        "error"
+    if (result.success) {
+      Swal.fire("Deleted!", "Variant has been deleted.", "success");
+
+      // Refresh the product list
+      dispatch(
+        fetchProductsFromBackend({
+          page: currentPage,
+          limit: 5,
+          search: searchQuery,
+          category: categoryFilter !== "all" ? categoryFilter : "",
+          status: statusFilter !== "all" ? statusFilter : "",
+          brand: brandFilter !== "all" ? brandFilter : "",
+          variantColour:
+            variantColourFilter !== "all" ? variantColourFilter : "",
+          variantCapacity:
+            variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+        })
       );
+    } else {
+      Swal.fire("Error!", result.error || "Failed to delete variant", "error");
     }
   };
 

@@ -30,7 +30,7 @@ import {
   fetchDashboardFailure,
 } from "../../redux/reducers/dashboardSlice";
 import AdminLeftbar from "../../components/AdminLeftbar";
-import adminAxios from "../../lib/adminAxios";
+import { getDashboardData } from "../../services/admin/adminDashboaredServices";
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
@@ -40,14 +40,15 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      try {
-        dispatch(fetchDashboardStart());
-        // Use axios instance for API call
-        // const { data } = await api.get("/dashboard");
-        const { data } = await adminAxios.get("/dashboard");
-        dispatch(fetchDashboardSuccess(data));
-      } catch (error) {
-        dispatch(fetchDashboardFailure(error.message));
+      dispatch(fetchDashboardStart());
+
+      const result = await getDashboardData();
+      console.log("dashboard result1: ", result);
+
+      if (result.success) {
+        dispatch(fetchDashboardSuccess(result.data));
+      } else {
+        dispatch(fetchDashboardFailure(result.error));
       }
     };
 

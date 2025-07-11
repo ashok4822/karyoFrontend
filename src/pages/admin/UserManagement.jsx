@@ -18,6 +18,10 @@ import {
 import { FaSearch, FaPlus, FaUserTimes, FaUserCheck } from "react-icons/fa";
 import AdminLeftbar from "../../components/AdminLeftbar";
 import adminAxios from "../../lib/adminAxios";
+import {
+  getUsers,
+  toggleBlockUser,
+} from "../../services/admin/adminUserService";
 
 const UserManagement = () => {
   const navigate = useNavigate();
@@ -36,21 +40,24 @@ const UserManagement = () => {
   const fetchUsers = async (page = 1, search = "", status = statusFilter) => {
     setLoading(true);
     setError("");
-    try {
-      const res = await adminAxios.get(
-        `/users?page=${page}&limit=${usersPerPage}&search=${encodeURIComponent(
-          search
-        )}&status=${status}`
-      );
-      setUsers(res.data.users);
-      setTotalPages(res.data.totalPages);
-      setTotal(res.data.total);
-      setCurrentPage(res.data.page);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to fetch users");
-    } finally {
-      setLoading(false);
+
+    const result = await getUsers({
+      page,
+      limit: usersPerPage,
+      search,
+      status,
+    });
+
+    if (result.success) {
+      setUsers(result.data.users);
+      setTotalPages(result.data.totalPages);
+      setTotal(result.data.total);
+      setCurrentPage(result.data.page);
+    } else {
+      setError(result.error || "Failed to fetch users");
     }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -75,28 +82,32 @@ const UserManagement = () => {
 
   const confirmBlockUnblock = async () => {
     if (!selectedUser) return;
+
     setLoading(true);
-    try {
-      await adminAxios.patch(`/users/${selectedUser._id}/block`);
+    setError("");
+
+    const result = await toggleBlockUser(selectedUser._id);
+
+    if (result.success) {
       fetchUsers(currentPage, searchTerm, statusFilter);
       setShowStatusModal(false);
       setSelectedUser(null);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to update user status");
-    } finally {
-      setLoading(false);
+    } else {
+      setError(result.error || "Failed to update user status");
     }
+
+    setLoading(false);
   };
 
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+
     return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   };
 

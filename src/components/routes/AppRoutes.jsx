@@ -1,10 +1,5 @@
 import React, { useState } from "react";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "../Layout";
 
 // Pages
@@ -24,7 +19,7 @@ import AdminRedirectRoute from "../../components/AdminRedirectRoute";
 import ForgotPassword from "../../pages/user/ForgotPassword";
 import GoogleAuthSuccess from "../../pages/user/GoogleAuthSuccess";
 import UserLogin from "../../pages/user/UserLogin";
-import AuthSync from "../../utils/sessionRestorationUtility/AuthSync";
+import AuthSync from "../../utils/AuthSync";
 import AdminProtectedRoute from "./protectedRoutes/AdminProtectedRoute";
 import UserProtectedRoute from "./protectedRoutes/UserProtectedRoute";
 import UserProfile from "../../pages/user/UserProfile";

@@ -18,7 +18,6 @@ import {
   FaComments,
   FaPaperPlane,
 } from "react-icons/fa";
-import userAxios from "../../lib/userAxios";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -83,28 +82,30 @@ const Contact = () => {
     setServerError("");
     setSuccessMsg("");
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
-    try {
-      const response = await userAxios.post('/contact', formData);
-      
-      setSuccessMsg(response.data.message || "Thank you for your message! We'll get back to you soon.");
+
+    const result = await submitContactForm(formData);
+
+    if (result.success) {
+      setSuccessMsg(
+        result.data.message ||
+          "Thank you for your message! We'll get back to you soon."
+      );
       setFormData({
         name: "",
         email: "",
         subject: "",
         message: "",
       });
-    } catch (error) {
+    } else {
       setServerError(
-        error.response?.data?.message || "Failed to send message. Please try again."
+        result.error || "Failed to send message. Please try again."
       );
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   };
 
   const contactInfo = [
@@ -136,7 +137,8 @@ const Contact = () => {
         <Col lg={8} className="text-center">
           <h1 className="fw-bold text-primary mb-3">Contact Us</h1>
           <p className="lead text-muted">
-            Have questions or need assistance? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            Have questions or need assistance? We'd love to hear from you. Send
+            us a message and we'll respond as soon as possible.
           </p>
         </Col>
       </Row>
@@ -158,7 +160,7 @@ const Contact = () => {
                   </div>
                 ))}
               </div>
-              
+
               <div className="mt-4 pt-4 border-top">
                 <h6 className="fw-semibold mb-3">Follow Us</h6>
                 <div className="d-flex gap-3">
@@ -185,10 +187,10 @@ const Contact = () => {
           <Card className="border-0 shadow-sm">
             <Card.Body className="p-4 p-md-5">
               <h4 className="fw-bold mb-4">Send us a Message</h4>
-              
+
               {serverError && <Alert variant="danger">{serverError}</Alert>}
               {successMsg && <Alert variant="success">{successMsg}</Alert>}
-              
+
               <Form onSubmit={handleSubmit}>
                 <Row>
                   <Col md={6}>
@@ -280,7 +282,11 @@ const Contact = () => {
                 >
                   {loading ? (
                     <>
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
                       Sending...
                     </>
                   ) : (
@@ -300,33 +306,51 @@ const Contact = () => {
         <Col lg={12}>
           <Card className="border-0 shadow-sm">
             <Card.Body className="p-4 p-md-5">
-              <h4 className="fw-bold mb-4 text-center">Frequently Asked Questions</h4>
+              <h4 className="fw-bold mb-4 text-center">
+                Frequently Asked Questions
+              </h4>
               <Row>
                 <Col md={6}>
                   <div className="mb-4">
-                    <h6 className="fw-semibold mb-2">How can I track my order?</h6>
+                    <h6 className="fw-semibold mb-2">
+                      How can I track my order?
+                    </h6>
                     <p className="text-muted small mb-0">
-                      You can track your order by logging into your account and visiting the order history section, or by using the tracking number provided in your order confirmation email.
+                      You can track your order by logging into your account and
+                      visiting the order history section, or by using the
+                      tracking number provided in your order confirmation email.
                     </p>
                   </div>
                   <div className="mb-4">
-                    <h6 className="fw-semibold mb-2">What is your return policy?</h6>
+                    <h6 className="fw-semibold mb-2">
+                      What is your return policy?
+                    </h6>
                     <p className="text-muted small mb-0">
-                      We offer a 30-day return policy for all unused items in their original packaging. Please contact our customer service team to initiate a return.
+                      We offer a 30-day return policy for all unused items in
+                      their original packaging. Please contact our customer
+                      service team to initiate a return.
                     </p>
                   </div>
                 </Col>
                 <Col md={6}>
                   <div className="mb-4">
-                    <h6 className="fw-semibold mb-2">Do you ship internationally?</h6>
+                    <h6 className="fw-semibold mb-2">
+                      Do you ship internationally?
+                    </h6>
                     <p className="text-muted small mb-0">
-                      Currently, we ship to most countries worldwide. Shipping costs and delivery times vary by location. Check our shipping page for more details.
+                      Currently, we ship to most countries worldwide. Shipping
+                      costs and delivery times vary by location. Check our
+                      shipping page for more details.
                     </p>
                   </div>
                   <div className="mb-4">
-                    <h6 className="fw-semibold mb-2">How can I contact customer support?</h6>
+                    <h6 className="fw-semibold mb-2">
+                      How can I contact customer support?
+                    </h6>
                     <p className="text-muted small mb-0">
-                      You can reach our customer support team through this contact form, email us at support@caryo.com, or call us at (123) 456-7890 during business hours.
+                      You can reach our customer support team through this
+                      contact form, email us at support@caryo.com, or call us at
+                      (123) 456-7890 during business hours.
                     </p>
                   </div>
                 </Col>
@@ -339,4 +363,4 @@ const Contact = () => {
   );
 };
 
-export default Contact; 
+export default Contact;

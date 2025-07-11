@@ -4,9 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "../../hooks/use-toast";
 import { fetchCart } from "../../redux/reducers/cartSlice";
 import { createOrder } from "../../redux/reducers/orderSlice";
-import { fetchShippingAddresses, createShippingAddress, updateShippingAddress, setDefaultShippingAddress } from "../../redux/reducers/shippingAddressSlice";
-import { fetchUserActiveDiscounts, setSelectedDiscount, clearSelectedDiscount } from "../../redux/reducers/userDiscountSlice";
-import userAxios from "../../lib/userAxios";
+import {
+  fetchShippingAddresses,
+  createShippingAddress,
+  updateShippingAddress,
+  setDefaultShippingAddress,
+} from "../../redux/reducers/shippingAddressSlice";
+import {
+  fetchUserActiveDiscounts,
+  setSelectedDiscount,
+  clearSelectedDiscount,
+} from "../../redux/reducers/userDiscountSlice";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 
 const Checkout = () => {
@@ -85,7 +93,14 @@ const Checkout = () => {
       dispatch(fetchUserActiveDiscounts());
       setDiscountsFetchAttempted(true);
     }
-  }, [dispatch, cartInitialized, userDiscounts.loading, userDiscounts.activeDiscounts.length, discountsFetchAttempted, userDiscounts.error]);
+  }, [
+    dispatch,
+    cartInitialized,
+    userDiscounts.loading,
+    userDiscounts.activeDiscounts.length,
+    discountsFetchAttempted,
+    userDiscounts.error,
+  ]);
 
   useEffect(() => {
     // Wait for cart to be initialized before making any checks
@@ -116,10 +131,11 @@ const Checkout = () => {
     }
 
     // Check if there are any disabled items
-    const hasDisabledItems = cart.items.some(item => {
+    const hasDisabledItems = cart.items.some((item) => {
       const variant = item.productVariantId;
       const product = variant?.product;
-      const isInactive = product?.status === 'inactive' || variant?.status === 'inactive';
+      const isInactive =
+        product?.status === "inactive" || variant?.status === "inactive";
       const isOutOfStock = (variant?.stock || 0) <= 0;
       return isInactive || isOutOfStock;
     });
@@ -142,7 +158,7 @@ const Checkout = () => {
 
     // Pre-fill form with user data if available
     if (auth.user) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         recipientName: auth.user.firstName || "",
         addressLine1: auth.user.address || "",
@@ -153,12 +169,26 @@ const Checkout = () => {
         phoneNumber: auth.user.phone || "",
       }));
     }
-  }, [cartInitialized, cart.items, auth.user, navigate, dispatch, addressesLoaded]);
+  }, [
+    cartInitialized,
+    cart.items,
+    auth.user,
+    navigate,
+    dispatch,
+    addressesLoaded,
+  ]);
 
   // Set default address when addresses are loaded
   useEffect(() => {
-    if (shippingAddress.addresses && shippingAddress.addresses.length > 0 && !selectedAddressId && !shippingAddress.loading) {
-      const defaultAddress = shippingAddress.addresses.find(addr => addr.isDefault);
+    if (
+      shippingAddress.addresses &&
+      shippingAddress.addresses.length > 0 &&
+      !selectedAddressId &&
+      !shippingAddress.loading
+    ) {
+      const defaultAddress = shippingAddress.addresses.find(
+        (addr) => addr.isDefault
+      );
       if (defaultAddress) {
         setSelectedAddressId(defaultAddress._id);
       } else {
@@ -169,32 +199,40 @@ const Checkout = () => {
 
   // Calculation functions
   const getSelectedAddress = () => {
-    return shippingAddress.addresses?.find(addr => addr._id === selectedAddressId);
+    return shippingAddress.addresses?.find(
+      (addr) => addr._id === selectedAddressId
+    );
   };
 
   const calculateSubtotal = () => {
-    return cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.items.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
   };
 
   const calculateDiscount = () => {
     if (!userDiscounts.selectedDiscount) return 0;
-    
+
     const subtotal = calculateSubtotal();
     const discount = userDiscounts.selectedDiscount;
-    
+
     let discountAmount = 0;
-    
+
     if (discount.discountType === "percentage") {
       discountAmount = (subtotal * discount.discountValue) / 100;
-      
+
       // Apply maximum discount limit if set
-      if (discount.maximumDiscount && discountAmount > discount.maximumDiscount) {
+      if (
+        discount.maximumDiscount &&
+        discountAmount > discount.maximumDiscount
+      ) {
         discountAmount = discount.maximumDiscount;
       }
     } else {
       discountAmount = Math.min(discount.discountValue, subtotal);
     }
-    
+
     // Ensure discount doesn't exceed order amount
     return Math.min(discountAmount, subtotal);
   };
@@ -218,29 +256,30 @@ const Checkout = () => {
     if (!selectedAddress) return;
 
     setCodChecking(true);
-    try {
-      const response = await userAxios.post('/orders/check-cod', {
-        state: selectedAddress.state,
-        total: calculateTotal()
-      });
-      
-      setCodAvailable(response.data.isAvailable);
-      
-      // If COD is not available and currently selected, switch to online payment
-      if (!response.data.isAvailable && paymentMethod === "cod") {
+
+    const result = await checkCOD(selectedAddress.state, calculateTotal());
+
+    if (result.success) {
+      setCodAvailable(result.data.isAvailable);
+
+      if (!result.data.isAvailable && paymentMethod === "cod") {
         setPaymentMethod("online");
       }
-    } catch (error) {
-      console.error("Error checking COD availability:", error);
+    } else {
+      console.error("COD check error:", result.error);
       setCodAvailable(false);
-      // If there's an error and COD is currently selected, switch to online payment
       if (paymentMethod === "cod") {
         setPaymentMethod("online");
       }
-    } finally {
-      setCodChecking(false);
     }
-  }, [selectedAddressId, cart.items, userDiscounts.selectedDiscount, paymentMethod]);
+
+    setCodChecking(false);
+  }, [
+    selectedAddressId,
+    cart.items,
+    userDiscounts.selectedDiscount,
+    paymentMethod,
+  ]);
 
   // Check COD availability when address or total changes
   useEffect(() => {
@@ -258,32 +297,32 @@ const Checkout = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ""
+        [name]: "",
       }));
     }
   };
 
   const handleEditInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
+    setEditFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
-    
+
     // Clear error when user starts typing
     if (editErrors[name]) {
-      setEditErrors(prev => ({
+      setEditErrors((prev) => ({
         ...prev,
-        [name]: ""
+        [name]: "",
       }));
     }
   };
@@ -321,13 +360,13 @@ const Checkout = () => {
   const handleSetAsDefault = async (addressId) => {
     try {
       await dispatch(setDefaultShippingAddress(addressId)).unwrap();
-      
+
       toast({
         title: "Default address updated",
-        description: "The selected address has been set as your default shipping address",
+        description:
+          "The selected address has been set as your default shipping address",
         variant: "default",
       });
-      
     } catch (error) {
       toast({
         title: "Failed to set default address",
@@ -340,13 +379,17 @@ const Checkout = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.recipientName.trim()) newErrors.recipientName = "Recipient name is required";
-    if (!formData.addressLine1.trim()) newErrors.addressLine1 = "Address line 1 is required";
+    if (!formData.recipientName.trim())
+      newErrors.recipientName = "Recipient name is required";
+    if (!formData.addressLine1.trim())
+      newErrors.addressLine1 = "Address line 1 is required";
     if (!formData.city.trim()) newErrors.city = "City is required";
     if (!formData.state.trim()) newErrors.state = "State is required";
-    if (!formData.postalCode.trim()) newErrors.postalCode = "Postal code is required";
+    if (!formData.postalCode.trim())
+      newErrors.postalCode = "Postal code is required";
     if (!formData.country.trim()) newErrors.country = "Country is required";
-    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
+    if (!formData.phoneNumber.trim())
+      newErrors.phoneNumber = "Phone number is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -355,13 +398,17 @@ const Checkout = () => {
   const validateEditForm = () => {
     const newErrors = {};
 
-    if (!editFormData.recipientName.trim()) newErrors.recipientName = "Recipient name is required";
-    if (!editFormData.addressLine1.trim()) newErrors.addressLine1 = "Address line 1 is required";
+    if (!editFormData.recipientName.trim())
+      newErrors.recipientName = "Recipient name is required";
+    if (!editFormData.addressLine1.trim())
+      newErrors.addressLine1 = "Address line 1 is required";
     if (!editFormData.city.trim()) newErrors.city = "City is required";
     if (!editFormData.state.trim()) newErrors.state = "State is required";
-    if (!editFormData.postalCode.trim()) newErrors.postalCode = "Postal code is required";
+    if (!editFormData.postalCode.trim())
+      newErrors.postalCode = "Postal code is required";
     if (!editFormData.country.trim()) newErrors.country = "Country is required";
-    if (!editFormData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required";
+    if (!editFormData.phoneNumber.trim())
+      newErrors.phoneNumber = "Phone number is required";
 
     setEditErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -413,7 +460,7 @@ const Checkout = () => {
     } catch (error) {
       // Check for field-level errors in error.response?.data?.errors or error.errors
       const fieldErrors = error?.errors || error?.response?.data?.errors;
-      if (fieldErrors && typeof fieldErrors === 'object') {
+      if (fieldErrors && typeof fieldErrors === "object") {
         setErrors(fieldErrors);
         setErrorMessage("Please fix the highlighted fields.");
         setSuccessMessage("");
@@ -423,7 +470,9 @@ const Checkout = () => {
           variant: "destructive",
         });
       } else {
-        setErrorMessage(error.message || "Failed to save address. Please try again.");
+        setErrorMessage(
+          error.message || "Failed to save address. Please try again."
+        );
         setSuccessMessage("");
         toast({
           title: "Failed to save address",
@@ -446,8 +495,13 @@ const Checkout = () => {
 
     try {
       setEditLoading(true);
-      await dispatch(updateShippingAddress({ id: editingAddress._id, addressData: editFormData })).unwrap();
-      
+      await dispatch(
+        updateShippingAddress({
+          id: editingAddress._id,
+          addressData: editFormData,
+        })
+      ).unwrap();
+
       toast({
         title: "Address updated successfully",
         description: "Your shipping address has been updated",
@@ -468,7 +522,6 @@ const Checkout = () => {
         isDefault: false,
       });
       setEditErrors({});
-      
     } catch (error) {
       toast({
         title: "Failed to update address",
@@ -489,24 +542,25 @@ const Checkout = () => {
   };
 
   const getEligibleDiscounts = () => {
-    return userDiscounts.activeDiscounts.filter(discount => {
+    return userDiscounts.activeDiscounts.filter((discount) => {
       const subtotal = calculateSubtotal();
       // Backend already filters by status, validity, and usage limits
       // Frontend only needs to check minimum amount requirement
       const meetsMinimumAmount = subtotal >= discount.minimumAmount;
-      
+
       // Additional frontend check for usage limits (backup to backend)
-      const hasUsageLeft = !discount.maxUsagePerUser || 
-                          !discount.userUsageCount || 
-                          discount.userUsageCount < discount.maxUsagePerUser;
-      
+      const hasUsageLeft =
+        !discount.maxUsagePerUser ||
+        !discount.userUsageCount ||
+        discount.userUsageCount < discount.maxUsagePerUser;
+
       return meetsMinimumAmount && hasUsageLeft;
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Check if an address is selected or new address form is valid
     if (!selectedAddressId && !showNewAddressForm) {
       toast({
@@ -530,7 +584,8 @@ const Checkout = () => {
     if (paymentMethod === "cod" && !codAvailable) {
       toast({
         title: "COD Not Available",
-        description: "Cash on Delivery is not available for your location or order amount. Please select online payment.",
+        description:
+          "Cash on Delivery is not available for your location or order amount. Please select online payment.",
         variant: "destructive",
       });
       return;
@@ -540,7 +595,7 @@ const Checkout = () => {
 
     try {
       let shippingAddressData;
-      
+
       if (selectedAddressId) {
         // Use selected address
         const selectedAddress = getSelectedAddress();
@@ -559,40 +614,43 @@ const Checkout = () => {
       }
 
       const orderData = {
-        items: cart.items.map(item => ({
+        items: cart.items.map((item) => ({
           productVariantId: item.productVariantId._id,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
         })),
         shippingAddress: shippingAddressData,
         paymentMethod,
         subtotal: calculateSubtotal(),
         subtotalAfterDiscount: calculateSubtotalAfterDiscount(),
-        discount: userDiscounts.selectedDiscount ? {
-          discountId: userDiscounts.selectedDiscount._id,
-          discountName: userDiscounts.selectedDiscount.name,
-          discountAmount: calculateDiscount(),
-          discountType: userDiscounts.selectedDiscount.discountType,
-          discountValue: userDiscounts.selectedDiscount.discountValue
-        } : null,
+        discount: userDiscounts.selectedDiscount
+          ? {
+              discountId: userDiscounts.selectedDiscount._id,
+              discountName: userDiscounts.selectedDiscount.name,
+              discountAmount: calculateDiscount(),
+              discountType: userDiscounts.selectedDiscount.discountType,
+              discountValue: userDiscounts.selectedDiscount.discountValue,
+            }
+          : null,
         shipping: calculateShipping(),
-        total: calculateTotal()
+        total: calculateTotal(),
       };
 
       const result = await dispatch(createOrder(orderData)).unwrap();
       const orderId = result.order?._id;
       toast({
         title: "Order placed successfully!",
-        description: "Your order has been placed and you will receive a confirmation email shortly.",
+        description:
+          "Your order has been placed and you will receive a confirmation email shortly.",
         variant: "default",
       });
       // Redirect to order confirmation page with orderId and fresh parameter
       navigate(`/order-confirmation/${orderId}?fresh=true`);
-      
     } catch (error) {
       toast({
         title: "Order failed",
-        description: error.message || "Failed to place order. Please try again.",
+        description:
+          error.message || "Failed to place order. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -625,102 +683,183 @@ const Checkout = () => {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: "2rem" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 400px",
+          gap: "2rem",
+        }}
+      >
         {/* Left Column - Shipping Form */}
         <div>
-          <div style={{ 
-            backgroundColor: "#fff", 
-            padding: "2rem", 
-            borderRadius: "8px", 
-            border: "1px solid #eee",
-            marginBottom: "2rem"
-          }}>
-            <h2 style={{ marginBottom: "1.5rem", fontSize: "1.5rem" }}>Shipping Information</h2>
-            
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "2rem",
+              borderRadius: "8px",
+              border: "1px solid #eee",
+              marginBottom: "2rem",
+            }}
+          >
+            <h2 style={{ marginBottom: "1.5rem", fontSize: "1.5rem" }}>
+              Shipping Information
+            </h2>
+
             {/* Existing Addresses */}
             {shippingAddress.loading && addressesLoaded ? (
-              <div style={{ marginBottom: "2rem", textAlign: "center", padding: "2rem" }}>
+              <div
+                style={{
+                  marginBottom: "2rem",
+                  textAlign: "center",
+                  padding: "2rem",
+                }}
+              >
                 <p>Loading shipping addresses...</p>
               </div>
-            ) : shippingAddress.addresses && shippingAddress.addresses.length > 0 ? (
+            ) : shippingAddress.addresses &&
+              shippingAddress.addresses.length > 0 ? (
               <div style={{ marginBottom: "2rem" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-                  <h3 style={{ fontSize: "1.25rem", margin: 0 }}>Select Shipping Address</h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <h3 style={{ fontSize: "1.25rem", margin: 0 }}>
+                    Select Shipping Address
+                  </h3>
                   <span style={{ fontSize: "0.875rem", color: "#666" }}>
-                    {shippingAddress.addresses.length} saved address{shippingAddress.addresses.length > 1 ? 'es' : ''}
+                    {shippingAddress.addresses.length} saved address
+                    {shippingAddress.addresses.length > 1 ? "es" : ""}
                   </span>
                 </div>
-                
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
+                  }}
+                >
                   {shippingAddress.addresses.map((address) => (
                     <div
                       key={address._id}
                       style={{
-                        border: selectedAddressId === address._id ? "2px solid #4f46e5" : "1px solid #ddd",
+                        border:
+                          selectedAddressId === address._id
+                            ? "2px solid #4f46e5"
+                            : "1px solid #ddd",
                         borderRadius: "12px",
                         padding: "1.5rem",
                         cursor: "pointer",
-                        backgroundColor: selectedAddressId === address._id ? "#f8f9ff" : "#fff",
+                        backgroundColor:
+                          selectedAddressId === address._id
+                            ? "#f8f9ff"
+                            : "#fff",
                         position: "relative",
                         transition: "all 0.2s ease",
-                        boxShadow: selectedAddressId === address._id ? "0 2px 8px rgba(79, 70, 229, 0.1)" : "none"
+                        boxShadow:
+                          selectedAddressId === address._id
+                            ? "0 2px 8px rgba(79, 70, 229, 0.1)"
+                            : "none",
                       }}
                       onClick={() => handleAddressSelect(address._id)}
                     >
                       {/* Selection Indicator */}
-                      <div style={{
-                        position: "absolute",
-                        top: "1rem",
-                        left: "1rem",
-                        width: "20px",
-                        height: "20px",
-                        borderRadius: "50%",
-                        border: selectedAddressId === address._id ? "2px solid #4f46e5" : "2px solid #ddd",
-                        backgroundColor: selectedAddressId === address._id ? "#4f46e5" : "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "1rem",
+                          left: "1rem",
+                          width: "20px",
+                          height: "20px",
+                          borderRadius: "50%",
+                          border:
+                            selectedAddressId === address._id
+                              ? "2px solid #4f46e5"
+                              : "2px solid #ddd",
+                          backgroundColor:
+                            selectedAddressId === address._id
+                              ? "#4f46e5"
+                              : "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
                         {selectedAddressId === address._id && (
-                          <div style={{
-                            width: "8px",
-                            height: "8px",
-                            borderRadius: "50%",
-                            backgroundColor: "#fff"
-                          }} />
+                          <div
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              backgroundColor: "#fff",
+                            }}
+                          />
                         )}
                       </div>
 
                       {/* Default Badge */}
                       {address.isDefault && (
-                        <span style={{
-                          position: "absolute",
-                          top: "1rem",
-                          right: "1rem",
-                          backgroundColor: "#10b981",
-                          color: "white",
-                          padding: "0.25rem 0.75rem",
-                          borderRadius: "20px",
-                          fontSize: "0.75rem",
-                          fontWeight: "bold"
-                        }}>
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: "1rem",
+                            right: "1rem",
+                            backgroundColor: "#10b981",
+                            color: "white",
+                            padding: "0.25rem 0.75rem",
+                            borderRadius: "20px",
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Default
                         </span>
                       )}
 
                       {/* Address Content */}
-                      <div style={{ marginLeft: "2rem", marginRight: address.isDefault ? "6rem" : "2rem" }}>
-                        <div style={{ marginBottom: "0.75rem", fontWeight: "600", fontSize: "1.1rem", color: "#1f2937" }}>
+                      <div
+                        style={{
+                          marginLeft: "2rem",
+                          marginRight: address.isDefault ? "6rem" : "2rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            marginBottom: "0.75rem",
+                            fontWeight: "600",
+                            fontSize: "1.1rem",
+                            color: "#1f2937",
+                          }}
+                        >
                           {address.recipientName}
                         </div>
-                        <div style={{ color: "#6b7280", fontSize: "0.95rem", lineHeight: "1.5" }}>
+                        <div
+                          style={{
+                            color: "#6b7280",
+                            fontSize: "0.95rem",
+                            lineHeight: "1.5",
+                          }}
+                        >
                           <div>{address.addressLine1}</div>
-                          {address.addressLine2 && <div>{address.addressLine2}</div>}
+                          {address.addressLine2 && (
+                            <div>{address.addressLine2}</div>
+                          )}
                           <div style={{ marginTop: "0.25rem" }}>
                             {address.city}, {address.state} {address.postalCode}
                           </div>
                           <div>{address.country}</div>
-                          <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <div
+                            style={{
+                              marginTop: "0.5rem",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                            }}
+                          >
                             <span style={{ color: "#4f46e5" }}>📞</span>
                             <span>{address.phoneNumber}</span>
                           </div>
@@ -728,13 +867,15 @@ const Checkout = () => {
                       </div>
 
                       {/* Action Buttons */}
-                      <div style={{ 
-                        position: "absolute", 
-                        bottom: "1rem", 
-                        right: "1rem",
-                        display: "flex",
-                        gap: "0.5rem"
-                      }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "1rem",
+                          right: "1rem",
+                          display: "flex",
+                          gap: "0.5rem",
+                        }}
+                      >
                         {!address.isDefault && (
                           <button
                             onClick={(e) => {
@@ -750,7 +891,7 @@ const Checkout = () => {
                               cursor: "pointer",
                               fontSize: "0.875rem",
                               fontWeight: "500",
-                              transition: "all 0.2s ease"
+                              transition: "all 0.2s ease",
                             }}
                             onMouseEnter={(e) => {
                               e.target.style.backgroundColor = "#10b981";
@@ -778,7 +919,7 @@ const Checkout = () => {
                             cursor: "pointer",
                             fontSize: "0.875rem",
                             fontWeight: "500",
-                            transition: "all 0.2s ease"
+                            transition: "all 0.2s ease",
                           }}
                           onMouseEnter={(e) => {
                             e.target.style.backgroundColor = "#4f46e5";
@@ -795,24 +936,26 @@ const Checkout = () => {
 
                       {/* Selected Indicator */}
                       {selectedAddressId === address._id && (
-                        <div style={{
-                          position: "absolute",
-                          top: "0.5rem",
-                          right: "0.5rem",
-                          backgroundColor: "#4f46e5",
-                          color: "#fff",
-                          padding: "0.25rem 0.5rem",
-                          borderRadius: "4px",
-                          fontSize: "0.75rem",
-                          fontWeight: "bold"
-                        }}>
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "0.5rem",
+                            right: "0.5rem",
+                            backgroundColor: "#4f46e5",
+                            color: "#fff",
+                            padding: "0.25rem 0.5rem",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Selected
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
-                
+
                 <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
                   <button
                     onClick={() => {
@@ -841,7 +984,7 @@ const Checkout = () => {
                       cursor: "pointer",
                       fontSize: "1rem",
                       fontWeight: "500",
-                      transition: "all 0.2s ease"
+                      transition: "all 0.2s ease",
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.backgroundColor = "#4f46e5";
@@ -858,16 +1001,25 @@ const Checkout = () => {
 
                 {/* Selection Instructions */}
                 {!selectedAddressId && (
-                  <div style={{
-                    marginTop: "1rem",
-                    padding: "1rem",
-                    backgroundColor: "#fef3c7",
-                    border: "1px solid #f59e0b",
-                    borderRadius: "8px",
-                    textAlign: "center"
-                  }}>
-                    <p style={{ margin: 0, color: "#92400e", fontSize: "0.875rem" }}>
-                      ⚠️ Please select a shipping address to continue with your order
+                  <div
+                    style={{
+                      marginTop: "1rem",
+                      padding: "1rem",
+                      backgroundColor: "#fef3c7",
+                      border: "1px solid #f59e0b",
+                      borderRadius: "8px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "#92400e",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      ⚠️ Please select a shipping address to continue with your
+                      order
                     </p>
                   </div>
                 )}
@@ -875,113 +1027,144 @@ const Checkout = () => {
             ) : null}
 
             {/* Show form for new users with no addresses */}
-            {!shippingAddress.loading && (!shippingAddress.addresses || shippingAddress.addresses.length === 0) && !showNewAddressForm && (
-              <div style={{ 
-                marginBottom: "2rem",
-                padding: "2rem",
-                backgroundColor: "#f8fafc",
-                border: "2px dashed #cbd5e1",
-                borderRadius: "12px",
-                textAlign: "center"
-              }}>
-                <div style={{ marginBottom: "1rem" }}>
-                  <div style={{
-                    width: "60px",
-                    height: "60px",
-                    backgroundColor: "#e2e8f0",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 1rem",
-                    fontSize: "1.5rem"
-                  }}>
-                    📍
-                  </div>
-                  <h3 style={{ fontSize: "1.25rem", marginBottom: "0.5rem", color: "#1f2937" }}>
-                    No Saved Addresses
-                  </h3>
-                  <p style={{ color: "#6b7280", fontSize: "1rem", margin: 0 }}>
-                    You don't have any saved addresses. Please add a shipping address to continue with your order.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setFormData({
-                      recipientName: "",
-                      addressLine1: "",
-                      addressLine2: "",
-                      city: "",
-                      state: "",
-                      postalCode: "",
-                      country: "India",
-                      phoneNumber: "",
-                      isDefault: false,
-                    });
-                    setShowAddressModal(true);
-                    setErrors({});
-                    setSuccessMessage("");
-                    setErrorMessage("");
-                  }}
+            {!shippingAddress.loading &&
+              (!shippingAddress.addresses ||
+                shippingAddress.addresses.length === 0) &&
+              !showNewAddressForm && (
+                <div
                   style={{
-                    padding: "0.875rem 2rem",
-                    background: "#4f46e5",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontSize: "1rem",
-                    fontWeight: "600",
-                    transition: "all 0.2s ease",
-                    boxShadow: "0 2px 4px rgba(79, 70, 229, 0.2)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = "#4338ca";
-                    e.target.style.transform = "translateY(-1px)";
-                    e.target.style.boxShadow = "0 4px 8px rgba(79, 70, 229, 0.3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = "#4f46e5";
-                    e.target.style.transform = "translateY(0)";
-                    e.target.style.boxShadow = "0 2px 4px rgba(79, 70, 229, 0.2)";
+                    marginBottom: "2rem",
+                    padding: "2rem",
+                    backgroundColor: "#f8fafc",
+                    border: "2px dashed #cbd5e1",
+                    borderRadius: "12px",
+                    textAlign: "center",
                   }}
                 >
-                  + Add Your First Shipping Address
-                </button>
-              </div>
-            )}
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div
+                      style={{
+                        width: "60px",
+                        height: "60px",
+                        backgroundColor: "#e2e8f0",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        margin: "0 auto 1rem",
+                        fontSize: "1.5rem",
+                      }}
+                    >
+                      📍
+                    </div>
+                    <h3
+                      style={{
+                        fontSize: "1.25rem",
+                        marginBottom: "0.5rem",
+                        color: "#1f2937",
+                      }}
+                    >
+                      No Saved Addresses
+                    </h3>
+                    <p
+                      style={{ color: "#6b7280", fontSize: "1rem", margin: 0 }}
+                    >
+                      You don't have any saved addresses. Please add a shipping
+                      address to continue with your order.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setFormData({
+                        recipientName: "",
+                        addressLine1: "",
+                        addressLine2: "",
+                        city: "",
+                        state: "",
+                        postalCode: "",
+                        country: "India",
+                        phoneNumber: "",
+                        isDefault: false,
+                      });
+                      setShowAddressModal(true);
+                      setErrors({});
+                      setSuccessMessage("");
+                      setErrorMessage("");
+                    }}
+                    style={{
+                      padding: "0.875rem 2rem",
+                      background: "#4f46e5",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontSize: "1rem",
+                      fontWeight: "600",
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 2px 4px rgba(79, 70, 229, 0.2)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = "#4338ca";
+                      e.target.style.transform = "translateY(-1px)";
+                      e.target.style.boxShadow =
+                        "0 4px 8px rgba(79, 70, 229, 0.3)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = "#4f46e5";
+                      e.target.style.transform = "translateY(0)";
+                      e.target.style.boxShadow =
+                        "0 2px 4px rgba(79, 70, 229, 0.2)";
+                    }}
+                  >
+                    + Add Your First Shipping Address
+                  </button>
+                </div>
+              )}
 
             {/* New Address Form - moved above Payment Method */}
-            <Modal show={showAddressModal} onHide={() => {
-              setShowAddressModal(false);
-              setErrors({});
-              setSuccessMessage("");
-              setErrorMessage("");
-              setFormData({
-                recipientName: "",
-                addressLine1: "",
-                addressLine2: "",
-                city: "",
-                state: "",
-                postalCode: "",
-                country: "India",
-                phoneNumber: "",
-                isDefault: false,
-              });
-            }} centered backdrop="static" keyboard={false}>
+            <Modal
+              show={showAddressModal}
+              onHide={() => {
+                setShowAddressModal(false);
+                setErrors({});
+                setSuccessMessage("");
+                setErrorMessage("");
+                setFormData({
+                  recipientName: "",
+                  addressLine1: "",
+                  addressLine2: "",
+                  city: "",
+                  state: "",
+                  postalCode: "",
+                  country: "India",
+                  phoneNumber: "",
+                  isDefault: false,
+                });
+              }}
+              centered
+              backdrop="static"
+              keyboard={false}
+            >
               <Modal.Header closeButton>
                 <Modal.Title>Add New Shipping Address</Modal.Title>
               </Modal.Header>
               <Modal.Body>
                 {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
-                {successMessage && <Alert variant="success">{successMessage}</Alert>}
+                {successMessage && (
+                  <Alert variant="success">{successMessage}</Alert>
+                )}
                 <Form autoComplete="off">
                   <Form.Group className="mb-2">
                     <Form.Label>Recipient Name</Form.Label>
                     <Form.Control
                       type="text"
                       value={formData.recipientName}
-                      onChange={e => setFormData(f => ({ ...f, recipientName: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({
+                          ...f,
+                          recipientName: e.target.value,
+                        }))
+                      }
                       placeholder="Enter recipient name"
                       isInvalid={!!errors.recipientName}
                     />
@@ -996,7 +1179,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={formData.addressLine1}
-                      onChange={e => setFormData(f => ({ ...f, addressLine1: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({
+                          ...f,
+                          addressLine1: e.target.value,
+                        }))
+                      }
                       placeholder="Enter address line 1"
                       isInvalid={!!errors.addressLine1}
                     />
@@ -1011,7 +1199,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={formData.addressLine2}
-                      onChange={e => setFormData(f => ({ ...f, addressLine2: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({
+                          ...f,
+                          addressLine2: e.target.value,
+                        }))
+                      }
                       placeholder="Enter address line 2 (optional)"
                     />
                   </Form.Group>
@@ -1020,7 +1213,9 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={formData.city}
-                      onChange={e => setFormData(f => ({ ...f, city: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({ ...f, city: e.target.value }))
+                      }
                       placeholder="Enter city"
                       isInvalid={!!errors.city}
                     />
@@ -1035,7 +1230,9 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={formData.state}
-                      onChange={e => setFormData(f => ({ ...f, state: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({ ...f, state: e.target.value }))
+                      }
                       placeholder="Enter state"
                       isInvalid={!!errors.state}
                     />
@@ -1050,7 +1247,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={formData.postalCode}
-                      onChange={e => setFormData(f => ({ ...f, postalCode: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({
+                          ...f,
+                          postalCode: e.target.value,
+                        }))
+                      }
                       placeholder="Enter postal code"
                       isInvalid={!!errors.postalCode}
                     />
@@ -1065,7 +1267,9 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={formData.country}
-                      onChange={e => setFormData(f => ({ ...f, country: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({ ...f, country: e.target.value }))
+                      }
                       placeholder="Enter country"
                       isInvalid={!!errors.country}
                     />
@@ -1080,7 +1284,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={formData.phoneNumber}
-                      onChange={e => setFormData(f => ({ ...f, phoneNumber: e.target.value }))}
+                      onChange={(e) =>
+                        setFormData((f) => ({
+                          ...f,
+                          phoneNumber: e.target.value,
+                        }))
+                      }
                       placeholder="Enter phone number"
                       isInvalid={!!errors.phoneNumber}
                     />
@@ -1095,7 +1304,12 @@ const Checkout = () => {
                     type="checkbox"
                     label="Set as default address"
                     checked={formData.isDefault}
-                    onChange={e => setFormData(f => ({ ...f, isDefault: e.target.checked }))}
+                    onChange={(e) =>
+                      setFormData((f) => ({
+                        ...f,
+                        isDefault: e.target.checked,
+                      }))
+                    }
                   />
                   <Button
                     variant="primary"
@@ -1135,22 +1349,28 @@ const Checkout = () => {
             </Modal>
 
             {/* Edit Address Modal */}
-            <Modal show={showEditAddressForm} onHide={() => {
-              setShowEditAddressForm(false);
-              setEditErrors({});
-              setEditingAddress(null);
-              setEditFormData({
-                recipientName: "",
-                addressLine1: "",
-                addressLine2: "",
-                city: "",
-                state: "",
-                postalCode: "",
-                country: "",
-                phoneNumber: "",
-                isDefault: false,
-              });
-            }} centered backdrop="static" keyboard={false}>
+            <Modal
+              show={showEditAddressForm}
+              onHide={() => {
+                setShowEditAddressForm(false);
+                setEditErrors({});
+                setEditingAddress(null);
+                setEditFormData({
+                  recipientName: "",
+                  addressLine1: "",
+                  addressLine2: "",
+                  city: "",
+                  state: "",
+                  postalCode: "",
+                  country: "",
+                  phoneNumber: "",
+                  isDefault: false,
+                });
+              }}
+              centered
+              backdrop="static"
+              keyboard={false}
+            >
               <Modal.Header closeButton>
                 <Modal.Title>Edit Shipping Address</Modal.Title>
               </Modal.Header>
@@ -1161,7 +1381,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.recipientName}
-                      onChange={e => setEditFormData(f => ({ ...f, recipientName: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({
+                          ...f,
+                          recipientName: e.target.value,
+                        }))
+                      }
                       placeholder="Enter recipient name"
                       isInvalid={!!editErrors.recipientName}
                     />
@@ -1176,7 +1401,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.addressLine1}
-                      onChange={e => setEditFormData(f => ({ ...f, addressLine1: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({
+                          ...f,
+                          addressLine1: e.target.value,
+                        }))
+                      }
                       placeholder="Enter address line 1"
                       isInvalid={!!editErrors.addressLine1}
                     />
@@ -1191,7 +1421,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.addressLine2}
-                      onChange={e => setEditFormData(f => ({ ...f, addressLine2: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({
+                          ...f,
+                          addressLine2: e.target.value,
+                        }))
+                      }
                       placeholder="Enter address line 2 (optional)"
                     />
                   </Form.Group>
@@ -1200,7 +1435,9 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.city}
-                      onChange={e => setEditFormData(f => ({ ...f, city: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({ ...f, city: e.target.value }))
+                      }
                       placeholder="Enter city"
                       isInvalid={!!editErrors.city}
                     />
@@ -1215,7 +1452,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.state}
-                      onChange={e => setEditFormData(f => ({ ...f, state: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({
+                          ...f,
+                          state: e.target.value,
+                        }))
+                      }
                       placeholder="Enter state"
                       isInvalid={!!editErrors.state}
                     />
@@ -1230,7 +1472,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.postalCode}
-                      onChange={e => setEditFormData(f => ({ ...f, postalCode: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({
+                          ...f,
+                          postalCode: e.target.value,
+                        }))
+                      }
                       placeholder="Enter postal code"
                       isInvalid={!!editErrors.postalCode}
                     />
@@ -1245,7 +1492,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.country}
-                      onChange={e => setEditFormData(f => ({ ...f, country: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({
+                          ...f,
+                          country: e.target.value,
+                        }))
+                      }
                       placeholder="Enter country"
                       isInvalid={!!editErrors.country}
                     />
@@ -1260,7 +1512,12 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       value={editFormData.phoneNumber}
-                      onChange={e => setEditFormData(f => ({ ...f, phoneNumber: e.target.value }))}
+                      onChange={(e) =>
+                        setEditFormData((f) => ({
+                          ...f,
+                          phoneNumber: e.target.value,
+                        }))
+                      }
                       placeholder="Enter phone number"
                       isInvalid={!!editErrors.phoneNumber}
                     />
@@ -1275,7 +1532,12 @@ const Checkout = () => {
                     type="checkbox"
                     label="Set as default address"
                     checked={editFormData.isDefault}
-                    onChange={e => setEditFormData(f => ({ ...f, isDefault: e.target.checked }))}
+                    onChange={(e) =>
+                      setEditFormData((f) => ({
+                        ...f,
+                        isDefault: e.target.checked,
+                      }))
+                    }
                   />
                   <Button
                     variant="primary"
@@ -1315,20 +1577,32 @@ const Checkout = () => {
 
             {/* Payment Method */}
             <div style={{ marginBottom: "2rem" }}>
-              <h3 style={{ marginBottom: "1rem", fontSize: "1.25rem" }}>Payment Method</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <label 
-                  style={{ 
-                    display: "flex", 
-                    alignItems: "flex-start", 
-                    gap: "0.75rem", 
+              <h3 style={{ marginBottom: "1rem", fontSize: "1.25rem" }}>
+                Payment Method
+              </h3>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
                     cursor: codAvailable ? "pointer" : "not-allowed",
                     padding: "1rem",
                     borderRadius: "8px",
-                    border: paymentMethod === "cod" ? "2px solid #10b981" : "1px solid #ddd",
-                    backgroundColor: paymentMethod === "cod" ? "#f0fdf4" : "#fff",
+                    border:
+                      paymentMethod === "cod"
+                        ? "2px solid #10b981"
+                        : "1px solid #ddd",
+                    backgroundColor:
+                      paymentMethod === "cod" ? "#f0fdf4" : "#fff",
                     opacity: codAvailable ? 1 : 0.6,
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
                   }}
                 >
                   <input
@@ -1341,39 +1615,76 @@ const Checkout = () => {
                     style={{ margin: 0, marginTop: "0.25rem" }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "600", fontSize: "1rem", color: "#10b981" }}>
+                    <div
+                      style={{
+                        fontWeight: "600",
+                        fontSize: "1rem",
+                        color: "#10b981",
+                      }}
+                    >
                       Cash on Delivery (COD)
                       {codChecking && (
-                        <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#666" }}>
+                        <span
+                          style={{
+                            marginLeft: "0.5rem",
+                            fontSize: "0.75rem",
+                            color: "#666",
+                          }}
+                        >
                           Checking availability...
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.25rem" }}>
-                      Pay with cash when your order is delivered. No upfront payment required.
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "#666",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      Pay with cash when your order is delivered. No upfront
+                      payment required.
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#10b981", marginTop: "0.5rem", fontWeight: "500" }}>
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#10b981",
+                        marginTop: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                    >
                       ✓ Secure and convenient
                     </div>
                     {!codAvailable && !codChecking && (
-                      <div style={{ fontSize: "0.75rem", color: "#ef4444", marginTop: "0.5rem", fontWeight: "500" }}>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#ef4444",
+                          marginTop: "0.5rem",
+                          fontWeight: "500",
+                        }}
+                      >
                         ⚠️ Not available for your location or order amount
                       </div>
                     )}
                   </div>
                 </label>
-                
-                <label 
-                  style={{ 
-                    display: "flex", 
-                    alignItems: "flex-start", 
-                    gap: "0.75rem", 
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "0.75rem",
                     cursor: "pointer",
                     padding: "1rem",
                     borderRadius: "8px",
-                    border: paymentMethod === "online" ? "2px solid #4f46e5" : "1px solid #ddd",
-                    backgroundColor: paymentMethod === "online" ? "#f8f9ff" : "#fff",
-                    transition: "all 0.2s ease"
+                    border:
+                      paymentMethod === "online"
+                        ? "2px solid #4f46e5"
+                        : "1px solid #ddd",
+                    backgroundColor:
+                      paymentMethod === "online" ? "#f8f9ff" : "#fff",
+                    transition: "all 0.2s ease",
                   }}
                 >
                   <input
@@ -1385,33 +1696,73 @@ const Checkout = () => {
                     style={{ margin: 0, marginTop: "0.25rem" }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "600", fontSize: "1rem", color: "#4f46e5" }}>
+                    <div
+                      style={{
+                        fontWeight: "600",
+                        fontSize: "1rem",
+                        color: "#4f46e5",
+                      }}
+                    >
                       Online Payment
                     </div>
-                    <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.25rem" }}>
-                      Pay securely online using credit/debit cards, UPI, or digital wallets.
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "#666",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      Pay securely online using credit/debit cards, UPI, or
+                      digital wallets.
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#4f46e5", marginTop: "0.5rem", fontWeight: "500" }}>
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#4f46e5",
+                        marginTop: "0.5rem",
+                        fontWeight: "500",
+                      }}
+                    >
                       ✓ Instant confirmation
                     </div>
                   </div>
                 </label>
               </div>
-              
+
               {/* COD Information */}
               {paymentMethod === "cod" && codAvailable && (
-                <div style={{ 
-                  marginTop: "1rem", 
-                  padding: "1rem", 
-                  backgroundColor: "#f0fdf4", 
-                  borderRadius: "8px",
-                  border: "1px solid #bbf7d0"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                    <span style={{ color: "#10b981", fontWeight: "bold" }}>ℹ️</span>
-                    <span style={{ fontWeight: "600", color: "#10b981" }}>Cash on Delivery Information</span>
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "1rem",
+                    backgroundColor: "#f0fdf4",
+                    borderRadius: "8px",
+                    border: "1px solid #bbf7d0",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <span style={{ color: "#10b981", fontWeight: "bold" }}>
+                      ℹ️
+                    </span>
+                    <span style={{ fontWeight: "600", color: "#10b981" }}>
+                      Cash on Delivery Information
+                    </span>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: "1.5rem", fontSize: "0.875rem", color: "#374151" }}>
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: "1.5rem",
+                      fontSize: "0.875rem",
+                      color: "#374151",
+                    }}
+                  >
                     <li>Pay the exact amount when your order arrives</li>
                     <li>Keep the exact change ready for faster delivery</li>
                     <li>You can inspect the items before payment</li>
@@ -1422,19 +1773,39 @@ const Checkout = () => {
 
               {/* COD Not Available Warning */}
               {paymentMethod === "cod" && !codAvailable && !codChecking && (
-                <div style={{ 
-                  marginTop: "1rem", 
-                  padding: "1rem", 
-                  backgroundColor: "#fef2f2", 
-                  borderRadius: "8px",
-                  border: "1px solid #fecaca"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                    <span style={{ color: "#ef4444", fontWeight: "bold" }}>⚠️</span>
-                    <span style={{ fontWeight: "600", color: "#ef4444" }}>COD Not Available</span>
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "1rem",
+                    backgroundColor: "#fef2f2",
+                    borderRadius: "8px",
+                    border: "1px solid #fecaca",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <span style={{ color: "#ef4444", fontWeight: "bold" }}>
+                      ⚠️
+                    </span>
+                    <span style={{ fontWeight: "600", color: "#ef4444" }}>
+                      COD Not Available
+                    </span>
                   </div>
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "#991b1b" }}>
-                    Cash on Delivery is not available for your location or order amount. Please select online payment to continue.
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.875rem",
+                      color: "#991b1b",
+                    }}
+                  >
+                    Cash on Delivery is not available for your location or order
+                    amount. Please select online payment to continue.
                   </p>
                 </div>
               )}
@@ -1444,30 +1815,41 @@ const Checkout = () => {
 
         {/* Right Column - Order Summary */}
         <div style={{ position: "sticky", top: "2rem" }}>
-          <div style={{ 
-            backgroundColor: "#fff", 
-            padding: "2rem", 
-            borderRadius: "8px", 
-            border: "1px solid #eee"
-          }}>
-            <h2 style={{ marginBottom: "1.5rem", fontSize: "1.5rem" }}>Order Summary</h2>
-            
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "2rem",
+              borderRadius: "8px",
+              border: "1px solid #eee",
+            }}
+          >
+            <h2 style={{ marginBottom: "1.5rem", fontSize: "1.5rem" }}>
+              Order Summary
+            </h2>
+
             {/* Payment Method Badge */}
             <div style={{ marginBottom: "1rem" }}>
-              <div style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.5rem 1rem",
-                borderRadius: "20px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                backgroundColor: paymentMethod === "cod" ? "#f0fdf4" : "#f8f9ff",
-                color: paymentMethod === "cod" ? "#10b981" : "#4f46e5",
-                border: `1px solid ${paymentMethod === "cod" ? "#bbf7d0" : "#e0e7ff"}`
-              }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "20px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  backgroundColor:
+                    paymentMethod === "cod" ? "#f0fdf4" : "#f8f9ff",
+                  color: paymentMethod === "cod" ? "#10b981" : "#4f46e5",
+                  border: `1px solid ${
+                    paymentMethod === "cod" ? "#bbf7d0" : "#e0e7ff"
+                  }`,
+                }}
+              >
                 {paymentMethod === "cod" ? "💰" : "💳"}
-                {paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment"}
+                {paymentMethod === "cod"
+                  ? "Cash on Delivery"
+                  : "Online Payment"}
               </div>
             </div>
 
@@ -1476,7 +1858,7 @@ const Checkout = () => {
               {cart.items.map((item) => {
                 const variant = item.productVariantId;
                 const product = variant?.product;
-                
+
                 return (
                   <div
                     key={item.productVariantId._id}
@@ -1484,7 +1866,7 @@ const Checkout = () => {
                       display: "flex",
                       alignItems: "center",
                       padding: "1rem 0",
-                      borderBottom: "1px solid #eee"
+                      borderBottom: "1px solid #eee",
                     }}
                   >
                     <div
@@ -1496,7 +1878,7 @@ const Checkout = () => {
                         marginRight: "1rem",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center"
+                        justifyContent: "center",
                       }}
                     >
                       {variant?.imageUrls?.[0] ? (
@@ -1507,26 +1889,40 @@ const Checkout = () => {
                             width: "100%",
                             height: "100%",
                             objectFit: "cover",
-                            borderRadius: "4px"
+                            borderRadius: "4px",
                           }}
                         />
                       ) : (
-                        <span style={{ color: "#999", fontSize: "0.75rem" }}>No Image</span>
+                        <span style={{ color: "#999", fontSize: "0.75rem" }}>
+                          No Image
+                        </span>
                       )}
                     </div>
-                    
+
                     <div style={{ flex: 1 }}>
                       <h4 style={{ margin: "0 0 0.25rem 0", fontSize: "1rem" }}>
                         {product?.name || "Product Name"}
                       </h4>
-                      <p style={{ margin: "0", color: "#666", fontSize: "0.875rem" }}>
+                      <p
+                        style={{
+                          margin: "0",
+                          color: "#666",
+                          fontSize: "0.875rem",
+                        }}
+                      >
                         {variant?.colour} - {variant?.capacity}
                       </p>
-                      <p style={{ margin: "0.25rem 0 0 0", color: "#666", fontSize: "0.875rem" }}>
+                      <p
+                        style={{
+                          margin: "0.25rem 0 0 0",
+                          color: "#666",
+                          fontSize: "0.875rem",
+                        }}
+                      >
                         Qty: {item.quantity}
                       </p>
                     </div>
-                    
+
                     <div style={{ textAlign: "right" }}>
                       <p style={{ margin: 0, fontWeight: "bold" }}>
                         ₹{(item.price * item.quantity).toFixed(2)}
@@ -1539,9 +1935,24 @@ const Checkout = () => {
 
             {/* Discount Selection */}
             {getEligibleDiscounts().length > 0 && (
-              <div style={{ marginBottom: "2rem", padding: "1rem", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
-                <h3 style={{ marginBottom: "1rem", fontSize: "1.125rem" }}>Available Discounts</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div
+                style={{
+                  marginBottom: "2rem",
+                  padding: "1rem",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "8px",
+                }}
+              >
+                <h3 style={{ marginBottom: "1rem", fontSize: "1.125rem" }}>
+                  Available Discounts
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
+                >
                   {/* No Discount Option */}
                   <label
                     style={{
@@ -1551,8 +1962,12 @@ const Checkout = () => {
                       cursor: "pointer",
                       padding: "0.5rem",
                       borderRadius: "4px",
-                      backgroundColor: !userDiscounts.selectedDiscount ? "#e0e7ff" : "transparent",
-                      border: !userDiscounts.selectedDiscount ? "1px solid #4f46e5" : "1px solid #ddd"
+                      backgroundColor: !userDiscounts.selectedDiscount
+                        ? "#e0e7ff"
+                        : "transparent",
+                      border: !userDiscounts.selectedDiscount
+                        ? "1px solid #4f46e5"
+                        : "1px solid #ddd",
                     }}
                   >
                     <input
@@ -1562,7 +1977,13 @@ const Checkout = () => {
                       onChange={() => dispatch(clearSelectedDiscount())}
                       style={{ margin: 0 }}
                     />
-                    <div style={{ flex: 1, fontWeight: "500", fontSize: "0.875rem" }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        fontWeight: "500",
+                        fontSize: "0.875rem",
+                      }}
+                    >
                       No Discount
                     </div>
                   </label>
@@ -1577,42 +1998,77 @@ const Checkout = () => {
                         cursor: "pointer",
                         padding: "0.5rem",
                         borderRadius: "4px",
-                        backgroundColor: userDiscounts.selectedDiscount?._id === discount._id ? "#e0e7ff" : "transparent",
-                        border: userDiscounts.selectedDiscount?._id === discount._id ? "1px solid #4f46e5" : "1px solid #ddd"
+                        backgroundColor:
+                          userDiscounts.selectedDiscount?._id === discount._id
+                            ? "#e0e7ff"
+                            : "transparent",
+                        border:
+                          userDiscounts.selectedDiscount?._id === discount._id
+                            ? "1px solid #4f46e5"
+                            : "1px solid #ddd",
                       }}
                     >
                       <input
                         type="radio"
                         name="discount"
-                        checked={userDiscounts.selectedDiscount?._id === discount._id}
+                        checked={
+                          userDiscounts.selectedDiscount?._id === discount._id
+                        }
                         onChange={() => handleDiscountSelect(discount)}
                         style={{ margin: 0 }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: "500", fontSize: "0.875rem" }}>
+                        <div
+                          style={{ fontWeight: "500", fontSize: "0.875rem" }}
+                        >
                           {discount.name}
                         </div>
                         <div style={{ fontSize: "0.75rem", color: "#666" }}>
                           {discount.description}
                         </div>
-                        <div style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: "500" }}>
-                          {discount.discountType === "percentage" 
-                            ? `${discount.discountValue}% off` 
-                            : `₹${discount.discountValue} off`
-                          }
-                          {discount.minimumAmount > 0 && ` (Min. ₹${discount.minimumAmount})`}
-                          {discount.maximumDiscount && discount.discountType === "percentage" && 
-                            ` (Max. ₹${discount.maximumDiscount})`
-                          }
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#10b981",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {discount.discountType === "percentage"
+                            ? `${discount.discountValue}% off`
+                            : `₹${discount.discountValue} off`}
+                          {discount.minimumAmount > 0 &&
+                            ` (Min. ₹${discount.minimumAmount})`}
+                          {discount.maximumDiscount &&
+                            discount.discountType === "percentage" &&
+                            ` (Max. ₹${discount.maximumDiscount})`}
                         </div>
                         {discount.maxUsagePerUser && (
-                          <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.25rem" }}>
-                            Used: {discount.userUsageCount || 0}/{discount.maxUsagePerUser} times
-                            {discount.userUsageCount >= discount.maxUsagePerUser && (
-                              <span style={{ color: "#ef4444", fontWeight: "500" }}> (Limit reached)</span>
+                          <div
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "#666",
+                              marginTop: "0.25rem",
+                            }}
+                          >
+                            Used: {discount.userUsageCount || 0}/
+                            {discount.maxUsagePerUser} times
+                            {discount.userUsageCount >=
+                              discount.maxUsagePerUser && (
+                              <span
+                                style={{ color: "#ef4444", fontWeight: "500" }}
+                              >
+                                {" "}
+                                (Limit reached)
+                              </span>
                             )}
-                            {discount.userUsageCount === discount.maxUsagePerUser - 1 && (
-                              <span style={{ color: "#f59e0b", fontWeight: "500" }}> (Last use!)</span>
+                            {discount.userUsageCount ===
+                              discount.maxUsagePerUser - 1 && (
+                              <span
+                                style={{ color: "#f59e0b", fontWeight: "500" }}
+                              >
+                                {" "}
+                                (Last use!)
+                              </span>
                             )}
                           </div>
                         )}
@@ -1625,12 +2081,24 @@ const Checkout = () => {
 
             {/* Price Breakdown */}
             <div style={{ borderTop: "1px solid #eee", paddingTop: "1rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "0.5rem",
+                }}
+              >
                 <span>Subtotal:</span>
                 <div style={{ textAlign: "right" }}>
                   {userDiscounts.selectedDiscount ? (
                     <>
-                      <div style={{ textDecoration: "line-through", color: "#999", fontSize: "0.875rem" }}>
+                      <div
+                        style={{
+                          textDecoration: "line-through",
+                          color: "#999",
+                          fontSize: "0.875rem",
+                        }}
+                      >
                         ₹{calculateSubtotal().toFixed(2)}
                       </div>
                       <div style={{ fontWeight: "bold", color: "#10b981" }}>
@@ -1642,29 +2110,49 @@ const Checkout = () => {
                   )}
                 </div>
               </div>
-              
+
               {userDiscounts.selectedDiscount && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                  <span style={{ color: "#10b981" }}>Discount ({userDiscounts.selectedDiscount.name}):</span>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <span style={{ color: "#10b981" }}>
+                    Discount ({userDiscounts.selectedDiscount.name}):
+                  </span>
                   <span style={{ color: "#10b981", fontWeight: "500" }}>
                     -₹{calculateDiscount().toFixed(2)}
                   </span>
                 </div>
               )}
-              
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "0.5rem",
+                }}
+              >
                 <span>Shipping:</span>
-                <span>{calculateShipping() === 0 ? "Free" : `₹${calculateShipping().toFixed(2)}`}</span>
+                <span>
+                  {calculateShipping() === 0
+                    ? "Free"
+                    : `₹${calculateShipping().toFixed(2)}`}
+                </span>
               </div>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                marginTop: "1rem",
-                paddingTop: "1rem",
-                borderTop: "1px solid #eee",
-                fontWeight: "bold",
-                fontSize: "1.125rem"
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginTop: "1rem",
+                  paddingTop: "1rem",
+                  borderTop: "1px solid #eee",
+                  fontWeight: "bold",
+                  fontSize: "1.125rem",
+                }}
+              >
                 <span>Total:</span>
                 <span>₹{calculateTotal().toFixed(2)}</span>
               </div>
@@ -1677,39 +2165,64 @@ const Checkout = () => {
               style={{
                 width: "100%",
                 padding: "1rem",
-                background: loading || (!selectedAddressId && !showNewAddressForm) ? "#ccc" : 
-                          paymentMethod === "cod" ? "#10b981" : "#4f46e5",
+                background:
+                  loading || (!selectedAddressId && !showNewAddressForm)
+                    ? "#ccc"
+                    : paymentMethod === "cod"
+                    ? "#10b981"
+                    : "#4f46e5",
                 color: "#fff",
                 border: "none",
                 borderRadius: "8px",
                 fontSize: "1.125rem",
                 fontWeight: "600",
-                cursor: loading || (!selectedAddressId && !showNewAddressForm) ? "not-allowed" : "pointer",
+                cursor:
+                  loading || (!selectedAddressId && !showNewAddressForm)
+                    ? "not-allowed"
+                    : "pointer",
                 marginTop: "2rem",
                 transition: "all 0.2s ease",
-                boxShadow: paymentMethod === "cod" && !loading && (selectedAddressId || showNewAddressForm) ? 
-                          "0 4px 12px rgba(16, 185, 129, 0.3)" : "none"
+                boxShadow:
+                  paymentMethod === "cod" &&
+                  !loading &&
+                  (selectedAddressId || showNewAddressForm)
+                    ? "0 4px 12px rgba(16, 185, 129, 0.3)"
+                    : "none",
               }}
             >
-              {loading ? "Processing..." : 
-               paymentMethod === "cod" ? "Place Order with Cash on Delivery" : "Place Order"}
+              {loading
+                ? "Processing..."
+                : paymentMethod === "cod"
+                ? "Place Order with Cash on Delivery"
+                : "Place Order"}
             </button>
 
             {/* COD Notice */}
-            {paymentMethod === "cod" && !loading && (selectedAddressId || showNewAddressForm) && (
-              <div style={{ 
-                marginTop: "1rem", 
-                padding: "0.75rem", 
-                backgroundColor: "#f0fdf4", 
-                borderRadius: "6px",
-                border: "1px solid #bbf7d0",
-                textAlign: "center"
-              }}>
-                <div style={{ fontSize: "0.875rem", color: "#10b981", fontWeight: "500" }}>
-                  💰 You'll pay ₹{calculateTotal().toFixed(2)} when your order arrives
+            {paymentMethod === "cod" &&
+              !loading &&
+              (selectedAddressId || showNewAddressForm) && (
+                <div
+                  style={{
+                    marginTop: "1rem",
+                    padding: "0.75rem",
+                    backgroundColor: "#f0fdf4",
+                    borderRadius: "6px",
+                    border: "1px solid #bbf7d0",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "#10b981",
+                      fontWeight: "500",
+                    }}
+                  >
+                    💰 You'll pay ₹{calculateTotal().toFixed(2)} when your order
+                    arrives
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <button
               onClick={() => navigate("/cart")}
@@ -1722,7 +2235,7 @@ const Checkout = () => {
                 borderRadius: "8px",
                 fontSize: "1rem",
                 cursor: "pointer",
-                marginTop: "1rem"
+                marginTop: "1rem",
               }}
             >
               Back to Cart
@@ -1734,4 +2247,4 @@ const Checkout = () => {
   );
 };
 
-export default Checkout; 
+export default Checkout;

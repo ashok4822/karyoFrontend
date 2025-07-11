@@ -41,8 +41,13 @@ import {
   FaTrashAlt,
 } from "react-icons/fa";
 import AdminLeftbar from "../../components/AdminLeftbar";
-import adminAxios from "../../lib/adminAxios";
 import Swal from "sweetalert2";
+import {
+  createCategory,
+  getCategories,
+  restoreCategory,
+  updateCategory,
+} from "../../services/admin/adminCategoryService";
 
 // Memoized components to prevent unnecessary re-renders
 const StatusBadge = React.memo(({ status }) => {
@@ -286,50 +291,54 @@ const CategoryManagement = () => {
     async (page = 1, search = "", sort = sortOrder) => {
       setLoading(true);
       setError("");
-      try {
-        const res = await adminAxios.get(
-          `/categories?page=${page}&limit=${categoriesPerPage}&search=${encodeURIComponent(
-            search
-          )}&status=active&sort=${sort}`
-        );
-        setActiveCategories(res.data.categories);
-        setActiveTotalPages(res.data.totalPages);
-        setActiveTotal(res.data.total);
-        setActiveCurrentPage(res.data.page);
-      } catch (err) {
-        const errorMessage =
-          err.response?.data?.message || "Failed to fetch active categories";
-        setError(errorMessage);
+      const result = await getCategories({
+        page,
+        limit: categoriesPerPage,
+        search,
+        sort,
+      });
+
+      if (result.success) {
+        setActiveCategories(result.data.categories);
+        setActiveTotalPages(result.data.totalPages);
+        setActiveTotal(result.data.total);
+        setActiveCurrentPage(result.data.page);
+      } else {
+        setError(result.error);
+
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: errorMessage,
+          text: result.error || "Failed to fetch active categories",
           confirmButtonColor: "#d33",
         });
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     },
-    [sortOrder]
+    [sortOrder, categoriesPerPage]
   );
 
   const fetchInactiveCategories = useCallback(
     async (page = 1, search = "", sort = sortOrder) => {
       setLoading(true);
       setError("");
-      try {
-        const res = await adminAxios.get(
-          `/categories?page=${page}&limit=${categoriesPerPage}&search=${encodeURIComponent(
-            search
-          )}&status=inactive&sort=${sort}`
-        );
-        setInactiveCategories(res.data.categories);
-        setInactiveTotalPages(res.data.totalPages);
-        setInactiveTotal(res.data.total);
-        setInactiveCurrentPage(res.data.page);
-      } catch (err) {
+      const result = await getCategories({
+        page,
+        limit: categoriesPerPage,
+        search,
+        sort,
+        status: "inactive", // 👈 Key difference
+      });
+
+      if (result.success) {
+        setInactiveCategories(result.data.categories);
+        setInactiveTotalPages(result.data.totalPages);
+        setInactiveTotal(result.data.total);
+        setInactiveCurrentPage(result.data.page);
+      } else {
         const errorMessage =
-          err.response?.data?.message || "Failed to fetch inactive categories";
+          result.error || "Failed to fetch inactive categories";
+
         setError(errorMessage);
         Swal.fire({
           icon: "error",
@@ -337,30 +346,34 @@ const CategoryManagement = () => {
           text: errorMessage,
           confirmButtonColor: "#d33",
         });
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     },
-    [sortOrder]
+    [sortOrder, categoriesPerPage]
   );
 
   const fetchDeletedCategories = useCallback(
     async (page = 1, search = "", sort = sortOrder) => {
       setLoading(true);
       setError("");
-      try {
-        const res = await adminAxios.get(
-          `/categories?page=${page}&limit=${categoriesPerPage}&search=${encodeURIComponent(
-            search
-          )}&status=deleted&sort=${sort}`
-        );
-        setDeletedCategories(res.data.categories);
-        setDeletedTotalPages(res.data.totalPages);
-        setDeletedTotal(res.data.total);
-        setDeletedCurrentPage(res.data.page);
-      } catch (err) {
+
+      const result = await getCategories({
+        page,
+        limit: categoriesPerPage,
+        search,
+        sort,
+        status: "deleted",
+      });
+
+      if (result.success) {
+        setDeletedCategories(result.data.categories);
+        setDeletedTotalPages(result.data.totalPages);
+        setDeletedTotal(result.data.total);
+        setDeletedCurrentPage(result.data.page);
+      } else {
         const errorMessage =
-          err.response?.data?.message || "Failed to fetch deleted categories";
+          result.error || "Failed to fetch deleted categories";
+
         setError(errorMessage);
         Swal.fire({
           icon: "error",
@@ -368,11 +381,10 @@ const CategoryManagement = () => {
           text: errorMessage,
           confirmButtonColor: "#d33",
         });
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     },
-    [sortOrder]
+    [sortOrder, categoriesPerPage]
   );
 
   // Initial load
@@ -509,35 +521,43 @@ const CategoryManagement = () => {
       e.preventDefault();
       if (!validateForm()) return;
       setModalLoading(true);
+      setError("");
+
       try {
+        let result;
+
         if (selectedCategory) {
-          await adminAxios.put(`/categories/${selectedCategory._id}`, formData);
-          Swal.fire({
-            icon: "success",
-            title: "Success!",
-            text: "Category updated successfully",
-            confirmButtonColor: "#28a745",
-          });
+          result = await updateCategory(selectedCategory._id, formData);
         } else {
-          await adminAxios.post("/categories", formData);
+          result = await createCategory(formData);
+        }
+
+        if (result.success) {
           Swal.fire({
             icon: "success",
             title: "Success!",
-            text: "Category created successfully",
+            text: selectedCategory
+              ? "Category updated successfully"
+              : "Category created successfully",
             confirmButtonColor: "#28a745",
           });
-        }
-        handleCloseModal();
-        if (currentView === "active") {
-          fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
-        } else if (currentView === "inactive") {
-          fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
-        } else if (currentView === "deleted") {
-          fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+
+          handleCloseModal();
+
+          // Refresh the appropriate view
+          if (currentView === "active") {
+            fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
+          } else if (currentView === "inactive") {
+            fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
+          } else if (currentView === "deleted") {
+            fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
+          }
+        } else {
+          throw new Error(result.error);
         }
       } catch (error) {
-        const errorMessage =
-          error.response?.data?.message || "Error saving category";
+        const errorMessage = error.message || "Error saving category";
+
         setError(errorMessage);
         Swal.fire({
           icon: "error",
@@ -579,32 +599,33 @@ const CategoryManagement = () => {
         cancelButtonText: "Cancel",
       });
 
-      if (result.isConfirmed) {
-        try {
-          await adminAxios.delete(`/categories/${category._id}`);
-          Swal.fire({
-            icon: "success",
-            title: "Deleted!",
-            text: "Category has been deleted successfully.",
-            confirmButtonColor: "#28a745",
-          });
-          if (currentView === "active") {
-            fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
-          } else if (currentView === "inactive") {
-            fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
-          } else if (currentView === "deleted") {
-            fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
-          }
-        } catch (error) {
-          const errorMessage =
-            error.response?.data?.message || "Error deleting category";
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: errorMessage,
-            confirmButtonColor: "#d33",
-          });
+      if (!result.isConfirmed) return;
+
+      const deleteResult = await deleteCategory(category._id);
+
+      if (deleteResult.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Deleted!",
+          text: "Category has been deleted successfully.",
+          confirmButtonColor: "#28a745",
+        });
+
+        // Refresh current category view
+        if (currentView === "active") {
+          fetchActiveCategories(activeCurrentPage, searchTerm, sortOrder);
+        } else if (currentView === "inactive") {
+          fetchInactiveCategories(inactiveCurrentPage, searchTerm, sortOrder);
+        } else if (currentView === "deleted") {
+          fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
         }
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: deleteResult.error || "Error deleting category",
+          confirmButtonColor: "#d33",
+        });
       }
     },
     [
@@ -633,28 +654,29 @@ const CategoryManagement = () => {
         cancelButtonText: "Cancel",
       });
 
-      if (result.isConfirmed) {
-        try {
-          await adminAxios.patch(`/categories/${categoryId}/restore`);
-          Swal.fire({
-            icon: "success",
-            title: "Restored!",
-            text: "Category has been restored successfully.",
-            confirmButtonColor: "#28a745",
-          });
-          if (currentView === "deleted") {
-            fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
-          }
-        } catch (error) {
-          const errorMessage =
-            error.response?.data?.message || "Error restoring category";
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: errorMessage,
-            confirmButtonColor: "#d33",
-          });
+      if (!result.isConfirmed) return;
+
+      const restoreResult = await restoreCategory(categoryId);
+
+      if (restoreResult.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Restored!",
+          text: "Category has been restored successfully.",
+          confirmButtonColor: "#28a745",
+        });
+
+        // Refresh current view if it's 'deleted'
+        if (currentView === "deleted") {
+          fetchDeletedCategories(deletedCurrentPage, searchTerm, sortOrder);
         }
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: restoreResult.error || "Error restoring category",
+          confirmButtonColor: "#d33",
+        });
       }
     },
     [
