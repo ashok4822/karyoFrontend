@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Row,
@@ -11,7 +11,7 @@ import {
   Alert,
   Spinner,
   Badge,
-} from 'react-bootstrap';
+} from "react-bootstrap";
 import {
   FaPlus,
   FaEdit,
@@ -21,10 +21,10 @@ import {
   FaSortUp,
   FaSortDown,
   FaUndo,
-} from 'react-icons/fa';
-import AdminLeftbar from '../../components/AdminLeftbar';
-import Swal from 'sweetalert2';
-import { useDispatch, useSelector } from 'react-redux';
+} from "react-icons/fa";
+import AdminLeftbar from "../../components/AdminLeftbar";
+import Swal from "sweetalert2";
+import { useDispatch, useSelector } from "react-redux";
 import {
   fetchCoupons,
   createCoupon,
@@ -33,34 +33,27 @@ import {
   restoreCoupon,
   clearError,
   setFilters,
-} from '../../redux/reducers/couponSlice';
+} from "../../redux/reducers/couponSlice";
 
 const AdminCoupons = () => {
   const dispatch = useDispatch();
-  const {
-    coupons,
-    loading,
-    error,
-    total,
-    page,
-    totalPages,
-    filters,
-  } = useSelector((state) => state.coupons);
+  const { coupons, loading, error, total, page, totalPages, filters } =
+    useSelector((state) => state.coupons);
 
   const [showModal, setShowModal] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState(null);
   const [formData, setFormData] = useState({
-    code: '',
-    description: '',
-    discountType: 'percentage',
-    discountValue: '',
-    minimumAmount: '',
-    maximumDiscount: '',
-    validFrom: '',
-    validTo: '',
-    status: 'active',
-    maxUsage: '',
-    maxUsagePerUser: '',
+    code: "",
+    description: "",
+    discountType: "percentage",
+    discountValue: "",
+    minimumAmount: "",
+    maximumDiscount: "",
+    validFrom: "",
+    validTo: "",
+    status: "active",
+    maxUsage: "",
+    maxUsagePerUser: "",
   });
   const [formErrors, setFormErrors] = useState({});
 
@@ -74,31 +67,37 @@ const AdminCoupons = () => {
       setEditingCoupon(coupon);
       setFormData({
         code: coupon.code,
-        description: coupon.description || '',
+        description: coupon.description || "",
         discountType: coupon.discountType,
         discountValue: coupon.discountValue.toString(),
-        minimumAmount: coupon.minimumAmount ? coupon.minimumAmount.toString() : '',
-        maximumDiscount: coupon.maximumDiscount ? coupon.maximumDiscount.toString() : '',
+        minimumAmount: coupon.minimumAmount
+          ? coupon.minimumAmount.toString()
+          : "",
+        maximumDiscount: coupon.maximumDiscount
+          ? coupon.maximumDiscount.toString()
+          : "",
         validFrom: new Date(coupon.validFrom).toISOString().slice(0, 16),
         validTo: new Date(coupon.validTo).toISOString().slice(0, 16),
         status: coupon.status,
-        maxUsage: coupon.maxUsage ? coupon.maxUsage.toString() : '',
-        maxUsagePerUser: coupon.maxUsagePerUser ? coupon.maxUsagePerUser.toString() : '',
+        maxUsage: coupon.maxUsage ? coupon.maxUsage.toString() : "",
+        maxUsagePerUser: coupon.maxUsagePerUser
+          ? coupon.maxUsagePerUser.toString()
+          : "",
       });
     } else {
       setEditingCoupon(null);
       setFormData({
-        code: '',
-        description: '',
-        discountType: 'percentage',
-        discountValue: '',
-        minimumAmount: '',
-        maximumDiscount: '',
-        validFrom: '',
-        validTo: '',
-        status: 'active',
-        maxUsage: '',
-        maxUsagePerUser: '',
+        code: "",
+        description: "",
+        discountType: "percentage",
+        discountValue: "",
+        minimumAmount: "",
+        maximumDiscount: "",
+        validFrom: "",
+        validTo: "",
+        status: "active",
+        maxUsage: "",
+        maxUsagePerUser: "",
       });
     }
     setShowModal(true);
@@ -109,17 +108,17 @@ const AdminCoupons = () => {
     setShowModal(false);
     setEditingCoupon(null);
     setFormData({
-      code: '',
-      description: '',
-      discountType: 'percentage',
-      discountValue: '',
-      minimumAmount: '',
-      maximumDiscount: '',
-      validFrom: '',
-      validTo: '',
-      status: 'active',
-      maxUsage: '',
-      maxUsagePerUser: '',
+      code: "",
+      description: "",
+      discountType: "percentage",
+      discountValue: "",
+      minimumAmount: "",
+      maximumDiscount: "",
+      validFrom: "",
+      validTo: "",
+      status: "active",
+      maxUsage: "",
+      maxUsagePerUser: "",
     });
     setFormErrors({});
     dispatch(clearError());
@@ -127,12 +126,24 @@ const AdminCoupons = () => {
 
   const validateForm = () => {
     const errors = {};
-    if (!formData.code.trim()) errors.code = 'Coupon code is required';
-    else if (!/^[A-Z0-9_\-]{3,20}$/.test(formData.code.trim().toUpperCase())) errors.code = 'Code must be 3-20 characters, uppercase letters, numbers, - or _ only';
-    if (!formData.discountValue || isNaN(formData.discountValue) || Number(formData.discountValue) <= 0) errors.discountValue = 'Discount value must be greater than 0';
-    if (!formData.validFrom) errors.validFrom = 'Valid from date is required';
-    if (!formData.validTo) errors.validTo = 'Valid to date is required';
-    if (formData.validFrom && formData.validTo && new Date(formData.validFrom) >= new Date(formData.validTo)) errors.validTo = 'Valid to date must be after valid from date';
+    if (!formData.code.trim()) errors.code = "Coupon code is required";
+    else if (!/^[A-Z0-9_\-]{3,20}$/.test(formData.code.trim().toUpperCase()))
+      errors.code =
+        "Code must be 3-20 characters, uppercase letters, numbers, - or _ only";
+    if (
+      !formData.discountValue ||
+      isNaN(formData.discountValue) ||
+      Number(formData.discountValue) <= 0
+    )
+      errors.discountValue = "Discount value must be greater than 0";
+    if (!formData.validFrom) errors.validFrom = "Valid from date is required";
+    if (!formData.validTo) errors.validTo = "Valid to date is required";
+    if (
+      formData.validFrom &&
+      formData.validTo &&
+      new Date(formData.validFrom) >= new Date(formData.validTo)
+    )
+      errors.validTo = "Valid to date must be after valid from date";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -141,16 +152,18 @@ const AdminCoupons = () => {
     e.preventDefault();
     if (!validateForm()) {
       Swal.fire({
-        title: 'Validation Error',
-        text: Object.values(formErrors).join('\n'),
-        icon: 'warning',
-        confirmButtonColor: '#dc3545',
+        title: "Validation Error",
+        text: Object.values(formErrors).join("\n"),
+        icon: "warning",
+        confirmButtonColor: "#dc3545",
       });
       return;
     }
     Swal.fire({
-      title: editingCoupon ? 'Updating...' : 'Creating...',
-      text: editingCoupon ? 'Please wait while we update the coupon.' : 'Please wait while we create the coupon.',
+      title: editingCoupon ? "Updating..." : "Creating...",
+      text: editingCoupon
+        ? "Please wait while we update the coupon."
+        : "Please wait while we create the coupon.",
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
@@ -158,34 +171,39 @@ const AdminCoupons = () => {
     });
     try {
       if (editingCoupon) {
-        await dispatch(updateCoupon({ id: editingCoupon._id, couponData: formData })).unwrap();
+        await dispatch(
+          updateCoupon({ id: editingCoupon._id, couponData: formData })
+        ).unwrap();
         Swal.fire({
-          title: 'Updated!',
-          text: 'Coupon has been updated successfully.',
-          icon: 'success',
-          confirmButtonColor: '#28a745',
+          title: "Updated!",
+          text: "Coupon has been updated successfully.",
+          icon: "success",
+          confirmButtonColor: "#28a745",
         });
       } else {
         await dispatch(createCoupon(formData)).unwrap();
         Swal.fire({
-          title: 'Created!',
-          text: 'Coupon has been created successfully.',
-          icon: 'success',
-          confirmButtonColor: '#28a745',
+          title: "Created!",
+          text: "Coupon has been created successfully.",
+          icon: "success",
+          confirmButtonColor: "#28a745",
         });
       }
       handleCloseModal();
       dispatch(fetchCoupons(filters));
     } catch (err) {
-      if (typeof err === 'string' && err.includes('Coupon code already exists')) {
+      if (
+        typeof err === "string" &&
+        err.includes("Coupon code already exists")
+      ) {
         setFormErrors((prev) => ({ ...prev, code: err }));
         Swal.close();
       } else {
         Swal.fire({
-          title: 'Error!',
-          text: err || 'Failed to create/update coupon. Please try again.',
-          icon: 'error',
-          confirmButtonColor: '#dc3545',
+          title: "Error!",
+          text: err || "Failed to create/update coupon. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#dc3545",
         });
       }
     }
@@ -193,25 +211,25 @@ const AdminCoupons = () => {
 
   const handleDelete = async (id) => {
     Swal.fire({
-      title: 'Are you sure?',
+      title: "Are you sure?",
       text: "You won't be able to revert this!",
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!',
-      cancelButtonText: 'Cancel',
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
       reverseButtons: true,
       customClass: {
-        confirmButton: 'btn btn-danger',
-        cancelButton: 'btn btn-secondary',
+        confirmButton: "btn btn-danger",
+        cancelButton: "btn btn-secondary",
       },
       buttonsStyling: false,
     }).then(async (result) => {
       if (result.isConfirmed) {
         Swal.fire({
-          title: 'Deleting...',
-          text: 'Please wait while we delete the coupon.',
+          title: "Deleting...",
+          text: "Please wait while we delete the coupon.",
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
@@ -220,18 +238,18 @@ const AdminCoupons = () => {
         try {
           await dispatch(deleteCoupon(id)).unwrap();
           Swal.fire({
-            title: 'Deleted!',
-            text: 'Coupon has been deleted successfully.',
-            icon: 'success',
-            confirmButtonColor: '#28a745',
+            title: "Deleted!",
+            text: "Coupon has been deleted successfully.",
+            icon: "success",
+            confirmButtonColor: "#28a745",
           });
           dispatch(fetchCoupons(filters));
         } catch (err) {
           Swal.fire({
-            title: 'Error!',
-            text: err || 'Failed to delete coupon. Please try again.',
-            icon: 'error',
-            confirmButtonColor: '#dc3545',
+            title: "Error!",
+            text: err || "Failed to delete coupon. Please try again.",
+            icon: "error",
+            confirmButtonColor: "#dc3545",
           });
         }
       }
@@ -240,25 +258,25 @@ const AdminCoupons = () => {
 
   const handleRestore = async (id) => {
     Swal.fire({
-      title: 'Restore Coupon?',
-      text: 'This will restore the coupon and make it active again.',
-      icon: 'question',
+      title: "Restore Coupon?",
+      text: "This will restore the coupon and make it active again.",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonColor: '#28a745',
-      cancelButtonColor: '#6c757d',
-      confirmButtonText: 'Yes, restore it!',
-      cancelButtonText: 'Cancel',
+      confirmButtonColor: "#28a745",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Yes, restore it!",
+      cancelButtonText: "Cancel",
       reverseButtons: true,
       customClass: {
-        confirmButton: 'btn btn-success',
-        cancelButton: 'btn btn-secondary',
+        confirmButton: "btn btn-success",
+        cancelButton: "btn btn-secondary",
       },
       buttonsStyling: false,
     }).then(async (result) => {
       if (result.isConfirmed) {
         Swal.fire({
-          title: 'Restoring...',
-          text: 'Please wait while we restore the coupon.',
+          title: "Restoring...",
+          text: "Please wait while we restore the coupon.",
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
@@ -267,18 +285,18 @@ const AdminCoupons = () => {
         try {
           await dispatch(restoreCoupon(id)).unwrap();
           Swal.fire({
-            title: 'Restored!',
-            text: 'Coupon has been restored successfully.',
-            icon: 'success',
-            confirmButtonColor: '#28a745',
+            title: "Restored!",
+            text: "Coupon has been restored successfully.",
+            icon: "success",
+            confirmButtonColor: "#28a745",
           });
           dispatch(fetchCoupons(filters));
         } catch (err) {
           Swal.fire({
-            title: 'Error!',
-            text: err || 'Failed to restore coupon. Please try again.',
-            icon: 'error',
-            confirmButtonColor: '#dc3545',
+            title: "Error!",
+            text: err || "Failed to restore coupon. Please try again.",
+            icon: "error",
+            confirmButtonColor: "#dc3545",
           });
         }
       }
@@ -286,21 +304,26 @@ const AdminCoupons = () => {
   };
 
   const handleSort = (key) => {
-    dispatch(setFilters({
-      sortBy: key,
-      sortOrder: filters.sortBy === key && filters.sortOrder === 'asc' ? 'desc' : 'asc',
-    }));
+    dispatch(
+      setFilters({
+        sortBy: key,
+        sortOrder:
+          filters.sortBy === key && filters.sortOrder === "asc"
+            ? "desc"
+            : "asc",
+      })
+    );
   };
 
   const getSortIcon = (key) => {
     if (filters.sortBy !== key) return <FaSort className="text-muted" />;
-    return filters.sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />;
+    return filters.sortOrder === "asc" ? <FaSortUp /> : <FaSortDown />;
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
@@ -328,7 +351,11 @@ const AdminCoupons = () => {
               </Col>
             </Row>
             {error && (
-              <Alert variant="danger" dismissible onClose={() => dispatch(clearError())}>
+              <Alert
+                variant="danger"
+                dismissible
+                onClose={() => dispatch(clearError())}
+              >
                 {error}
               </Alert>
             )}
@@ -346,7 +373,9 @@ const AdminCoupons = () => {
                           type="text"
                           placeholder="Search by code or description..."
                           value={filters.search}
-                          onChange={(e) => dispatch(setFilters({ search: e.target.value }))}
+                          onChange={(e) =>
+                            dispatch(setFilters({ search: e.target.value }))
+                          }
                         />
                       </div>
                     </Form.Group>
@@ -356,7 +385,9 @@ const AdminCoupons = () => {
                       <Form.Label>Status Filter</Form.Label>
                       <Form.Select
                         value={filters.status}
-                        onChange={(e) => dispatch(setFilters({ status: e.target.value }))}
+                        onChange={(e) =>
+                          dispatch(setFilters({ status: e.target.value }))
+                        }
                       >
                         <option value="all">All Status</option>
                         <option value="active">Active</option>
@@ -377,9 +408,12 @@ const AdminCoupons = () => {
                   <Table hover className="align-middle">
                     <thead>
                       <tr>
-                        <th className="cursor-pointer" onClick={() => handleSort('code')}>
+                        <th
+                          className="cursor-pointer"
+                          onClick={() => handleSort("code")}
+                        >
                           <div className="d-flex align-items-center gap-2">
-                            Code {getSortIcon('code')}
+                            Code {getSortIcon("code")}
                           </div>
                         </th>
                         <th>Description</th>
@@ -396,9 +430,15 @@ const AdminCoupons = () => {
                     <tbody>
                       {coupons.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="text-center text-muted py-4">
+                          <td
+                            colSpan={10}
+                            className="text-center text-muted py-4"
+                          >
                             <div>
-                              <FaSearch className="mb-2" style={{ fontSize: '2rem' }} />
+                              <FaSearch
+                                className="mb-2"
+                                style={{ fontSize: "2rem" }}
+                              />
                               <p>No coupons found.</p>
                               <Button
                                 variant="outline-primary"
@@ -414,19 +454,27 @@ const AdminCoupons = () => {
                         coupons.map((coupon) => (
                           <tr key={coupon._id}>
                             <td>{coupon.code}</td>
-                            <td>{coupon.description || '-'}</td>
+                            <td>{coupon.description || "-"}</td>
                             <td>
-                              <Badge bg={coupon.discountType === 'percentage' ? 'info' : 'warning'}>
+                              <Badge
+                                bg={
+                                  coupon.discountType === "percentage"
+                                    ? "info"
+                                    : "warning"
+                                }
+                              >
                                 {coupon.discountType}
                               </Badge>
                             </td>
                             <td>
-                              {coupon.discountType === 'percentage'
+                              {coupon.discountType === "percentage"
                                 ? `${coupon.discountValue}%`
                                 : `₹${coupon.discountValue}`}
                             </td>
                             <td>
-                              {coupon.minimumAmount > 0 ? `₹${coupon.minimumAmount}` : '-'}
+                              {coupon.minimumAmount > 0
+                                ? `₹${coupon.minimumAmount}`
+                                : "-"}
                             </td>
                             <td>
                               <div>
@@ -435,7 +483,15 @@ const AdminCoupons = () => {
                               </div>
                             </td>
                             <td>
-                              <Badge bg={coupon.status === 'active' ? 'success' : coupon.status === 'inactive' ? 'secondary' : 'danger'}>
+                              <Badge
+                                bg={
+                                  coupon.status === "active"
+                                    ? "success"
+                                    : coupon.status === "inactive"
+                                    ? "secondary"
+                                    : "danger"
+                                }
+                              >
                                 {coupon.status}
                               </Badge>
                             </td>
@@ -444,7 +500,9 @@ const AdminCoupons = () => {
                               {coupon.maxUsage && ` / ${coupon.maxUsage}`}
                             </td>
                             <td>
-                              {coupon.maxUsagePerUser ? coupon.maxUsagePerUser : '-'}
+                              {coupon.maxUsagePerUser
+                                ? coupon.maxUsagePerUser
+                                : "-"}
                             </td>
                             <td>
                               <div className="d-flex gap-2">
@@ -496,7 +554,7 @@ const AdminCoupons = () => {
       <Modal show={showModal} onHide={handleCloseModal} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
-            {editingCoupon ? 'Edit Coupon' : 'Add New Coupon'}
+            {editingCoupon ? "Edit Coupon" : "Add New Coupon"}
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
@@ -508,14 +566,22 @@ const AdminCoupons = () => {
                   <Form.Control
                     type="text"
                     value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    required
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        code: e.target.value.toUpperCase(),
+                      })
+                    }
                     isInvalid={!!formErrors.code}
                     placeholder="E.g. SAVE10"
                     maxLength={20}
                   />
-                  <Form.Text className="text-muted">Unique, 3-20 uppercase letters, numbers, - or _</Form.Text>
-                  <Form.Control.Feedback type="invalid">{formErrors.code}</Form.Control.Feedback>
+                  <Form.Text className="text-muted">
+                    Unique, 3-20 uppercase letters, numbers, - or _
+                  </Form.Text>
+                  <Form.Control.Feedback type="invalid">
+                    {formErrors.code}
+                  </Form.Control.Feedback>
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -523,7 +589,9 @@ const AdminCoupons = () => {
                   <Form.Label>Status</Form.Label>
                   <Form.Select
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, status: e.target.value })
+                    }
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -537,7 +605,9 @@ const AdminCoupons = () => {
                 as="textarea"
                 rows={3}
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
               />
             </Form.Group>
             <Row>
@@ -546,8 +616,9 @@ const AdminCoupons = () => {
                   <Form.Label>Discount Type *</Form.Label>
                   <Form.Select
                     value={formData.discountType}
-                    onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
-                    required
+                    onChange={(e) =>
+                      setFormData({ ...formData, discountType: e.target.value })
+                    }
                   >
                     <option value="percentage">Percentage</option>
                     <option value="fixed">Fixed Amount</option>
@@ -562,13 +633,15 @@ const AdminCoupons = () => {
                     step="0.01"
                     min="0"
                     value={formData.discountValue}
-                    onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
-                    required
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        discountValue: e.target.value,
+                      })
+                    }
                   />
-                  {formData.discountType === 'percentage' && (
-                    <Form.Text className="text-muted">
-                      Maximum 100%
-                    </Form.Text>
+                  {formData.discountType === "percentage" && (
+                    <Form.Text className="text-muted">Maximum 100%</Form.Text>
                   )}
                 </Form.Group>
               </Col>
@@ -582,7 +655,12 @@ const AdminCoupons = () => {
                     step="0.01"
                     min="0"
                     value={formData.minimumAmount}
-                    onChange={(e) => setFormData({ ...formData, minimumAmount: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        minimumAmount: e.target.value,
+                      })
+                    }
                   />
                 </Form.Group>
               </Col>
@@ -594,7 +672,12 @@ const AdminCoupons = () => {
                     step="0.01"
                     min="0"
                     value={formData.maximumDiscount}
-                    onChange={(e) => setFormData({ ...formData, maximumDiscount: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        maximumDiscount: e.target.value,
+                      })
+                    }
                   />
                 </Form.Group>
               </Col>
@@ -606,8 +689,9 @@ const AdminCoupons = () => {
                   <Form.Control
                     type="datetime-local"
                     value={formData.validFrom}
-                    onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                    required
+                    onChange={(e) =>
+                      setFormData({ ...formData, validFrom: e.target.value })
+                    }
                   />
                 </Form.Group>
               </Col>
@@ -617,8 +701,9 @@ const AdminCoupons = () => {
                   <Form.Control
                     type="datetime-local"
                     value={formData.validTo}
-                    onChange={(e) => setFormData({ ...formData, validTo: e.target.value })}
-                    required
+                    onChange={(e) =>
+                      setFormData({ ...formData, validTo: e.target.value })
+                    }
                   />
                 </Form.Group>
               </Col>
@@ -631,7 +716,9 @@ const AdminCoupons = () => {
                     type="number"
                     min="1"
                     value={formData.maxUsage}
-                    onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, maxUsage: e.target.value })
+                    }
                     placeholder="Leave empty for unlimited"
                   />
                   <Form.Text className="text-muted">
@@ -646,7 +733,12 @@ const AdminCoupons = () => {
                     type="number"
                     min="1"
                     value={formData.maxUsagePerUser}
-                    onChange={(e) => setFormData({ ...formData, maxUsagePerUser: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        maxUsagePerUser: e.target.value,
+                      })
+                    }
                     placeholder="Leave empty for unlimited"
                   />
                   <Form.Text className="text-muted">
@@ -661,7 +753,7 @@ const AdminCoupons = () => {
               Cancel
             </Button>
             <Button variant="primary" type="submit">
-              {editingCoupon ? 'Update Coupon' : 'Create Coupon'}
+              {editingCoupon ? "Update Coupon" : "Create Coupon"}
             </Button>
           </Modal.Footer>
         </Form>
@@ -670,4 +762,4 @@ const AdminCoupons = () => {
   );
 };
 
-export default AdminCoupons; 
+export default AdminCoupons;

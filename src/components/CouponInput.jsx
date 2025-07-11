@@ -10,15 +10,22 @@ const CouponInput = ({ orderAmount, appliedCoupon, onApply, onRemove }) => {
   const handleApply = async (e) => {
     e.preventDefault();
     setError("");
-    if (!couponCode.trim()) {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
       setError("Please enter a coupon code");
+      return;
+    }
+    if (!/^[A-Z0-9_\-]{3,20}$/.test(code)) {
+      setError("Code must be 3-20 characters, uppercase letters, numbers, - or _ only");
       return;
     }
     setLoading(true);
     try {
-      const res = await validateCouponCode(couponCode.trim(), orderAmount);
-      if (res && res.discount) {
-        onApply(res.discount);
+      const res = await validateCouponCode(code, orderAmount);
+      console.log("Coupon validation response:", res);
+      console.log("Discount data:", res.data);
+      if (res && res.data && res.data.discount) {
+        onApply(res.data.discount);
         setCouponCode("");
       } else {
         setError("Invalid coupon code");
@@ -37,7 +44,7 @@ const CouponInput = ({ orderAmount, appliedCoupon, onApply, onRemove }) => {
           size="sm"
           placeholder="Enter coupon code"
           value={couponCode}
-          onChange={(e) => setCouponCode(e.target.value)}
+          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
           style={{ maxWidth: 180 }}
           disabled={!!appliedCoupon || loading}
         />

@@ -219,6 +219,7 @@ const Checkout = () => {
     if (!discount) return 0;
     const subtotal = calculateSubtotal();
     let discountAmount = 0;
+    
     if (discount.discountType === "percentage") {
       discountAmount = (subtotal * discount.discountValue) / 100;
       if (discount.maximumDiscount && discountAmount > discount.maximumDiscount) {
@@ -606,6 +607,7 @@ const Checkout = () => {
         shippingAddressData = { ...formData };
       }
 
+      const discountObj = appliedCoupon || userDiscounts.selectedDiscount;
       const orderData = {
         items: cart.items.map((item) => ({
           productVariantId: item.productVariantId._id,
@@ -616,13 +618,13 @@ const Checkout = () => {
         paymentMethod,
         subtotal: calculateSubtotal(),
         subtotalAfterDiscount: calculateSubtotalAfterDiscount(),
-        discount: userDiscounts.selectedDiscount
+        discount: discountObj
           ? {
-              discountId: userDiscounts.selectedDiscount._id,
-              discountName: userDiscounts.selectedDiscount.name,
+              discountId: discountObj._id,
+              discountName: discountObj.name,
               discountAmount: calculateDiscount(),
-              discountType: userDiscounts.selectedDiscount.discountType,
-              discountValue: userDiscounts.selectedDiscount.discountValue,
+              discountType: discountObj.discountType,
+              discountValue: discountObj.discountValue,
             }
           : null,
         shipping: calculateShipping(),

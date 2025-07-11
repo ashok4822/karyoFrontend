@@ -60,6 +60,14 @@ const AdminOrders = () => {
     const fetchOrders = async () => {
       setLoading(true);
       setError("");
+      console.log('Fetching orders with params:', {
+        page: currentPage,
+        limit: ordersPerPage,
+        status: statusFilter || undefined,
+        search: searchTerm || undefined,
+        sortBy: sortField,
+        sortOrder: sortDirection,
+      });
       const result = await getAllOrders({
         page: currentPage,
         limit: ordersPerPage,
@@ -71,10 +79,13 @@ const AdminOrders = () => {
 
       if (result.success) {
         const { orders = [], totalPages = 1, total = 0 } = result.data;
+        console.log('Orders received:', orders);
+        console.log('Total orders:', total);
         setOrders(orders);
         setTotalPages(totalPages);
         setTotal(total);
       } else {
+        console.log('Error in result:', result);
         setError(result.error);
       }
       setLoading(false);
@@ -213,7 +224,7 @@ const AdminOrders = () => {
                         </InputGroup.Text>
                         <Form.Control
                           type="text"
-                          placeholder="Search orders..."
+                          placeholder="Search by order ID, customer name, email, or product name..."
                           value={searchInput}
                           onChange={handleSearchInputChange}
                         />
@@ -222,6 +233,9 @@ const AdminOrders = () => {
                         </Button>
                       </InputGroup>
                     </Form>
+                    <small className="text-muted mt-1 d-block">
+                      Search by order number, customer name, email, or product name
+                    </small>
                   </Col>
                   {/* Remove the status filter dropdown from the admin orders table UI */}
                   <Col md={3}>
@@ -287,6 +301,7 @@ const AdminOrders = () => {
                         </button>
                       </th>
                       <th>Customer</th>
+                      <th>Products</th>
                       <th className="cursor-pointer">
                         <button
                           type="button"
@@ -348,6 +363,52 @@ const AdminOrders = () => {
                           <small className="text-muted">
                             {order.user?.email || ""}
                           </small>
+                        </td>
+                        <td>
+                          <div className="d-flex flex-column gap-2">
+                            {order.items && order.items.slice(0, 3).map((item, index) => {
+                              const variant = item.productVariantId || {};
+                              const product = variant.product || {};
+                              const imageUrl = variant.imageUrls && variant.imageUrls.length > 0 
+                                ? variant.imageUrls[0] 
+                                : product.mainImage || "";
+                              
+                              return (
+                                <div key={index} className="d-flex align-items-center gap-2">
+                                  <img
+                                    src={imageUrl}
+                                    alt={product.name || "Product"}
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      objectFit: "cover",
+                                      borderRadius: "4px",
+                                      border: "1px solid #dee2e6"
+                                    }}
+                                    onError={(e) => {
+                                      e.target.style.display = "none";
+                                    }}
+                                  />
+                                  <div className="flex-grow-1">
+                                    <div className="fw-medium small">
+                                      {product.name || "Product Name"}
+                                    </div>
+                                    <div className="text-muted small">
+                                      {variant.colour && variant.capacity 
+                                        ? `${variant.colour} - ${variant.capacity}`
+                                        : variant.colour || variant.capacity || ""
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {order.items && order.items.length > 3 && (
+                              <div className="text-muted small">
+                                +{order.items.length - 3} more items
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td>₹{order.total?.toFixed(2) ?? "-"}</td>
                         <td>

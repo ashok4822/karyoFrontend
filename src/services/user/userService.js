@@ -35,7 +35,7 @@ export const getUserProfile = async () => {
 export const validateCouponCode = (code, orderAmount) => {
   return apiHandler(
     userAxios.post(
-      "/validate-coupon",
+      "/users/validate-coupon",
       { code, orderAmount }
     )
   );

@@ -1112,7 +1112,7 @@ const ProductDetails = () => {
             })()}
 
             {/* Coupon Application */}
-            <div className="mb-3">
+            {/*<div className="mb-3">
               <Form
                 className="d-flex gap-2"
                 onSubmit={(e) => {
@@ -1164,7 +1164,7 @@ const ProductDetails = () => {
                     ))}
                   </div>
                 )}
-            </div>
+            </div>*/}
           </div>
 
           {/* Stock Status */}

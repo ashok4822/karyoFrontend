@@ -41,6 +41,14 @@ export const getAllOrders = ({
   sortBy = "createdAt",
   sortOrder = "desc",
 }) => {
+  console.log('getAllOrders service called with params:', {
+    page,
+    limit,
+    status,
+    search,
+    sortBy,
+    sortOrder,
+  });
   return apiHandler(
     adminAxios.get("/orders", {
       params: {

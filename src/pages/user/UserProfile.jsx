@@ -1720,6 +1720,9 @@ const UserProfile = () => {
                       item.itemPaymentStatus ||
                       order.paymentStatus ||
                       "pending";
+                    const originalPrice = (item.price * item.quantity).toFixed(2);
+                    const hasDiscount = order.discount && order.discount.discountAmount > 0;
+                    const discountedTotal = order.total.toFixed(2);
 
                     return (
                       <tr
@@ -1811,7 +1814,22 @@ const UserProfile = () => {
                         </td>
                         <td>{item.quantity}</td>
                         <td className="fw-bold">
-                          ₹{(item.price * item.quantity).toFixed(2)}
+                          {hasDiscount ? (
+                            <>
+                              <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.95em' }}>
+                                ₹{originalPrice}
+                              </span>
+                              <br />
+                              <span style={{ color: '#10b981', fontWeight: 600 }}>
+                                ₹{discountedTotal}
+                              </span>
+                              <div className="text-success small">
+                                -₹{order.discount.discountAmount.toFixed(2)} (Discount)
+                              </div>
+                            </>
+                          ) : (
+                            <>₹{originalPrice}</>
+                          )}
                         </td>
                         <td>
                           {(() => {
