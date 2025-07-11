@@ -34,6 +34,7 @@ import AdminOrderDetails from "../../pages/admin/AdminOrderDetails";
 import Wallet from "../../pages/user/Wallet";
 import Contact from "../../pages/user/Contact";
 import About from "../../pages/About";
+import AdminCoupons from "../../pages/admin/AdminCoupons";
 
 const AppRoutes = () => {
   const [isSessionRestored, setIsSessionRestored] = useState(false);
@@ -141,6 +142,14 @@ const AppRoutes = () => {
             element={
               <AdminProtectedRoute>
                 <AdminOrderDetails />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/coupons"
+            element={
+              <AdminProtectedRoute>
+                <AdminCoupons />
               </AdminProtectedRoute>
             }
           />

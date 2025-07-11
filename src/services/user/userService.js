@@ -30,3 +30,13 @@ export const verifyEmailChangeOtp = (email, otp, token) => {
 export const getUserProfile = async () => {
   return await apiHandler(userAxios.get("/users/profile"));
 };
+
+// Validate coupon code for checkout
+export const validateCouponCode = (code, orderAmount) => {
+  return apiHandler(
+    userAxios.post(
+      "/validate-coupon",
+      { code, orderAmount }
+    )
+  );
+};

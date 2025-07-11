@@ -15,6 +15,7 @@ import {
   setSelectedDiscount,
   clearSelectedDiscount,
 } from "../../redux/reducers/userDiscountSlice";
+import CouponInput from "../../components/CouponInput";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 
 const Checkout = () => {
@@ -66,6 +67,7 @@ const Checkout = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   // Initialize cart if not already done
   useEffect(() => {
@@ -211,29 +213,20 @@ const Checkout = () => {
     );
   };
 
+  // Update calculateDiscount to use appliedCoupon if present
   const calculateDiscount = () => {
-    if (!userDiscounts.selectedDiscount) return 0;
-
+    const discount = appliedCoupon || userDiscounts.selectedDiscount;
+    if (!discount) return 0;
     const subtotal = calculateSubtotal();
-    const discount = userDiscounts.selectedDiscount;
-
     let discountAmount = 0;
-
     if (discount.discountType === "percentage") {
       discountAmount = (subtotal * discount.discountValue) / 100;
-
-      // Apply maximum discount limit if set
-      if (
-        discount.maximumDiscount &&
-        discountAmount > discount.maximumDiscount
-      ) {
+      if (discount.maximumDiscount && discountAmount > discount.maximumDiscount) {
         discountAmount = discount.maximumDiscount;
       }
     } else {
       discountAmount = Math.min(discount.discountValue, subtotal);
     }
-
-    // Ensure discount doesn't exceed order amount
     return Math.min(discountAmount, subtotal);
   };
 
@@ -1934,6 +1927,16 @@ const Checkout = () => {
             </div>
 
             {/* Discount Selection */}
+            <CouponInput
+              orderAmount={calculateSubtotal()}
+              appliedCoupon={appliedCoupon}
+              onApply={(discount) => {
+                setAppliedCoupon(discount);
+                dispatch(clearSelectedDiscount());
+              }}
+              onRemove={() => setAppliedCoupon(null)}
+            />
+
             {getEligibleDiscounts().length > 0 && (
               <div
                 style={{
@@ -2014,7 +2017,10 @@ const Checkout = () => {
                         checked={
                           userDiscounts.selectedDiscount?._id === discount._id
                         }
-                        onChange={() => handleDiscountSelect(discount)}
+                        onChange={() => {
+                          handleDiscountSelect(discount);
+                          setAppliedCoupon(null);
+                        }}
                         style={{ margin: 0 }}
                       />
                       <div style={{ flex: 1 }}>
@@ -2090,7 +2096,7 @@ const Checkout = () => {
               >
                 <span>Subtotal:</span>
                 <div style={{ textAlign: "right" }}>
-                  {userDiscounts.selectedDiscount ? (
+                  {appliedCoupon || userDiscounts.selectedDiscount ? (
                     <>
                       <div
                         style={{
@@ -2111,7 +2117,7 @@ const Checkout = () => {
                 </div>
               </div>
 
-              {userDiscounts.selectedDiscount && (
+              {appliedCoupon || userDiscounts.selectedDiscount ? (
                 <div
                   style={{
                     display: "flex",
@@ -2120,13 +2126,13 @@ const Checkout = () => {
                   }}
                 >
                   <span style={{ color: "#10b981" }}>
-                    Discount ({userDiscounts.selectedDiscount.name}):
+                    Discount ({appliedCoupon?.name || userDiscounts.selectedDiscount?.name}):
                   </span>
                   <span style={{ color: "#10b981", fontWeight: "500" }}>
                     -₹{calculateDiscount().toFixed(2)}
                   </span>
                 </div>
-              )}
+              ) : null}
 
               <div
                 style={{

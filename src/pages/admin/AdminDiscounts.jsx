@@ -56,6 +56,7 @@ const AdminDiscounts = () => {
     maxUsage: '',
     maxUsagePerUser: '',
   });
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     // Fetch discounts on component mount
@@ -205,8 +206,28 @@ const AdminDiscounts = () => {
     dispatch(clearError());
   };
 
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Name is required';
+    if (!formData.discountValue || isNaN(formData.discountValue) || Number(formData.discountValue) <= 0) errors.discountValue = 'Discount value must be greater than 0';
+    if (!formData.validFrom) errors.validFrom = 'Valid from date is required';
+    if (!formData.validTo) errors.validTo = 'Valid to date is required';
+    if (formData.validFrom && formData.validTo && new Date(formData.validFrom) >= new Date(formData.validTo)) errors.validTo = 'Valid to date must be after valid from date';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateForm()) {
+      Swal.fire({
+        title: 'Validation Error',
+        text: Object.values(formErrors).join('\n'),
+        icon: 'warning',
+        confirmButtonColor: '#dc3545',
+      });
+      return;
+    }
     
     // Show loading state
     Swal.fire({
@@ -220,47 +241,34 @@ const AdminDiscounts = () => {
       }
     });
 
-    if (editingDiscount) {
-      dispatch(updateDiscount({ id: editingDiscount._id, discountData: formData }))
-        .unwrap()
-        .then(() => {
-          Swal.fire({
-            title: 'Updated!',
-            text: 'Discount has been updated successfully.',
-            icon: 'success',
-            confirmButtonColor: '#28a745'
-          });
-          handleCloseModal(true);
-        })
-        .catch((error) => {
+    const action = editingDiscount
+      ? dispatch(updateDiscount({ id: editingDiscount._id, discountData: formData }))
+      : dispatch(createDiscount(formData));
+    action
+      .unwrap()
+      .then(() => {
+        Swal.fire({
+          title: editingDiscount ? 'Updated!' : 'Created!',
+          text: editingDiscount ? 'Discount has been updated successfully.' : 'Discount has been created successfully.',
+          icon: 'success',
+          confirmButtonColor: '#28a745'
+        });
+        handleCloseModal(true);
+      })
+      .catch((error) => {
+        // Check for duplicate code error
+        if (typeof error === 'string' && error.includes('Coupon code already exists')) {
+          setFormErrors((prev) => ({ ...prev, code: error }));
+          Swal.close();
+        } else {
           Swal.fire({
             title: 'Error!',
-            text: error || 'Failed to update discount. Please try again.',
+            text: error || 'Failed to create/update discount. Please try again.',
             icon: 'error',
             confirmButtonColor: '#dc3545'
           });
-        });
-    } else {
-      dispatch(createDiscount(formData))
-        .unwrap()
-        .then(() => {
-          Swal.fire({
-            title: 'Created!',
-            text: 'Discount has been created successfully.',
-            icon: 'success',
-            confirmButtonColor: '#28a745'
-          });
-          handleCloseModal(true);
-        })
-        .catch((error) => {
-          Swal.fire({
-            title: 'Error!',
-            text: error || 'Failed to create discount. Please try again.',
-            icon: 'error',
-            confirmButtonColor: '#dc3545'
-          });
-        });
-    }
+        }
+      });
   };
 
   const handleDelete = (id) => {
@@ -716,31 +724,23 @@ const AdminDiscounts = () => {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
+                    isInvalid={!!formErrors.name}
                   />
+                  <Form.Control.Feedback type="invalid">{formErrors.name}</Form.Control.Feedback>
                 </Form.Group>
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Status</Form.Label>
-                  <Form.Select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </Form.Select>
+                  <Form.Label>Description</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  />
                 </Form.Group>
               </Col>
             </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </Form.Group>
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
@@ -762,7 +762,6 @@ const AdminDiscounts = () => {
                     type="number"
                     step="0.01"
                     min="0"
-                    max={formData.discountType === 'percentage' ? '100' : undefined}
                     value={formData.discountValue}
                     onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
                     required

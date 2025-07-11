@@ -10,6 +10,7 @@ import orderReducer from "../reducers/orderSlice";
 import shippingAddressReducer from "../reducers/shippingAddressSlice";
 import discountReducer from "../reducers/discountSlice";
 import userDiscountReducer from "../reducers/userDiscountSlice";
+import couponReducer from "../reducers/couponSlice";
 import storage from "redux-persist/lib/storage";
 import { persistStore, persistReducer } from "redux-persist";
 
@@ -34,6 +35,7 @@ export const store = configureStore({
     shippingAddress: shippingAddressReducer,
     discounts: discountReducer,
     userDiscounts: userDiscountReducer,
+    coupons: couponReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false }),
