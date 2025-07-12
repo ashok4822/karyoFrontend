@@ -18,6 +18,7 @@ import {
 import { checkCOD } from "../../services/user/orderService";
 import CouponInput from "../../components/CouponInput";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
+import { getBestOffersForProducts } from "../../services/user/offerService";
 
 const Checkout = () => {
   const cart = useSelector((state) => state.cart);
@@ -69,6 +70,8 @@ const Checkout = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [productOffers, setProductOffers] = useState({});
+  const [offersLoading, setOffersLoading] = useState(false);
 
   // Initialize cart if not already done
   useEffect(() => {
@@ -104,6 +107,55 @@ const Checkout = () => {
     discountsFetchAttempted,
     userDiscounts.error,
   ]);
+
+  // Fetch offers for cart products
+  useEffect(() => {
+    if (cartInitialized && cart.items.length > 0) {
+      fetchProductOffers();
+    }
+  }, [cartInitialized, cart.items]);
+
+  // Fetch best offers for all products
+  const fetchProductOffers = async () => {
+    if (!cart.items || cart.items.length === 0) return;
+    
+    try {
+      setOffersLoading(true);
+      const productIds = cart.items.map(item => item.productVariantId?.product?._id).filter(Boolean);
+      const response = await getBestOffersForProducts(productIds);
+      if (response.success && response.data) {
+        setProductOffers(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching best offers for checkout products:", error);
+    } finally {
+      setOffersLoading(false);
+    }
+  };
+
+  // Calculate final price with best offer discount
+  const getFinalPrice = (product, basePrice) => {
+    const offer = productOffers[product._id];
+    
+    if (!offer) {
+      return basePrice;
+    }
+
+    let finalPrice = basePrice;
+
+    // Apply offer discount
+    if (offer.discountType === "percentage") {
+      const discountAmount = (basePrice * offer.discountValue) / 100;
+      const finalDiscount = offer.maximumDiscount 
+        ? Math.min(discountAmount, offer.maximumDiscount)
+        : discountAmount;
+      finalPrice = Math.max(0, basePrice - finalDiscount);
+    } else {
+      finalPrice = Math.max(0, basePrice - offer.discountValue);
+    }
+
+    return finalPrice.toFixed(2);
+  };
 
   useEffect(() => {
     // Wait for cart to be initialized before making any checks
@@ -208,10 +260,12 @@ const Checkout = () => {
   };
 
   const calculateSubtotal = () => {
-    return cart.items.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
+    return cart.items.reduce((total, item) => {
+      const product = item.productVariantId?.product;
+      const basePrice = item.price;
+      const finalPrice = product ? parseFloat(getFinalPrice(product, basePrice)) : basePrice;
+      return total + finalPrice * item.quantity;
+    }, 0);
   };
 
   // Update calculateDiscount to use appliedCoupon if present
@@ -1920,9 +1974,48 @@ const Checkout = () => {
                     </div>
 
                     <div style={{ textAlign: "right" }}>
-                      <p style={{ margin: 0, fontWeight: "bold" }}>
-                        ₹{(item.price * item.quantity).toFixed(2)}
-                      </p>
+                      {(() => {
+                        const product = item.productVariantId?.product;
+                        const basePrice = item.price;
+                        const finalPrice = product ? parseFloat(getFinalPrice(product, basePrice)) : basePrice;
+                        const offer = product ? productOffers[product._id] : null;
+                        const totalPrice = finalPrice * item.quantity;
+                        const originalTotalPrice = basePrice * item.quantity;
+                        
+                        return (
+                          <div>
+                            <p style={{ margin: 0, fontWeight: "bold", fontSize: "16px" }}>
+                              ₹{totalPrice.toFixed(2)}
+                            </p>
+                            {offer && basePrice !== finalPrice && (
+                              <p style={{ 
+                                margin: "4px 0 0 0", 
+                                color: "#999", 
+                                textDecoration: "line-through",
+                                fontSize: "14px"
+                              }}>
+                                ₹{originalTotalPrice.toFixed(2)}
+                              </p>
+                            )}
+                            {offer && (
+                              <div style={{
+                                backgroundColor: "#dcfce7",
+                                color: "#166534",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontSize: "10px",
+                                fontWeight: "500",
+                                marginTop: "4px",
+                                display: "inline-block"
+                              }}>
+                                {offer.discountType === "percentage" 
+                                  ? `${offer.discountValue}% OFF` 
+                                  : `₹${offer.discountValue} OFF`}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -2099,24 +2192,45 @@ const Checkout = () => {
               >
                 <span>Subtotal:</span>
                 <div style={{ textAlign: "right" }}>
-                  {appliedCoupon || userDiscounts.selectedDiscount ? (
-                    <>
-                      <div
-                        style={{
-                          textDecoration: "line-through",
-                          color: "#999",
-                          fontSize: "0.875rem",
-                        }}
-                      >
-                        ₹{calculateSubtotal().toFixed(2)}
-                      </div>
-                      <div style={{ fontWeight: "bold", color: "#10b981" }}>
-                        ₹{calculateSubtotalAfterDiscount().toFixed(2)}
-                      </div>
-                    </>
-                  ) : (
-                    <span>₹{calculateSubtotal().toFixed(2)}</span>
-                  )}
+                  {(() => {
+                    const subtotalWithOffers = calculateSubtotal();
+                    const subtotalWithoutOffers = cart.items.reduce((total, item) => {
+                      return total + (item.price * item.quantity);
+                    }, 0);
+                    const offerSavings = subtotalWithoutOffers - subtotalWithOffers;
+                    const hasOffers = offerSavings > 0;
+                    
+                    return (
+                      <>
+                        {hasOffers && (
+                          <div
+                            style={{
+                              textDecoration: "line-through",
+                              color: "#999",
+                              fontSize: "0.875rem",
+                            }}
+                          >
+                            ₹{subtotalWithoutOffers.toFixed(2)}
+                          </div>
+                        )}
+                        <div style={{ 
+                          fontWeight: "bold", 
+                          color: hasOffers ? "#10b981" : "inherit"
+                        }}>
+                          ₹{subtotalWithOffers.toFixed(2)}
+                        </div>
+                        {hasOffers && (
+                          <div style={{
+                            fontSize: "0.75rem",
+                            color: "#10b981",
+                            fontWeight: "500"
+                          }}>
+                            Saved ₹{offerSavings.toFixed(2)} with offers
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 

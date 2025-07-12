@@ -38,6 +38,7 @@ import AdminCoupons from "../../pages/admin/AdminCoupons";
 import AdminOffers from "../../pages/admin/AdminOffers";
 import AdminReferrals from "../../pages/admin/AdminReferrals";
 import ReferralProgram from "../../pages/user/ReferralProgram";
+import Offers from "../../pages/user/Offers";
 
 const AppRoutes = () => {
   const [isSessionRestored, setIsSessionRestored] = useState(false);
@@ -222,6 +223,14 @@ const AppRoutes = () => {
               element={
                 <UserProtectedRoute>
                   <ReferralProgram />
+                </UserProtectedRoute>
+              }
+            />
+            <Route
+              path="/offers"
+              element={
+                <UserProtectedRoute>
+                  <Offers />
                 </UserProtectedRoute>
               }
             />

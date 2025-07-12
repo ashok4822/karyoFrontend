@@ -12,7 +12,7 @@ import AddVariantModal from "../../components/AddVariantModal";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 import Swal from "sweetalert2";
 import { getAllActiveCategories } from "../../services/admin/adminCategoryService";
-import { getVariantOptions } from "../../services/admin/adminProductService";
+import { getVariantOptions, getBrandOptions, deleteProduct, deleteVariant } from "../../services/admin/adminProductService";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
@@ -47,9 +47,12 @@ const ProductManagement = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       const result = await getAllActiveCategories();
+      console.log("Categories API response:", result);
 
       if (result.success) {
-        setCategories(result.data.categories || result.data);
+        const categoriesData = result.data.categories;
+        console.log("Setting categories:", categoriesData);
+        setCategories(categoriesData);
       } else {
         setCategories([]);
         console.error("Failed to fetch categories:", result.error);

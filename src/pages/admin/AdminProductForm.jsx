@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import { getAllActiveCategories } from '../../services/admin/adminCategoryService';
 import {
   Container,
   Row,
@@ -37,6 +38,8 @@ const AdminProductForm = () => {
   const [validated, setValidated] = useState(false);
   const [nameError, setNameError] = useState("");
   const [brandError, setBrandError] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   const [product, setProduct] = useState({
     name: '',
@@ -58,6 +61,25 @@ const AdminProductForm = () => {
       keywords: '',
     },
   });
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await getAllActiveCategories();
+        if (response.success) {
+          setCategories(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -338,9 +360,16 @@ const AdminProductForm = () => {
                                 category: e.target.value,
                               })
                             }
+                            disabled={categoriesLoading}
                           >
-                            <option value="">Select Category</option>
-                            {/* Add category options */}
+                            <option value="">
+                              {categoriesLoading ? 'Loading categories...' : 'Select Category'}
+                            </option>
+                            {categories.map((category) => (
+                              <option key={category._id} value={category._id}>
+                                {category.name}
+                              </option>
+                            ))}
                           </Form.Select>
                           <Form.Control.Feedback type="invalid">
                             Please select a category.

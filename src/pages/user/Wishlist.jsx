@@ -8,6 +8,7 @@ import {
 } from "../../redux/reducers/wishlistSlice";
 import { addToCart, getAvailableStock } from "../../redux/reducers/cartSlice";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
+import { getBestOffersForProducts } from "../../services/user/offerService";
 
 const Wishlist = () => {
   const wishlist = useSelector((state) => state.wishlist.items);
@@ -19,6 +20,8 @@ const Wishlist = () => {
   const cartError = useSelector((state) => state.cart.error);
   const dispatch = useDispatch();
   const [addingToCart, setAddingToCart] = useState({});
+  const [productOffers, setProductOffers] = useState({});
+  const [offersLoading, setOffersLoading] = useState(false);
 
   useEffect(() => {
     // Only fetch if wishlist is empty and not already loading
@@ -32,6 +35,54 @@ const Wishlist = () => {
     // Fetch latest products when wishlist page loads
     dispatch(fetchProductsFromBackend({ limit: 1000 })); // adjust limit as needed
   }, [dispatch]);
+
+  // Fetch offers for wishlist products
+  useEffect(() => {
+    if (wishlist.length > 0) {
+      fetchProductOffers();
+    }
+  }, [wishlist]);
+
+  // Fetch best offers for all products
+  const fetchProductOffers = async () => {
+    if (!wishlist || wishlist.length === 0) return;
+    
+    try {
+      setOffersLoading(true);
+      const response = await getBestOffersForProducts(wishlist.map(item => item.id));
+      if (response.success && response.data) {
+        setProductOffers(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching best offers for wishlist products:", error);
+    } finally {
+      setOffersLoading(false);
+    }
+  };
+
+  // Calculate final price with best offer discount
+  const getFinalPrice = (product, basePrice) => {
+    const offer = productOffers[product._id];
+    
+    if (!offer) {
+      return basePrice;
+    }
+
+    let finalPrice = basePrice;
+
+    // Apply offer discount
+    if (offer.discountType === "percentage") {
+      const discountAmount = (basePrice * offer.discountValue) / 100;
+      const finalDiscount = offer.maximumDiscount 
+        ? Math.min(discountAmount, offer.maximumDiscount)
+        : discountAmount;
+      finalPrice = Math.max(0, basePrice - finalDiscount);
+    } else {
+      finalPrice = Math.max(0, basePrice - offer.discountValue);
+    }
+
+    return finalPrice.toFixed(2);
+  };
 
   // Helper to get product and variant status
   const getProductStatus = (item) => {
@@ -250,9 +301,50 @@ const Wishlist = () => {
                   >
                     <h2 style={{ margin: 0, fontSize: 20 }}>{item.name}</h2>
                   </Link>
-                  <p style={{ margin: "8px 0", color: "#555" }}>
-                    ₹{item.price?.toFixed(2)}
-                  </p>
+                  {(() => {
+                    const product = products.find((p) => p._id === item.id);
+                    const basePrice = item.price;
+                    const finalPrice = product ? getFinalPrice(product, basePrice) : basePrice;
+                    const offer = product ? productOffers[product._id] : null;
+                    
+                    return (
+                      <div style={{ margin: "8px 0" }}>
+                        <span style={{ 
+                          color: "#555", 
+                          fontWeight: "bold",
+                          fontSize: "16px"
+                        }}>
+                          ₹{finalPrice}
+                        </span>
+                        {offer && basePrice !== finalPrice && (
+                          <span style={{ 
+                            color: "#999", 
+                            textDecoration: "line-through",
+                            marginLeft: "8px",
+                            fontSize: "14px"
+                          }}>
+                            ₹{basePrice?.toFixed(2)}
+                          </span>
+                        )}
+                        {offer && (
+                          <div style={{
+                            backgroundColor: "#dcfce7",
+                            color: "#166534",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            marginTop: "4px",
+                            display: "inline-block"
+                          }}>
+                            {offer.discountType === "percentage" 
+                              ? `${offer.discountValue}% OFF` 
+                              : `₹${offer.discountValue} OFF`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {item.variantName && (
                     <span style={{ color: "#888", fontSize: 14, display: "block", marginBottom: "4px" }}>
                       Variant: {item.variantName}

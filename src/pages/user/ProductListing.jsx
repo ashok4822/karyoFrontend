@@ -34,6 +34,7 @@ import ProductFilters from "../../components/ProductFilters";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 import { addToCart } from "../../redux/reducers/cartSlice";
 import { addToWishlist, removeFromWishlist } from "../../redux/reducers/wishlistSlice";
+import { getBestOffersForProducts } from "../../services/user/offerService";
 import { toast } from "react-toastify";
 
 const ProductListing = () => {
@@ -61,6 +62,8 @@ const ProductListing = () => {
     priceRange: [0, 5000]
   });
   const [searchError, setSearchError] = useState("");
+  const [productOffers, setProductOffers] = useState({});
+  const [offersLoading, setOffersLoading] = useState(false);
 
   // Read URL parameters and apply as initial filters
   useEffect(() => {
@@ -143,6 +146,14 @@ const ProductListing = () => {
     }
   }, [dispatch, searchParams]);
 
+  // Fetch offers when products change
+  useEffect(() => {
+    if (products && products.length > 0) {
+      const productIds = products.map(product => product._id);
+      fetchProductOffers(productIds);
+    }
+  }, [products]);
+
   const handleFilterChange = (newFilters) => {
     // console.log('ProductListing: handleFilterChange called with:', newFilters);
     setFilters(newFilters);
@@ -189,6 +200,48 @@ const ProductListing = () => {
     setSearchQuery("");
     const params = buildFilterParams(1, "", clearedFilters, "newest");
     dispatch(fetchProductsFromBackend(params));
+  };
+
+  // Fetch best offers for all products
+  const fetchProductOffers = async (productIds) => {
+    if (!productIds || productIds.length === 0) return;
+    
+    try {
+      setOffersLoading(true);
+      const response = await getBestOffersForProducts(productIds);
+      if (response.success && response.data) {
+        setProductOffers(response.data);
+        console.log("Set product offers:", response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching best offers for products:", error);
+    } finally {
+      setOffersLoading(false);
+    }
+  };
+
+  // Calculate final price with best offer discount
+  const getFinalPrice = (product, basePrice) => {
+    const offer = productOffers[product._id];
+    
+    if (!offer) {
+      return basePrice;
+    }
+
+    let finalPrice = basePrice;
+
+    // Apply offer discount
+    if (offer.discountType === "percentage") {
+      const discountAmount = (basePrice * offer.discountValue) / 100;
+      const finalDiscount = offer.maximumDiscount 
+        ? Math.min(discountAmount, offer.maximumDiscount)
+        : discountAmount;
+      finalPrice = Math.max(0, basePrice - finalDiscount);
+    } else {
+      finalPrice = Math.max(0, basePrice - offer.discountValue);
+    }
+
+    return finalPrice.toFixed(2);
   };
 
   const handleAddToCart = async (product) => {
@@ -526,16 +579,28 @@ const ProductListing = () => {
                           <div>
                             {(() => {
                               const firstVariant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
-                              const price = firstVariant && firstVariant.price ? firstVariant.price : product.price;
-                              const comparePrice = firstVariant && firstVariant.comparePrice ? firstVariant.comparePrice : product.comparePrice;
+                              const basePrice = firstVariant && firstVariant.price ? firstVariant.price : product.price;
+                              const finalPrice = getFinalPrice(product, basePrice);
+                              const offer = productOffers[product._id];
                               const colour = firstVariant && firstVariant.colour ? firstVariant.colour : null;
                               const capacity = firstVariant && firstVariant.capacity ? firstVariant.capacity : null;
+                              const hasOffer = offer && parseFloat(finalPrice) < parseFloat(basePrice);
+                              
                               return (
                                 <>
-                                  <span className="h4 fw-bold text-primary mb-0">₹{price}</span>
-                                  <span className="text-muted text-decoration-line-through ms-2">
-                                    ₹99.99
-                                  </span>
+                                  <span className="h4 fw-bold text-primary mb-0">₹{finalPrice}</span>
+                                  {hasOffer && (
+                                    <span className="text-muted text-decoration-line-through ms-2">
+                                      ₹{basePrice}
+                                    </span>
+                                  )}
+                                  {offer && hasOffer && (
+                                    <div className="mt-1">
+                                      <span className="badge bg-success small">
+                                        {offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `₹${offer.discountValue} OFF`}
+                                      </span>
+                                    </div>
+                                  )}
                                   {(colour || capacity) && (
                                     <div className="mt-1">
                                       {colour && <span className="badge bg-light text-dark me-1">{colour}</span>}

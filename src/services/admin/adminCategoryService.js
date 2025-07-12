@@ -45,8 +45,6 @@ export const restoreCategory = (categoryId) => {
 // Fetch all active categories (no pagination)
 export const getAllActiveCategories = () => {
   return apiHandler(
-    adminAxios.get("/categories", {
-      params: { status: "active" },
-    })
+    adminAxios.get("/categories/active")
   );
 };

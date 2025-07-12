@@ -46,6 +46,7 @@ import {
   fetchProductById,
   fetchRelatedProductsByCategory,
 } from "../../services/user/productService";
+import { getBestOfferForProduct } from "../../services/user/offerService";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -76,6 +77,8 @@ const ProductDetails = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isZoomed, setIsZoomed] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [productOffer, setProductOffer] = useState(null);
+  const [offerLoading, setOfferLoading] = useState(false);
 
   // Check if current product+variant is wishlisted
   const isWishlisted = !!wishlist.find(
@@ -162,6 +165,13 @@ const ProductDetails = () => {
     }
   }, [cartItems.length, product?._id, dispatch]);
 
+  // Fetch product offer when product loads
+  useEffect(() => {
+    if (product?._id) {
+      fetchProductOffer(product._id);
+    }
+  }, [product?._id]);
+
   // Fetch related products
   const fetchRelatedProducts = async (currentProduct) => {
     try {
@@ -178,6 +188,26 @@ const ProductDetails = () => {
       }
     } catch (error) {
       console.error("Error fetching related products:", error);
+    }
+  };
+
+  // Fetch best offer for product
+  const fetchProductOffer = async (productId) => {
+    try {
+      setOfferLoading(true);
+      console.log("Fetching offer for product:", productId);
+      const response = await getBestOfferForProduct(productId);
+      console.log("Offer response:", response);
+      if (response.success && response.data) {
+        setProductOffer(response.data);
+        console.log("Offer set:", response.data);
+      } else {
+        console.log("No offer found for this product");
+      }
+    } catch (error) {
+      console.error("Error fetching product offer:", error);
+    } finally {
+      setOfferLoading(false);
     }
   };
 
@@ -463,7 +493,7 @@ const ProductDetails = () => {
     return variants.reduce((sum, v) => sum + (v.stock || 0), 0);
   };
 
-  // Calculate final price with discount and coupon
+  // Calculate final price with discount, coupon, and offer
   const getFinalPrice = () => {
     if (!product) return "0.00";
 
@@ -471,15 +501,34 @@ const ProductDetails = () => {
     if (!basePrice) return "0.00";
 
     let finalPrice = basePrice;
+    console.log("Base price:", basePrice);
 
     // Apply product discount
     if (product.discount > 0) {
       finalPrice = finalPrice * (1 - product.discount / 100);
+      console.log("After product discount:", finalPrice);
     }
 
     // Apply coupon discount
     if (activeCoupon) {
       finalPrice = finalPrice * (1 - activeCoupon.discount / 100);
+      console.log("After coupon discount:", finalPrice);
+    }
+
+    // Apply offer discount
+    if (productOffer) {
+      const offerDiscount = productOffer.discountType === "percentage"
+        ? (basePrice * productOffer.discountValue) / 100
+        : productOffer.discountValue;
+      
+      // Apply maximum discount limit if set
+      let finalOfferDiscount = offerDiscount;
+      if (productOffer.maximumDiscount && productOffer.discountType === "percentage") {
+        finalOfferDiscount = Math.min(offerDiscount, productOffer.maximumDiscount);
+      }
+      
+      finalPrice = Math.max(0, finalPrice - finalOfferDiscount);
+      console.log("After offer discount:", finalPrice, "Offer:", productOffer);
     }
 
     return finalPrice.toFixed(2);
@@ -1083,9 +1132,11 @@ const ProductDetails = () => {
               <span className="h3 text-primary fw-bold">
                 ₹{getFinalPrice()}
               </span>
-              <span className="text-muted text-decoration-line-through ms-2">
-                ₹99.99
-              </span>
+              {getCurrentPrice() !== getFinalPrice() && (
+                <span className="text-muted text-decoration-line-through ms-2">
+                  ₹{getCurrentPrice()}
+                </span>
+              )}
               {activeCoupon && (
                 <Badge bg="success">
                   <FaCheck className="me-1" />
@@ -1093,6 +1144,19 @@ const ProductDetails = () => {
                 </Badge>
               )}
             </div>
+
+            {/* Offer Display */}
+            {offerLoading ? (
+              <div className="alert alert-info py-2 px-3 mb-2 small">Checking for offers...</div>
+            ) : productOffer ? (
+              <div className="alert alert-success py-2 px-3 mb-2 small d-flex align-items-center gap-2">
+                <FaTag className="me-2 text-success" />
+                <span>
+                  <strong>{productOffer.name}</strong>: {productOffer.discountType === 'percentage' ? `${productOffer.discountValue}% OFF` : `₹${productOffer.discountValue} OFF`} &nbsp;
+                  <span className="text-muted">(Valid till {new Date(productOffer.validTo).toLocaleDateString('en-GB')})</span>
+                </span>
+              </div>
+            ) : null}
 
             {/* Show price range if multiple variants */}
             {(() => {

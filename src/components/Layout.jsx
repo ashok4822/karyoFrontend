@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useNavigate, Outlet } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Navbar, Nav, Button, Row, Col } from "react-bootstrap";
-import { FaShoppingCart, FaUser, FaSignOutAlt, FaHeart } from "react-icons/fa";
+import { FaShoppingCart, FaUser, FaSignOutAlt, FaHeart, FaGift } from "react-icons/fa";
 import {
   logout as logoutAction,
   logoutUser,
@@ -74,6 +74,10 @@ const Layout = () => {
               </Nav.Link>
               <Nav.Link as={Link} to="/contact">
                 Contact
+              </Nav.Link>
+              <Nav.Link as={Link} to="/offers" className="d-flex align-items-center">
+                <FaGift size={18} className="me-1" style={{ verticalAlign: 'middle' }} />
+                Offers
               </Nav.Link>
             </Nav>
             <div className="d-flex align-items-center gap-3" style={{ position: 'relative' }}>

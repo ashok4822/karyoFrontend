@@ -5,6 +5,7 @@ import { createProduct, getAllProducts } from "../services/admin/adminProductSer
 import { getAllActiveCategories } from "../services/admin/adminCategoryService";
 
 const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
+  console.log("AddProductModal received categories:", categories);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -524,11 +525,15 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                   
                 >
                   <option value="">Select Category</option>
-                  {categories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.name}
-                    </option>
-                  ))}
+                  {categories && categories.length > 0 ? (
+                    categories.map((category) => (
+                      <option key={category._id} value={category._id}>
+                        {category.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>No categories available</option>
+                  )}
                 </Form.Select>
               </Form.Group>
             </Col>

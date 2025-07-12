@@ -22,6 +22,9 @@ import {
   FaTimesCircle,
   FaKey,
   FaCamera,
+  FaShareAlt,
+  FaCopy,
+  FaGift,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { loginSuccess, logoutUser } from "../../redux/reducers/authSlice";
@@ -51,13 +54,14 @@ import {
   verifyEmailChangeOtp,
 } from "../../services/user/userService";
 import { submitReturnRequest } from "../../services/user/orderService";
+import userAxios from "../../lib/userAxios";
 
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
   { label: "Edit profile", icon: <FaEdit /> },
   { label: "Address Management", icon: <FaMapMarkerAlt /> },
   { label: "Show orders", icon: <FaBoxOpen /> },
-  // { label: "Cancel orders", icon: <FaTimesCircle /> }, // Commented out as per request
+  { label: "Referral Program", icon: <FaGift />, link: "/referral-program" },
   { label: "Reset password", icon: <FaKey /> },
   { label: "Edit Email", icon: <FaEdit /> },
 ];
@@ -162,6 +166,9 @@ const UserProfile = () => {
   const [walletBalance, setWalletBalance] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState("");
+
+  const [referralCode, setReferralCode] = useState("");
+  const [copySuccess, setCopySuccess] = useState("");
 
   // On mount, check for tab query param
   useEffect(() => {
@@ -746,6 +753,39 @@ const UserProfile = () => {
     setForgotPasswordLoading(false);
   };
 
+  useEffect(() => {
+    // Fetch referral code on mount
+    const fetchReferralCode = async () => {
+      try {
+        const response = await userAxios.get("/api/user/referral/code");
+        setReferralCode(response.data.data.referralCode || "");
+      } catch (error) {
+        setReferralCode("");
+      }
+    };
+    fetchReferralCode();
+  }, []);
+
+  const handleCopyReferralCode = () => {
+    if (referralCode) {
+      navigator.clipboard.writeText(referralCode);
+      setCopySuccess("Copied!");
+      setTimeout(() => setCopySuccess(""), 1500);
+    }
+  };
+
+  const handleShareReferralCode = () => {
+    if (navigator.share && referralCode) {
+      navigator.share({
+        title: "Join me on our platform!",
+        text: `Use my referral code: ${referralCode}`,
+        url: window.location.origin,
+      });
+    } else {
+      handleCopyReferralCode();
+    }
+  };
+
   // User Details content
   const userDetailsContent = (
     <Card className="shadow-sm border-0">
@@ -824,6 +864,37 @@ const UserProfile = () => {
         </div>
         <div className="mb-3">
           <strong>Address:</strong> {user?.address || "-"}
+        </div>
+        <div className="mb-3">
+          <strong>Referral Code:</strong>
+          {referralCode ? (
+            <span style={{ marginLeft: 8, fontFamily: "monospace", fontWeight: 600 }}>{referralCode}</span>
+          ) : (
+            <span style={{ marginLeft: 8, color: "#888" }}>-</span>
+          )}
+          {referralCode && (
+            <>
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                style={{ marginLeft: 8 }}
+                onClick={handleCopyReferralCode}
+                title="Copy referral code"
+              >
+                <FaCopy />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-primary"
+                style={{ marginLeft: 4 }}
+                onClick={handleShareReferralCode}
+                title="Share referral code"
+              >
+                <FaShareAlt />
+              </Button>
+              {copySuccess && <span style={{ marginLeft: 8, color: "green" }}>{copySuccess}</span>}
+            </>
+          )}
         </div>
       </Card.Body>
     </Card>
@@ -2261,7 +2332,13 @@ const UserProfile = () => {
                     padding: "14px 18px",
                   }}
                   className="border-0"
-                  onClick={() => setActiveIndex(idx)}
+                  onClick={() => {
+                    if (item.link) {
+                      navigate(item.link);
+                    } else {
+                      setActiveIndex(idx);
+                    }
+                  }}
                 >
                   <span style={{ fontSize: 18, marginRight: 10 }}>
                     {item.icon}

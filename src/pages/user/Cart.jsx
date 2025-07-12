@@ -4,12 +4,15 @@ import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { fetchCart, updateCartItem, removeFromCart, clearCart, getAvailableStock } from "../../redux/reducers/cartSlice";
 import { useToast } from "../../hooks/use-toast";
+import { getBestOffersForProducts } from "../../services/user/offerService";
 
 const Cart = () => {
   const cart = useSelector((state) => state.cart);
   const dispatch = useDispatch();
   const [updatingItems, setUpdatingItems] = useState({});
   const [localQuantities, setLocalQuantities] = useState({});
+  const [productOffers, setProductOffers] = useState({});
+  const [offersLoading, setOffersLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -18,6 +21,55 @@ const Cart = () => {
       dispatch(fetchCart());
     }
   }, [dispatch, cart.items.length, cart.loading, cart.initialized]);
+
+  // Fetch offers for cart products
+  useEffect(() => {
+    if (cart.items.length > 0) {
+      fetchProductOffers();
+    }
+  }, [cart.items]);
+
+  // Fetch best offers for all products
+  const fetchProductOffers = async () => {
+    if (!cart.items || cart.items.length === 0) return;
+    
+    try {
+      setOffersLoading(true);
+      const productIds = cart.items.map(item => item.productVariantId?.product?._id).filter(Boolean);
+      const response = await getBestOffersForProducts(productIds);
+      if (response.success && response.data) {
+        setProductOffers(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching best offers for cart products:", error);
+    } finally {
+      setOffersLoading(false);
+    }
+  };
+
+  // Calculate final price with best offer discount
+  const getFinalPrice = (product, basePrice) => {
+    const offer = productOffers[product._id];
+    
+    if (!offer) {
+      return basePrice;
+    }
+
+    let finalPrice = basePrice;
+
+    // Apply offer discount
+    if (offer.discountType === "percentage") {
+      const discountAmount = (basePrice * offer.discountValue) / 100;
+      const finalDiscount = offer.maximumDiscount 
+        ? Math.min(discountAmount, offer.maximumDiscount)
+        : discountAmount;
+      finalPrice = Math.max(0, basePrice - finalDiscount);
+    } else {
+      finalPrice = Math.max(0, basePrice - offer.discountValue);
+    }
+
+    return finalPrice.toFixed(2);
+  };
 
   // Initialize local quantities when cart loads
   useEffect(() => {
@@ -219,7 +271,10 @@ const Cart = () => {
   const calculateTotal = () => {
     return cart.items.reduce((total, item) => {
       const quantity = localQuantities[item.productVariantId._id] || item.quantity;
-      return total + (item.price * quantity);
+      const product = item.productVariantId?.product;
+      const basePrice = item.price;
+      const finalPrice = product ? parseFloat(getFinalPrice(product, basePrice)) : basePrice;
+      return total + (finalPrice * quantity);
     }, 0);
   };
 
@@ -438,9 +493,50 @@ const Cart = () => {
                   <p style={{ margin: "0.5rem 0", color: "#666", fontSize: "14px" }}>
                     Variant: {variant?.colour} - {variant?.capacity}
                   </p>
-                  <p style={{ margin: "0.5rem 0", color: "#555", fontWeight: "bold" }}>
-                    ₹{item.price?.toFixed(2)}
-                  </p>
+                  {(() => {
+                    const product = item.productVariantId?.product;
+                    const basePrice = item.price;
+                    const finalPrice = product ? getFinalPrice(product, basePrice) : basePrice;
+                    const offer = product ? productOffers[product._id] : null;
+                    
+                    return (
+                      <div style={{ margin: "0.5rem 0" }}>
+                        <span style={{ 
+                          color: "#555", 
+                          fontWeight: "bold",
+                          fontSize: "16px"
+                        }}>
+                          ₹{finalPrice}
+                        </span>
+                        {offer && basePrice !== finalPrice && (
+                          <span style={{ 
+                            color: "#999", 
+                            textDecoration: "line-through",
+                            marginLeft: "8px",
+                            fontSize: "14px"
+                          }}>
+                            ₹{basePrice?.toFixed(2)}
+                          </span>
+                        )}
+                        {offer && (
+                          <div style={{
+                            backgroundColor: "#dcfce7",
+                            color: "#166534",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            marginTop: "4px",
+                            display: "inline-block"
+                          }}>
+                            {offer.discountType === "percentage" 
+                              ? `${offer.discountValue}% OFF` 
+                              : `₹${offer.discountValue} OFF`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   
                   {/* Status message */}
                   {statusMessage && (
@@ -528,13 +624,39 @@ const Cart = () => {
                 </div>
 
                 <div style={{ textAlign: "right", minWidth: "80px" }}>
-                  <p style={{ 
-                    margin: "0", 
-                    fontWeight: "bold",
-                    opacity: isDisabled ? 0.7 : 1,
-                  }}>
-                    ₹{(item.price * (localQuantities[item.productVariantId._id] || item.quantity)).toFixed(2)}
-                  </p>
+                  {(() => {
+                    const product = item.productVariantId?.product;
+                    const basePrice = item.price;
+                    const finalPrice = product ? parseFloat(getFinalPrice(product, basePrice)) : basePrice;
+                    const quantity = localQuantities[item.productVariantId._id] || item.quantity;
+                    const totalPrice = finalPrice * quantity;
+                    const originalTotalPrice = basePrice * quantity;
+                    const offer = product ? productOffers[product._id] : null;
+                    
+                    return (
+                      <div>
+                        <p style={{ 
+                          margin: "0", 
+                          fontWeight: "bold",
+                          opacity: isDisabled ? 0.7 : 1,
+                          fontSize: "16px"
+                        }}>
+                          ₹{totalPrice.toFixed(2)}
+                        </p>
+                        {offer && basePrice !== finalPrice && (
+                          <p style={{ 
+                            margin: "4px 0 0 0", 
+                            color: "#999", 
+                            textDecoration: "line-through",
+                            fontSize: "12px",
+                            opacity: isDisabled ? 0.7 : 1,
+                          }}>
+                            ₹{originalTotalPrice.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <button
@@ -564,27 +686,59 @@ const Cart = () => {
         borderRadius: "8px",
         backgroundColor: "#f9f9f9"
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ margin: 0 }}>Total: ₹{calculateTotal().toFixed(2)}</h3>
-          <button
-            onClick={() => navigate("/checkout")}
-            disabled={hasDisabledItems}
-            style={{
-              padding: "12px 24px",
-              background: hasDisabledItems ? "#ccc" : "#4f46e5",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              cursor: hasDisabledItems ? "not-allowed" : "pointer",
-              fontSize: "16px",
-              opacity: hasDisabledItems ? 0.6 : 1,
-              position: "relative",
-            }}
-            title={hasDisabledItems ? "Please remove unavailable items to proceed with checkout" : "Proceed to checkout"}
-          >
-            Proceed to Checkout
-          </button>
-        </div>
+        {(() => {
+          const totalWithOffers = calculateTotal();
+          const totalWithoutOffers = cart.items.reduce((total, item) => {
+            const quantity = localQuantities[item.productVariantId._id] || item.quantity;
+            return total + (item.price * quantity);
+          }, 0);
+          const totalSavings = totalWithoutOffers - totalWithOffers;
+          const hasOffers = totalSavings > 0;
+          
+          return (
+            <div>
+              {hasOffers && (
+                <div style={{
+                  marginBottom: "1rem",
+                  padding: "0.75rem",
+                  backgroundColor: "#dcfce7",
+                  border: "1px solid #22c55e",
+                  borderRadius: "6px",
+                  color: "#166534"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: "500" }}>🎉 You saved ₹{totalSavings.toFixed(2)} with offers!</span>
+                    <span style={{ fontSize: "14px" }}>
+                      Original: <span style={{ textDecoration: "line-through" }}>₹{totalWithoutOffers.toFixed(2)}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>Total: ₹{totalWithOffers.toFixed(2)}</h3>
+                <button
+                  onClick={() => navigate("/checkout")}
+                  disabled={hasDisabledItems}
+                  style={{
+                    padding: "12px 24px",
+                    background: hasDisabledItems ? "#ccc" : "#4f46e5",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: hasDisabledItems ? "not-allowed" : "pointer",
+                    fontSize: "16px",
+                    opacity: hasDisabledItems ? 0.6 : 1,
+                    position: "relative",
+                  }}
+                  title={hasDisabledItems ? "Please remove unavailable items to proceed with checkout" : "Proceed to checkout"}
+                >
+                  Proceed to Checkout
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
