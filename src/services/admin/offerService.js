@@ -74,7 +74,7 @@ export const getOfferStats = async () => {
 // Get best offer for a product
 export const getBestOfferForProduct = async (productId) => {
   try {
-    const response = await adminAxios.get(`/api/offers/product/${productId}`);
+    const response = await adminAxios.get(`/offers/product/${productId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -85,7 +85,7 @@ export const getBestOfferForProduct = async (productId) => {
 export const getOffersByCategory = async (categoryId, params = {}) => {
   try {
     const queryParams = new URLSearchParams(params);
-    const response = await adminAxios.get(`/api/offers/category/${categoryId}?${queryParams}`);
+    const response = await adminAxios.get(`/offers/category/${categoryId}?${queryParams}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -95,7 +95,7 @@ export const getOffersByCategory = async (categoryId, params = {}) => {
 // Get offers for specific products
 export const getOffersByProducts = async (productIds) => {
   try {
-    const response = await adminAxios.post("/api/offers/products", { productIds });
+    const response = await adminAxios.post("/offers/products", { productIds });
     return response.data;
   } catch (error) {
     throw error.response?.data || error;

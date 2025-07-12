@@ -90,39 +90,45 @@ const AdminOffers = () => {
         status: filters.status,
         search: filters.search,
       };
-      
+
       const filteredParams = Object.fromEntries(
-        Object.entries(basicFilters).filter(([key, value]) => value && value !== "all")
+        Object.entries(basicFilters).filter(
+          ([key, value]) => value && value !== "all"
+        )
       );
-      
+
       const params = new URLSearchParams({
         page: pagination.currentPage,
         limit: pagination.itemsPerPage,
         ...filteredParams,
       });
 
-      const response = await adminAxios.get(`/api/offers?${params}`);
+      const response = await adminAxios.get(`/offers?${params}`);
       let filteredOffers = response.data.data;
 
       // Apply client-side filtering for target product and category
       if (filters.targetProduct !== "all") {
-        filteredOffers = filteredOffers.filter(offer => 
-          offer.offerType === "product" && 
-          offer.products && 
-          offer.products.some(product => product._id === filters.targetProduct)
+        filteredOffers = filteredOffers.filter(
+          (offer) =>
+            offer.offerType === "product" &&
+            offer.products &&
+            offer.products.some(
+              (product) => product._id === filters.targetProduct
+            )
         );
       }
 
       if (filters.targetCategory !== "all") {
-        filteredOffers = filteredOffers.filter(offer => 
-          offer.offerType === "category" && 
-          offer.category && 
-          offer.category._id === filters.targetCategory
+        filteredOffers = filteredOffers.filter(
+          (offer) =>
+            offer.offerType === "category" &&
+            offer.category &&
+            offer.category._id === filters.targetCategory
         );
       }
 
       setOffers(filteredOffers);
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
         totalPages: response.data.pagination.totalPages,
         totalItems: response.data.pagination.totalItems,
@@ -164,14 +170,22 @@ const AdminOffers = () => {
         ...formData,
         discountValue: parseFloat(formData.discountValue),
         minimumAmount: parseFloat(formData.minimumAmount) || 0,
-        maximumDiscount: parseFloat(formData.maximumDiscount) || null,
-        maxUsage: parseInt(formData.maxUsage) || null,
-        maxUsagePerUser: parseInt(formData.maxUsagePerUser) || null,
+        maximumDiscount: formData.maximumDiscount
+          ? parseFloat(formData.maximumDiscount)
+          : undefined,
+        maxUsage: formData.maxUsage ? parseInt(formData.maxUsage) : undefined,
+        maxUsagePerUser: formData.maxUsagePerUser
+          ? parseInt(formData.maxUsagePerUser)
+          : undefined,
+        category:
+          formData.category && formData.category.trim()
+            ? formData.category
+            : undefined,
         validFrom: new Date(formData.validFrom).toISOString(),
         validTo: new Date(formData.validTo).toISOString(),
       };
 
-      await adminAxios.post("/api/offers", offerData);
+      await adminAxios.post("/offers", offerData);
       setIsCreateModalOpen(false);
       Swal.fire({
         title: "Success",
@@ -196,14 +210,22 @@ const AdminOffers = () => {
         ...formData,
         discountValue: parseFloat(formData.discountValue),
         minimumAmount: parseFloat(formData.minimumAmount) || 0,
-        maximumDiscount: parseFloat(formData.maximumDiscount) || null,
-        maxUsage: parseInt(formData.maxUsage) || null,
-        maxUsagePerUser: parseInt(formData.maxUsagePerUser) || null,
+        maximumDiscount: formData.maximumDiscount
+          ? parseFloat(formData.maximumDiscount)
+          : undefined,
+        maxUsage: formData.maxUsage ? parseInt(formData.maxUsage) : undefined,
+        maxUsagePerUser: formData.maxUsagePerUser
+          ? parseInt(formData.maxUsagePerUser)
+          : undefined,
+        category:
+          formData.category && formData.category.trim()
+            ? formData.category
+            : undefined,
         validFrom: new Date(formData.validFrom).toISOString(),
         validTo: new Date(formData.validTo).toISOString(),
       };
 
-      await adminAxios.put(`/api/offers/${selectedOffer._id}`, offerData);
+      await adminAxios.put(`/offers/${selectedOffer._id}`, offerData);
       setIsEditModalOpen(false);
       Swal.fire({
         title: "Success",
@@ -235,7 +257,7 @@ const AdminOffers = () => {
 
     if (result.isConfirmed) {
       try {
-        await adminAxios.delete(`/api/offers/${offerId}`);
+        await adminAxios.delete(`/offers/${offerId}`);
         Swal.fire({
           title: "Deleted!",
           text: "Offer has been deleted.",
@@ -257,7 +279,9 @@ const AdminOffers = () => {
   const handleToggleStatus = async (offerId, currentStatus) => {
     try {
       const newStatus = currentStatus === "active" ? "inactive" : "active";
-      await adminAxios.patch(`/api/offers/${offerId}/status`, { status: newStatus });
+      await adminAxios.patch(`/offers/${offerId}/status`, {
+        status: newStatus,
+      });
       Swal.fire({
         title: "Success",
         text: `Offer ${newStatus}`,
@@ -304,15 +328,21 @@ const AdminOffers = () => {
       offerType: offer.offerType,
       discountType: offer.discountType,
       discountValue: offer.discountValue.toString(),
-      products: offer.products || [],
+      products: offer.products
+        ? offer.products.map((p) => (typeof p === "object" ? p._id : p))
+        : [],
       category: offer.category?._id || "",
       referralType: offer.referralType || "code",
       minimumAmount: offer.minimumAmount ? offer.minimumAmount.toString() : "",
-      maximumDiscount: offer.maximumDiscount ? offer.maximumDiscount.toString() : "",
+      maximumDiscount: offer.maximumDiscount
+        ? offer.maximumDiscount.toString()
+        : "",
       validFrom: new Date(offer.validFrom).toISOString().slice(0, 16),
       validTo: new Date(offer.validTo).toISOString().slice(0, 16),
       maxUsage: offer.maxUsage ? offer.maxUsage.toString() : "",
-      maxUsagePerUser: offer.maxUsagePerUser ? offer.maxUsagePerUser.toString() : "",
+      maxUsagePerUser: offer.maxUsagePerUser
+        ? offer.maxUsagePerUser.toString()
+        : "",
       status: offer.status,
     });
     setIsEditModalOpen(true);
@@ -408,7 +438,7 @@ const AdminOffers = () => {
                       <div>
                         <h6 className="text-muted mb-1">Active Offers</h6>
                         <h3 className="mb-0 text-success">
-                          {offers.filter(o => o.status === "active").length}
+                          {offers.filter((o) => o.status === "active").length}
                         </h3>
                       </div>
                       <div className="bg-success bg-opacity-10 p-3 rounded">
@@ -425,7 +455,10 @@ const AdminOffers = () => {
                       <div>
                         <h6 className="text-muted mb-1">Product Offers</h6>
                         <h3 className="mb-0 text-info">
-                          {offers.filter(o => o.offerType === "product").length}
+                          {
+                            offers.filter((o) => o.offerType === "product")
+                              .length
+                          }
                         </h3>
                       </div>
                       <div className="bg-info bg-opacity-10 p-3 rounded">
@@ -442,7 +475,10 @@ const AdminOffers = () => {
                       <div>
                         <h6 className="text-muted mb-1">Category Offers</h6>
                         <h3 className="mb-0 text-warning">
-                          {offers.filter(o => o.offerType === "category").length}
+                          {
+                            offers.filter((o) => o.offerType === "category")
+                              .length
+                          }
                         </h3>
                       </div>
                       <div className="bg-warning bg-opacity-10 p-3 rounded">
@@ -469,7 +505,12 @@ const AdminOffers = () => {
                           type="text"
                           placeholder="Search by name or description..."
                           value={filters.search}
-                          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                          onChange={(e) =>
+                            setFilters((prev) => ({
+                              ...prev,
+                              search: e.target.value,
+                            }))
+                          }
                         />
                       </div>
                     </Form.Group>
@@ -479,7 +520,12 @@ const AdminOffers = () => {
                       <Form.Label>Offer Type</Form.Label>
                       <Form.Select
                         value={filters.offerType}
-                        onChange={(e) => setFilters(prev => ({ ...prev, offerType: e.target.value }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            offerType: e.target.value,
+                          }))
+                        }
                       >
                         <option value="all">All types</option>
                         <option value="product">Product</option>
@@ -493,7 +539,12 @@ const AdminOffers = () => {
                       <Form.Label>Status</Form.Label>
                       <Form.Select
                         value={filters.status}
-                        onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            status: e.target.value,
+                          }))
+                        }
                       >
                         <option value="all">All statuses</option>
                         <option value="active">Active</option>
@@ -507,7 +558,12 @@ const AdminOffers = () => {
                       <Form.Label>Target Product</Form.Label>
                       <Form.Select
                         value={filters.targetProduct}
-                        onChange={(e) => setFilters(prev => ({ ...prev, targetProduct: e.target.value }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            targetProduct: e.target.value,
+                          }))
+                        }
                       >
                         <option value="all">All products</option>
                         {products.map((product) => (
@@ -523,7 +579,12 @@ const AdminOffers = () => {
                       <Form.Label>Target Category</Form.Label>
                       <Form.Select
                         value={filters.targetCategory}
-                        onChange={(e) => setFilters(prev => ({ ...prev, targetCategory: e.target.value }))}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            targetCategory: e.target.value,
+                          }))
+                        }
                       >
                         <option value="all">All categories</option>
                         {categories.map((category) => (
@@ -540,13 +601,15 @@ const AdminOffers = () => {
                     <Button
                       variant="outline-secondary"
                       size="sm"
-                      onClick={() => setFilters({
-                        offerType: "all",
-                        status: "all",
-                        search: "",
-                        targetProduct: "all",
-                        targetCategory: "all",
-                      })}
+                      onClick={() =>
+                        setFilters({
+                          offerType: "all",
+                          status: "all",
+                          search: "",
+                          targetProduct: "all",
+                          targetCategory: "all",
+                        })
+                      }
                     >
                       Clear All Filters
                     </Button>
@@ -586,9 +649,15 @@ const AdminOffers = () => {
                       <tbody>
                         {offers.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="text-center text-muted py-4">
+                            <td
+                              colSpan={8}
+                              className="text-center text-muted py-4"
+                            >
                               <div>
-                                <FaGift className="mb-2" style={{ fontSize: "2rem" }} />
+                                <FaGift
+                                  className="mb-2"
+                                  style={{ fontSize: "2rem" }}
+                                />
                                 <p>No offers found.</p>
                                 <Button
                                   variant="outline-primary"
@@ -610,7 +679,9 @@ const AdminOffers = () => {
                                 <div>
                                   <strong>{offer.name}</strong>
                                   {offer.description && (
-                                    <div className="text-muted small">{offer.description}</div>
+                                    <div className="text-muted small">
+                                      {offer.description}
+                                    </div>
                                   )}
                                 </div>
                               </td>
@@ -628,38 +699,55 @@ const AdminOffers = () => {
                                 </Badge>
                               </td>
                               <td>
-                                {offer.offerType === "product" && offer.products && offer.products.length > 0 ? (
+                                {offer.offerType === "product" &&
+                                offer.products &&
+                                offer.products.length > 0 ? (
                                   <div>
                                     <div className="fw-bold text-primary">
-                                      {offer.products.length} Product{offer.products.length > 1 ? 's' : ''}
+                                      {offer.products.length} Product
+                                      {offer.products.length > 1 ? "s" : ""}
                                     </div>
                                     <div className="small text-muted">
-                                      {offer.products.slice(0, 2).map(product => product.name).join(', ')}
-                                      {offer.products.length > 2 && ` +${offer.products.length - 2} more`}
+                                      {offer.products
+                                        .slice(0, 2)
+                                        .map((product) => product.name)
+                                        .join(", ")}
+                                      {offer.products.length > 2 &&
+                                        ` +${offer.products.length - 2} more`}
                                     </div>
                                   </div>
-                                ) : offer.offerType === "category" && offer.category ? (
+                                ) : offer.offerType === "category" &&
+                                  offer.category ? (
                                   <div>
                                     <div className="fw-bold text-warning">
                                       {offer.category.name}
                                     </div>
                                     {offer.category.description && (
-                                      <div className="small text-muted">{offer.category.description}</div>
+                                      <div className="small text-muted">
+                                        {offer.category.description}
+                                      </div>
                                     )}
                                   </div>
                                 ) : offer.offerType === "referral" ? (
                                   <div>
                                     <div className="fw-bold text-secondary">
-                                      Referral {offer.referralType === "code" ? "Code" : "Token"}
+                                      Referral{" "}
+                                      {offer.referralType === "code"
+                                        ? "Code"
+                                        : "Token"}
                                     </div>
-                                    <div className="small text-muted">User Registration</div>
+                                    <div className="small text-muted">
+                                      User Registration
+                                    </div>
                                   </div>
                                 ) : (
                                   <span className="text-muted">-</span>
                                 )}
                               </td>
                               <td>
-                                {offer.discountType === "percentage" ? `${offer.discountValue}%` : `₹${offer.discountValue}`}
+                                {offer.discountType === "percentage"
+                                  ? `${offer.discountValue}%`
+                                  : `₹${offer.discountValue}`}
                               </td>
                               <td>
                                 <div>
@@ -705,10 +793,21 @@ const AdminOffers = () => {
                                   <Button
                                     variant="outline-warning"
                                     size="sm"
-                                    onClick={() => handleToggleStatus(offer._id, offer.status)}
-                                    title={offer.status === "active" ? "Deactivate" : "Activate"}
+                                    onClick={() =>
+                                      handleToggleStatus(
+                                        offer._id,
+                                        offer.status
+                                      )
+                                    }
+                                    title={
+                                      offer.status === "active"
+                                        ? "Deactivate"
+                                        : "Activate"
+                                    }
                                   >
-                                    {offer.status === "active" ? "Deactivate" : "Activate"}
+                                    {offer.status === "active"
+                                      ? "Deactivate"
+                                      : "Activate"}
                                   </Button>
                                   <Button
                                     variant="outline-danger"
@@ -735,7 +834,12 @@ const AdminOffers = () => {
               <div className="d-flex justify-content-center mt-4">
                 <div className="d-flex align-items-center gap-3">
                   <Button
-                    onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        currentPage: prev.currentPage - 1,
+                      }))
+                    }
                     disabled={pagination.currentPage === 1}
                     variant="outline"
                     size="sm"
@@ -746,7 +850,12 @@ const AdminOffers = () => {
                     Page {pagination.currentPage} of {pagination.totalPages}
                   </span>
                   <Button
-                    onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        currentPage: prev.currentPage + 1,
+                      }))
+                    }
                     disabled={pagination.currentPage === pagination.totalPages}
                     variant="outline"
                     size="sm"
@@ -761,9 +870,9 @@ const AdminOffers = () => {
       </Row>
 
       {/* Create Modal */}
-      <Modal 
-        show={isCreateModalOpen} 
-        onHide={() => setIsCreateModalOpen(false)} 
+      <Modal
+        show={isCreateModalOpen}
+        onHide={() => setIsCreateModalOpen(false)}
         size="lg"
         backdrop="static"
         keyboard={false}
@@ -787,9 +896,9 @@ const AdminOffers = () => {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal 
-        show={isEditModalOpen} 
-        onHide={() => setIsEditModalOpen(false)} 
+      <Modal
+        show={isEditModalOpen}
+        onHide={() => setIsEditModalOpen(false)}
         size="lg"
         backdrop="static"
         keyboard={false}
@@ -813,9 +922,9 @@ const AdminOffers = () => {
       </Modal>
 
       {/* View Modal */}
-      <Modal 
-        show={isViewModalOpen} 
-        onHide={() => setIsViewModalOpen(false)} 
+      <Modal
+        show={isViewModalOpen}
+        onHide={() => setIsViewModalOpen(false)}
         size="lg"
         backdrop="static"
         keyboard={false}
@@ -832,9 +941,16 @@ const AdminOffers = () => {
 };
 
 // OfferForm component
-const OfferForm = ({ formData, setFormData, products, categories, onSubmit, submitText }) => {
+const OfferForm = ({
+  formData,
+  setFormData,
+  products,
+  categories,
+  onSubmit,
+  submitText,
+}) => {
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = (e) => {
@@ -852,7 +968,6 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
-              required
             />
           </Form.Group>
         </Col>
@@ -862,7 +977,6 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
             <Form.Select
               value={formData.offerType}
               onChange={(e) => handleInputChange("offerType", e.target.value)}
-              required
             >
               <option value="product">Product Offer</option>
               <option value="category">Category Offer</option>
@@ -888,8 +1002,9 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
             <Form.Label>Discount Type *</Form.Label>
             <Form.Select
               value={formData.discountType}
-              onChange={(e) => handleInputChange("discountType", e.target.value)}
-              required
+              onChange={(e) =>
+                handleInputChange("discountType", e.target.value)
+              }
             >
               <option value="percentage">Percentage</option>
               <option value="fixed">Fixed Amount</option>
@@ -904,8 +1019,9 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
               step="0.01"
               min="0"
               value={formData.discountValue}
-              onChange={(e) => handleInputChange("discountValue", e.target.value)}
-              required
+              onChange={(e) =>
+                handleInputChange("discountValue", e.target.value)
+              }
             />
           </Form.Group>
         </Col>
@@ -918,10 +1034,12 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
             multiple
             value={formData.products}
             onChange={(e) => {
-              const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+              const selectedOptions = Array.from(
+                e.target.selectedOptions,
+                (option) => option.value
+              );
               handleInputChange("products", selectedOptions);
             }}
-            required
           >
             {products.map((product) => (
               <option key={product._id} value={product._id}>
@@ -938,7 +1056,6 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
           <Form.Select
             value={formData.category}
             onChange={(e) => handleInputChange("category", e.target.value)}
-            required
           >
             <option value="">Select a category</option>
             {categories.map((category) => (
@@ -958,7 +1075,6 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
               type="datetime-local"
               value={formData.validFrom}
               onChange={(e) => handleInputChange("validFrom", e.target.value)}
-              required
             />
           </Form.Group>
         </Col>
@@ -969,7 +1085,6 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
               type="datetime-local"
               value={formData.validTo}
               onChange={(e) => handleInputChange("validTo", e.target.value)}
-              required
             />
           </Form.Group>
         </Col>
@@ -984,7 +1099,9 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
               step="0.01"
               min="0"
               value={formData.minimumAmount}
-              onChange={(e) => handleInputChange("minimumAmount", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("minimumAmount", e.target.value)
+              }
             />
           </Form.Group>
         </Col>
@@ -996,7 +1113,9 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
               step="0.01"
               min="0"
               value={formData.maximumDiscount}
-              onChange={(e) => handleInputChange("maximumDiscount", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("maximumDiscount", e.target.value)
+              }
             />
           </Form.Group>
         </Col>
@@ -1021,7 +1140,9 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
               type="number"
               min="1"
               value={formData.maxUsagePerUser}
-              onChange={(e) => handleInputChange("maxUsagePerUser", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("maxUsagePerUser", e.target.value)
+              }
             />
           </Form.Group>
         </Col>
@@ -1038,20 +1159,24 @@ const OfferForm = ({ formData, setFormData, products, categories, onSubmit, subm
         </Form.Select>
       </Form.Group>
 
-             <div className="d-flex justify-content-end gap-2">
-         <Button variant="secondary" type="button" onClick={() => {
-           if (submitText === "Create Offer") {
-             setIsCreateModalOpen(false);
-           } else {
-             setIsEditModalOpen(false);
-           }
-         }}>
-           Cancel
-         </Button>
-         <Button variant="primary" type="submit">
-           {submitText}
-         </Button>
-       </div>
+      <div className="d-flex justify-content-end gap-2">
+        <Button
+          variant="secondary"
+          type="button"
+          onClick={() => {
+            if (submitText === "Create Offer") {
+              setIsCreateModalOpen(false);
+            } else {
+              setIsEditModalOpen(false);
+            }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button variant="primary" type="submit">
+          {submitText}
+        </Button>
+      </div>
     </Form>
   );
 };
@@ -1140,12 +1265,18 @@ const OfferDetails = ({ offer }) => {
               <h6>Discount Details</h6>
               <div className="d-flex justify-content-between mb-2">
                 <span>Type:</span>
-                <strong>{offer.discountType === "percentage" ? "Percentage" : "Fixed Amount"}</strong>
+                <strong>
+                  {offer.discountType === "percentage"
+                    ? "Percentage"
+                    : "Fixed Amount"}
+                </strong>
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span>Value:</span>
                 <strong className="text-primary">
-                  {offer.discountType === "percentage" ? `${offer.discountValue}%` : `₹${offer.discountValue}`}
+                  {offer.discountType === "percentage"
+                    ? `${offer.discountValue}%`
+                    : `₹${offer.discountValue}`}
                 </strong>
               </div>
               {offer.minimumAmount > 0 && (
@@ -1178,7 +1309,11 @@ const OfferDetails = ({ offer }) => {
               <div className="d-flex justify-content-between">
                 <span>Duration:</span>
                 <strong>
-                  {Math.ceil((new Date(offer.validTo) - new Date(offer.validFrom)) / (1000 * 60 * 60 * 24))} days
+                  {Math.ceil(
+                    (new Date(offer.validTo) - new Date(offer.validFrom)) /
+                      (1000 * 60 * 60 * 24)
+                  )}{" "}
+                  days
                 </strong>
               </div>
             </Card.Body>
@@ -1204,12 +1339,16 @@ const OfferDetails = ({ offer }) => {
             <Col md={6}>
               <div className="d-flex justify-content-between mb-2">
                 <span>Max Per User:</span>
-                <strong>{offer.maxUsagePerUser ? offer.maxUsagePerUser : "Unlimited"}</strong>
+                <strong>
+                  {offer.maxUsagePerUser ? offer.maxUsagePerUser : "Unlimited"}
+                </strong>
               </div>
               <div className="d-flex justify-content-between">
                 <span>Remaining:</span>
                 <strong className="text-success">
-                  {offer.maxUsage ? (offer.maxUsage - (offer.usageCount || 0)) : "Unlimited"}
+                  {offer.maxUsage
+                    ? offer.maxUsage - (offer.usageCount || 0)
+                    : "Unlimited"}
                 </strong>
               </div>
             </Col>
@@ -1218,28 +1357,30 @@ const OfferDetails = ({ offer }) => {
       </Card>
 
       {/* Offer Specific Details */}
-      {offer.offerType === "product" && offer.products && offer.products.length > 0 && (
-        <Card className="mb-4">
-          <Card.Body>
-            <h6>Eligible Products</h6>
-            <div className="row">
-              {offer.products.map((product) => (
-                <div key={product._id} className="col-md-6 mb-2">
-                  <div className="d-flex align-items-center gap-2 p-2 bg-light rounded">
-                    <FaBox className="text-primary" />
-                    <span>{product.name}</span>
-                    {product.price && (
-                      <Badge bg="secondary" className="ms-auto">
-                        ₹{product.price}
-                      </Badge>
-                    )}
+      {offer.offerType === "product" &&
+        offer.products &&
+        offer.products.length > 0 && (
+          <Card className="mb-4">
+            <Card.Body>
+              <h6>Eligible Products</h6>
+              <div className="row">
+                {offer.products.map((product) => (
+                  <div key={product._id} className="col-md-6 mb-2">
+                    <div className="d-flex align-items-center gap-2 p-2 bg-light rounded">
+                      <FaBox className="text-primary" />
+                      <span>{product.name}</span>
+                      {product.price && (
+                        <Badge bg="secondary" className="ms-auto">
+                          ₹{product.price}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Card.Body>
-        </Card>
-      )}
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
       {offer.offerType === "category" && offer.category && (
         <Card className="mb-4">
@@ -1249,7 +1390,9 @@ const OfferDetails = ({ offer }) => {
               <FaTag className="text-warning" />
               <span className="fw-bold">{offer.category.name}</span>
               {offer.category.description && (
-                <span className="text-muted ms-2">({offer.category.description})</span>
+                <span className="text-muted ms-2">
+                  ({offer.category.description})
+                </span>
               )}
             </div>
           </Card.Body>
@@ -1262,12 +1405,18 @@ const OfferDetails = ({ offer }) => {
             <h6>Referral Details</h6>
             <div className="d-flex justify-content-between mb-2">
               <span>Referral Type:</span>
-              <strong>{offer.referralType === "code" ? "Referral Code" : "Referral Token"}</strong>
+              <strong>
+                {offer.referralType === "code"
+                  ? "Referral Code"
+                  : "Referral Token"}
+              </strong>
             </div>
             <div className="d-flex justify-content-between">
               <span>Discount Applied:</span>
               <strong className="text-primary">
-                {offer.discountType === "percentage" ? `${offer.discountValue}%` : `₹${offer.discountValue}`}
+                {offer.discountType === "percentage"
+                  ? `${offer.discountValue}%`
+                  : `₹${offer.discountValue}`}
               </strong>
             </div>
           </Card.Body>
@@ -1281,14 +1430,21 @@ const OfferDetails = ({ offer }) => {
           <Row>
             <Col md={4}>
               <div className="text-center">
-                <div className="h4 text-primary mb-1">{offer.usageCount || 0}</div>
+                <div className="h4 text-primary mb-1">
+                  {offer.usageCount || 0}
+                </div>
                 <div className="text-muted small">Total Uses</div>
               </div>
             </Col>
             <Col md={4}>
               <div className="text-center">
                 <div className="h4 text-success mb-1">
-                  {offer.maxUsage ? Math.round(((offer.usageCount || 0) / offer.maxUsage) * 100) : 0}%
+                  {offer.maxUsage
+                    ? Math.round(
+                        ((offer.usageCount || 0) / offer.maxUsage) * 100
+                      )
+                    : 0}
+                  %
                 </div>
                 <div className="text-muted small">Usage Rate</div>
               </div>
@@ -1308,4 +1464,4 @@ const OfferDetails = ({ offer }) => {
   );
 };
 
-export default AdminOffers; 
+export default AdminOffers;

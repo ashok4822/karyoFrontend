@@ -15,6 +15,7 @@ import {
   setSelectedDiscount,
   clearSelectedDiscount,
 } from "../../redux/reducers/userDiscountSlice";
+import { checkCOD } from "../../services/user/orderService";
 import CouponInput from "../../components/CouponInput";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 
