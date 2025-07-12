@@ -35,6 +35,9 @@ import Wallet from "../../pages/user/Wallet";
 import Contact from "../../pages/user/Contact";
 import About from "../../pages/About";
 import AdminCoupons from "../../pages/admin/AdminCoupons";
+import AdminOffers from "../../pages/admin/AdminOffers";
+import AdminReferrals from "../../pages/admin/AdminReferrals";
+import ReferralProgram from "../../pages/user/ReferralProgram";
 
 const AppRoutes = () => {
   const [isSessionRestored, setIsSessionRestored] = useState(false);
@@ -153,6 +156,22 @@ const AppRoutes = () => {
               </AdminProtectedRoute>
             }
           />
+          <Route
+            path="/admin/offers"
+            element={
+              <AdminProtectedRoute>
+                <AdminOffers />
+              </AdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/referrals"
+            element={
+              <AdminProtectedRoute>
+                <AdminReferrals />
+              </AdminProtectedRoute>
+            }
+          />
           {/* Catch-all admin route - redirect to admin dashboard */}
           <Route
             path="/admin/*"
@@ -195,6 +214,14 @@ const AppRoutes = () => {
               element={
                 <UserProtectedRoute>
                   <ProductDetails />
+                </UserProtectedRoute>
+              }
+            />
+            <Route
+              path="/referral-program"
+              element={
+                <UserProtectedRoute>
+                  <ReferralProgram />
                 </UserProtectedRoute>
               }
             />

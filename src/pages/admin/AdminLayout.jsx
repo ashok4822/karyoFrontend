@@ -34,8 +34,11 @@ const AdminLayout = () => {
     { path: '/admin', icon: <FaHome />, label: 'Dashboard' },
     { path: '/admin/products', icon: <FaBox />, label: 'Products' },
     { path: '/admin/orders', icon: <FaShoppingCart />, label: 'Orders' },
-    { path: '/admin/customers', icon: <FaUsers />, label: 'Customers' },
+    { path: '/admin/users', icon: <FaUsers />, label: 'Customers' },
     { path: '/admin/categories', icon: <FaTags />, label: 'Categories' },
+    { path: '/admin/offers', icon: <FaTags />, label: 'Offers' },
+    { path: '/admin/coupons', icon: <FaTags />, label: 'Coupons' },
+    { path: '/admin/referrals', icon: <FaUsers />, label: 'Referrals' },
     { path: '/admin/settings', icon: <FaCog />, label: 'Settings' },
   ];
 

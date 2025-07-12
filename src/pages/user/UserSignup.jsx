@@ -30,6 +30,7 @@ const UserSignup = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    referralCode: "",
   });
   const [step, setStep] = useState(1); // 1: info, 2: otp
   const [otp, setOtp] = useState("");
@@ -99,6 +100,7 @@ const UserSignup = () => {
         username: formData.username,
         password: formData.password,
         otp,
+        referralCode: formData.referralCode,
       });
       // Save access token and user in Redux/localStorage
       dispatch(loginSuccess({ user: res.data.user, token: res.data.token }));
@@ -203,6 +205,24 @@ const UserSignup = () => {
                           placeholder="Confirm your password"
                         />
                       </InputGroup>
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Referral Code (Optional)</Form.Label>
+                      <InputGroup>
+                        <InputGroup.Text>
+                          <FaUser />
+                        </InputGroup.Text>
+                        <Form.Control
+                          type="text"
+                          name="referralCode"
+                          value={formData.referralCode}
+                          onChange={handleChange}
+                          placeholder="Enter referral code (optional)"
+                        />
+                      </InputGroup>
+                      <Form.Text className="text-muted">
+                        Have a referral code? Enter it here to get rewards for both you and your referrer!
+                      </Form.Text>
                     </Form.Group>
                     <Button
                       type="submit"
