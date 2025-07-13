@@ -1,15 +1,15 @@
-import React from 'react';
-import { Card, Badge, Button } from 'react-bootstrap';
-import { FaGift, FaTag, FaUsers } from 'react-icons/fa';
+import React from "react";
+import { Card, Badge, Button } from "react-bootstrap";
+import { FaGift, FaTag, FaUsers } from "react-icons/fa";
 
 const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
   const getOfferTypeIcon = (type) => {
     switch (type) {
-      case 'product':
+      case "product":
         return <FaTag className="text-primary" />;
-      case 'category':
+      case "category":
         return <FaGift className="text-success" />;
-      case 'referral':
+      case "referral":
         return <FaUsers className="text-info" />;
       default:
         return <FaGift className="text-success" />;
@@ -18,24 +18,24 @@ const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
 
   const getOfferTypeLabel = (type) => {
     switch (type) {
-      case 'product':
-        return 'Product Offer';
-      case 'category':
-        return 'Category Offer';
-      case 'referral':
-        return 'Referral Offer';
+      case "product":
+        return "Product Offer";
+      case "category":
+        return "Category Offer";
+      case "referral":
+        return "Referral Offer";
       default:
-        return 'Offer';
+        return "Offer";
     }
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+    return date.toLocaleDateString("en-GB"); // dd/mm/yyyy format
   };
 
   const calculateDiscountText = () => {
-    if (offer.discountType === 'percentage') {
+    if (offer.discountType === "percentage") {
       return `${offer.discountValue}% OFF`;
     } else {
       return `₹${offer.discountValue} OFF`;
@@ -45,20 +45,23 @@ const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
   const isExpired = new Date() > new Date(offer.validTo);
 
   return (
-    <Card className={`h-100 ${isExpired ? 'opacity-50' : ''}`}>
+    <Card className={`h-100 ${isExpired ? "opacity-50" : ""}`}>
       {isExpired && (
-        <div className="position-absolute top-0 end-0 p-2" style={{ zIndex: 10 }}>
+        <div
+          className="position-absolute top-0 end-0 p-2"
+          style={{ zIndex: 10 }}
+        >
           <Badge bg="danger" className="fs-6">
             Expired
           </Badge>
         </div>
       )}
-      
+
       <Card.Header className="border-0 pb-0">
         <div className="d-flex align-items-center justify-content-between">
           <div className="d-flex align-items-center gap-2">
             {getOfferTypeIcon(offer.offerType)}
-            <Badge bg="outline-secondary" className="fs-6">
+            <Badge bg="outline-secondary" className="fs-6 text-dark">
               {getOfferTypeLabel(offer.offerType)}
             </Badge>
           </div>
@@ -82,8 +85,8 @@ const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
               <span className="fw-medium">₹{offer.minimumAmount}</span>
             </div>
           )}
-          
-          {offer.maximumDiscount && offer.discountType === 'percentage' && (
+
+          {offer.maximumDiscount && offer.discountType === "percentage" && (
             <div className="d-flex justify-content-between mb-1">
               <span className="text-muted">Max. Discount:</span>
               <span className="fw-medium">₹{offer.maximumDiscount}</span>
@@ -110,7 +113,7 @@ const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
           )}
         </div>
 
-        {showApplyButton && !isExpired && onApply && (
+        {/* {showApplyButton && !isExpired && onApply && (
           <Button
             variant="success"
             className="w-100 mt-3"
@@ -118,10 +121,10 @@ const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
           >
             Apply Offer
           </Button>
-        )}
+        )} */}
       </Card.Body>
     </Card>
   );
 };
 
-export default OfferCard; 
+export default OfferCard;
