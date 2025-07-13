@@ -12,6 +12,8 @@ import autoTable from "jspdf-autotable";
 
 const OrderConfirmation = () => {
   const { currentOrder } = useSelector((state) => state.order);
+  // Add log for debugging
+  console.log("OrderConfirmation currentOrder:", currentOrder);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { orderId } = useParams();
@@ -176,6 +178,16 @@ const OrderConfirmation = () => {
         y
       );
       y += 5;
+    }
+    if (currentOrder.offers && currentOrder.offers.length > 0) {
+      currentOrder.offers.forEach((offer) => {
+        doc.text(
+          `Offer (${offer.offerName}): -INR ${offer.offerAmount.toFixed(2)}`,
+          14,
+          y
+        );
+        y += 5;
+      });
     }
     doc.text(
       `Shipping: ${
@@ -426,6 +438,15 @@ const OrderConfirmation = () => {
                         <div className="text-muted small">
                           Qty: {item.quantity}
                         </div>
+                        {currentOrder.offers && currentOrder.offers.some(offer => 
+                          offer.productId === item.productVariantId?.product?._id
+                        ) && (
+                          <div className="mt-1">
+                            <span className="badge bg-success bg-opacity-25 text-success">
+                              Offer Applied
+                            </span>
+                          </div>
+                        )}
                         <div className="mt-1">
                           <span className={`badge me-1 ${
                             item.itemStatus === 'delivered' ? 'bg-success bg-opacity-25 text-success' :
@@ -465,6 +486,23 @@ const OrderConfirmation = () => {
                       <span className="text-success">
                         -INR {currentOrder.discount.discountAmount.toFixed(2)}
                       </span>
+                    </li>
+                  )}
+                  {currentOrder.offers && currentOrder.offers.length > 0 ? (
+                    <>
+                      {currentOrder.offers.map((offer, index) => (
+                        <li key={index} className="d-flex justify-content-between mb-1">
+                          <span>Offer ({offer.offerName}):</span>
+                          <span className="text-success">
+                            -INR {offer.offerAmount.toFixed(2)}
+                          </span>
+                        </li>
+                      ))}
+                    </>
+                  ) : (
+                    <li className="d-flex justify-content-between mb-1 text-muted">
+                      <span>Offers:</span>
+                      <span>No offers applied</span>
                     </li>
                   )}
                   <li className="d-flex justify-content-between mb-1">

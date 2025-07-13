@@ -353,13 +353,16 @@ const AdminOffers = () => {
     setIsViewModalOpen(true);
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (offer) => {
+    if (isOfferExpired(offer) && (offer.status === "active" || offer.status === "inactive")) {
+      return <Badge bg="danger" title="This offer has expired but status hasn't been updated yet">expired*</Badge>;
+    }
     const variants = {
       active: "success",
       inactive: "secondary",
       expired: "danger",
     };
-    return <Badge bg={variants[status] || "secondary"}>{status}</Badge>;
+    return <Badge bg={variants[offer.status] || "secondary"}>{offer.status}</Badge>;
   };
 
   const getOfferTypeBadge = (type) => {
@@ -385,8 +388,10 @@ const AdminOffers = () => {
   };
 
   const formatDate = (dateString) => {
-    return format(new Date(dateString), "dd/MM/yyyy");
+    return format(new Date(dateString), "dd/MM/yyyy HH:mm:ss");
   };
+
+  const isOfferExpired = (offer) => new Date(offer.validTo) < new Date();
 
   return (
     <Container fluid className="py-5">
@@ -568,7 +573,7 @@ const AdminOffers = () => {
                         <option value="all">All products</option>
                         {products.map((product) => (
                           <option key={product._id} value={product._id}>
-                            {product.name}
+                            {product?.name || 'Product Name Not Available'}
                           </option>
                         ))}
                       </Form.Select>
@@ -589,7 +594,7 @@ const AdminOffers = () => {
                         <option value="all">All categories</option>
                         {categories.map((category) => (
                           <option key={category._id} value={category._id}>
-                            {category.name}
+                            {category?.name || 'Category Name Not Available'}
                           </option>
                         ))}
                       </Form.Select>
@@ -710,7 +715,7 @@ const AdminOffers = () => {
                                     <div className="small text-muted">
                                       {offer.products
                                         .slice(0, 2)
-                                        .map((product) => product.name)
+                                        .map((product) => product?.name || 'Product Name Not Available')
                                         .join(", ")}
                                       {offer.products.length > 2 &&
                                         ` +${offer.products.length - 2} more`}
@@ -720,7 +725,7 @@ const AdminOffers = () => {
                                   offer.category ? (
                                   <div>
                                     <div className="fw-bold text-warning">
-                                      {offer.category.name}
+                                      {offer.category?.name || 'Category Name Not Available'}
                                     </div>
                                     {offer.category.description && (
                                       <div className="small text-muted">
@@ -756,17 +761,7 @@ const AdminOffers = () => {
                                 </div>
                               </td>
                               <td>
-                                <Badge
-                                  bg={
-                                    offer.status === "active"
-                                      ? "success"
-                                      : offer.status === "inactive"
-                                      ? "secondary"
-                                      : "danger"
-                                  }
-                                >
-                                  {offer.status}
-                                </Badge>
+                                {getStatusBadge(offer)}
                               </td>
                               <td>
                                 {offer.usageCount || 0}
@@ -891,6 +886,7 @@ const AdminOffers = () => {
             categories={categories}
             onSubmit={handleCreateOffer}
             submitText="Create Offer"
+            onCancel={() => setIsCreateModalOpen(false)}
           />
         </Modal.Body>
       </Modal>
@@ -917,6 +913,7 @@ const AdminOffers = () => {
             categories={categories}
             onSubmit={handleUpdateOffer}
             submitText="Update Offer"
+            onCancel={() => setIsEditModalOpen(false)}
           />
         </Modal.Body>
       </Modal>
@@ -948,6 +945,7 @@ const OfferForm = ({
   categories,
   onSubmit,
   submitText,
+  onCancel,
 }) => {
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -1043,7 +1041,7 @@ const OfferForm = ({
           >
             {products.map((product) => (
               <option key={product._id} value={product._id}>
-                {product.name}
+                {product?.name || 'Product Name Not Available'}
               </option>
             ))}
           </Form.Select>
@@ -1060,7 +1058,7 @@ const OfferForm = ({
             <option value="">Select a category</option>
             {categories.map((category) => (
               <option key={category._id} value={category._id}>
-                {category.name}
+                {category?.name || 'Category Name Not Available'}
               </option>
             ))}
           </Form.Select>
@@ -1163,13 +1161,7 @@ const OfferForm = ({
         <Button
           variant="secondary"
           type="button"
-          onClick={() => {
-            if (submitText === "Create Offer") {
-              setIsCreateModalOpen(false);
-            } else {
-              setIsEditModalOpen(false);
-            }
-          }}
+          onClick={onCancel}
         >
           Cancel
         </Button>
@@ -1368,8 +1360,8 @@ const OfferDetails = ({ offer }) => {
                   <div key={product._id} className="col-md-6 mb-2">
                     <div className="d-flex align-items-center gap-2 p-2 bg-light rounded">
                       <FaBox className="text-primary" />
-                      <span>{product.name}</span>
-                      {product.price && (
+                      <span>{product?.name || 'Product Name Not Available'}</span>
+                      {product?.price && (
                         <Badge bg="secondary" className="ms-auto">
                           ₹{product.price}
                         </Badge>
@@ -1388,7 +1380,7 @@ const OfferDetails = ({ offer }) => {
             <h6>Eligible Category</h6>
             <div className="d-flex align-items-center gap-2 p-3 bg-light rounded">
               <FaTag className="text-warning" />
-              <span className="fw-bold">{offer.category.name}</span>
+              <span className="fw-bold">{offer.category?.name || 'Category Name Not Available'}</span>
               {offer.category.description && (
                 <span className="text-muted ms-2">
                   ({offer.category.description})

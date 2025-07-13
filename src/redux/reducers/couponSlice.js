@@ -79,6 +79,20 @@ export const restoreCoupon = createAsyncThunk(
   }
 );
 
+export const updateExpiredCoupons = createAsyncThunk(
+  "coupons/updateExpiredCoupons",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await adminAxios.post("/coupons/update-expired");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update expired coupons"
+      );
+    }
+  }
+);
+
 const initialState = {
   coupons: [],
   loading: false,
@@ -198,6 +212,20 @@ const couponSlice = createSlice({
         state.total += 1;
       })
       .addCase(restoreCoupon.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Update expired coupons
+      .addCase(updateExpiredCoupons.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateExpiredCoupons.fulfilled, (state, action) => {
+        state.loading = false;
+        // Refresh the coupons list to show updated statuses
+        // The actual update is handled by the backend
+      })
+      .addCase(updateExpiredCoupons.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

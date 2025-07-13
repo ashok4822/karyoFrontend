@@ -663,6 +663,30 @@ const Checkout = () => {
       }
 
       const discountObj = appliedCoupon || userDiscounts.selectedDiscount;
+      
+      // Prepare offers data
+      const offersData = [];
+      cart.items.forEach((item) => {
+        const product = item.productVariantId?.product;
+        if (product && productOffers[product._id]) {
+          const offer = productOffers[product._id];
+          const basePrice = item.price;
+          const finalPrice = parseFloat(getFinalPrice(product, basePrice));
+          const offerAmount = basePrice - finalPrice;
+          
+          if (offerAmount > 0) {
+            offersData.push({
+              offerId: offer._id,
+              offerName: offer.name,
+              offerAmount: offerAmount * item.quantity,
+              offerType: offer.discountType,
+              offerValue: offer.discountValue,
+              productId: product._id,
+            });
+          }
+        }
+      });
+
       const orderData = {
         items: cart.items.map((item) => ({
           productVariantId: item.productVariantId._id,
@@ -682,6 +706,7 @@ const Checkout = () => {
               discountValue: discountObj.discountValue,
             }
           : null,
+        offers: offersData.length > 0 ? offersData : null,
         shipping: calculateShipping(),
         total: calculateTotal(),
       };

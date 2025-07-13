@@ -31,6 +31,7 @@ import {
   updateCoupon,
   deleteCoupon,
   restoreCoupon,
+  updateExpiredCoupons,
   clearError,
   setFilters,
 } from "../../redux/reducers/couponSlice";
@@ -303,6 +304,54 @@ const AdminCoupons = () => {
     });
   };
 
+  const handleUpdateExpiredCoupons = async () => {
+    Swal.fire({
+      title: "Update Expired Coupons?",
+      text: "This will automatically update the status of expired coupons to 'expired'.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#ffc107",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Yes, update them!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      customClass: {
+        confirmButton: "btn btn-warning",
+        cancelButton: "btn btn-secondary",
+      },
+      buttonsStyling: false,
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: "Updating...",
+          text: "Please wait while we update expired coupons.",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+        try {
+          const result = await dispatch(updateExpiredCoupons()).unwrap();
+          Swal.fire({
+            title: "Updated!",
+            text: result.message || "Expired coupons have been updated successfully.",
+            icon: "success",
+            confirmButtonColor: "#28a745",
+          });
+          // Refresh the coupons list to show updated statuses
+          dispatch(fetchCoupons(filters));
+        } catch (err) {
+          Swal.fire({
+            title: "Error!",
+            text: err || "Failed to update expired coupons. Please try again.",
+            icon: "error",
+            confirmButtonColor: "#dc3545",
+          });
+        }
+      }
+    });
+  };
+
   const handleSort = (key) => {
     dispatch(
       setFilters({
@@ -325,7 +374,44 @@ const AdminCoupons = () => {
     const day = date.getDate().toString().padStart(2, "0");
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  };
+
+  const isCouponExpired = (coupon) => {
+    const now = new Date();
+    const validTo = new Date(coupon.validTo);
+    return validTo < now;
+  };
+
+  const getStatusBadge = (coupon) => {
+    const isExpired = isCouponExpired(coupon);
+    
+    // If the coupon is expired but status is still active/inactive, show as expired
+    if (isExpired && (coupon.status === "active" || coupon.status === "inactive")) {
+      return (
+        <Badge bg="danger" title="This coupon has expired but status hasn't been updated yet">
+          expired*
+        </Badge>
+      );
+    }
+    
+    // Normal status display
+    return (
+      <Badge
+        bg={
+          coupon.status === "active"
+            ? "success"
+            : coupon.status === "inactive"
+            ? "secondary"
+            : "danger"
+        }
+      >
+        {coupon.status}
+      </Badge>
+    );
   };
 
   return (
@@ -340,7 +426,15 @@ const AdminCoupons = () => {
               <Col>
                 <h2 className="mb-0">Coupon Management</h2>
               </Col>
-              <Col xs="auto">
+              <Col xs="auto" className="d-flex gap-2">
+                <Button
+                  variant="warning"
+                  onClick={handleUpdateExpiredCoupons}
+                  className="d-flex align-items-center gap-2"
+                  disabled={loading}
+                >
+                  <FaUndo /> Update Expired
+                </Button>
                 <Button
                   variant="primary"
                   onClick={() => handleShowModal()}
@@ -359,6 +453,11 @@ const AdminCoupons = () => {
                 {error}
               </Alert>
             )}
+            <Alert variant="info" className="mb-3">
+              <strong>Auto-Expiration Feature:</strong> Coupons are automatically updated to "expired" status when their end date passes. 
+              Use the "Update Expired" button to manually trigger this update, or it will happen automatically when you view the coupons list.
+              Coupons marked with "expired*" have passed their end date but haven't been updated yet.
+            </Alert>
             <Card className="border-0 shadow-sm mb-4">
               <Card.Body>
                 <Row>
@@ -483,17 +582,7 @@ const AdminCoupons = () => {
                               </div>
                             </td>
                             <td>
-                              <Badge
-                                bg={
-                                  coupon.status === "active"
-                                    ? "success"
-                                    : coupon.status === "inactive"
-                                    ? "secondary"
-                                    : "danger"
-                                }
-                              >
-                                {coupon.status}
-                              </Badge>
+                              {getStatusBadge(coupon)}
                             </td>
                             <td>
                               {coupon.usageCount || 0}

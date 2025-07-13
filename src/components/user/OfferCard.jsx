@@ -42,21 +42,8 @@ const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
     }
   };
 
-  const isExpired = new Date() > new Date(offer.validTo);
-
   return (
-    <Card className={`h-100 ${isExpired ? "opacity-50" : ""}`}>
-      {isExpired && (
-        <div
-          className="position-absolute top-0 end-0 p-2"
-          style={{ zIndex: 10 }}
-        >
-          <Badge bg="danger" className="fs-6">
-            Expired
-          </Badge>
-        </div>
-      )}
-
+    <Card className="h-100">
       <Card.Header className="border-0 pb-0">
         <div className="d-flex align-items-center justify-content-between">
           <div className="d-flex align-items-center gap-2">
@@ -113,7 +100,7 @@ const OfferCard = ({ offer, onApply, showApplyButton = true }) => {
           )}
         </div>
 
-        {/* {showApplyButton && !isExpired && onApply && (
+        {/* {showApplyButton && onApply && (
           <Button
             variant="success"
             className="w-100 mt-3"
