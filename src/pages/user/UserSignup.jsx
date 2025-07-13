@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { loginSuccess } from "../../redux/reducers/authSlice";
 import {
@@ -25,6 +25,7 @@ import api, { OTP_EXPIRY_SECONDS } from "../../lib/utils";
 const UserSignup = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -47,6 +48,14 @@ const UserSignup = () => {
     }
     return () => clearInterval(interval);
   }, [step, timer]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      setFormData((prev) => ({ ...prev, referralCode: ref, referralToken: ref }));
+    }
+  }, [location.search]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -95,13 +104,18 @@ const UserSignup = () => {
     if (!otp) return setServerError("Please enter the OTP");
     setLoading(true);
     try {
-      const res = await api.post("auth/verify-otp", {
+      const payload = {
         email: formData.email,
         username: formData.username,
         password: formData.password,
         otp,
-        referralCode: formData.referralCode,
-      });
+      };
+      if (formData.referralToken) {
+        payload.referralToken = formData.referralToken;
+      } else if (formData.referralCode) {
+        payload.referralCode = formData.referralCode;
+      }
+      const res = await api.post("auth/verify-otp", payload);
       // Save access token and user in Redux/localStorage
       dispatch(loginSuccess({ user: res.data.user, token: res.data.token }));
       navigate("/");
@@ -111,6 +125,17 @@ const UserSignup = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = () => {
+    // Get the referral token from the URL (if present)
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      window.location.href = `http://localhost:5000/auth/google?ref=${ref}`;
+    } else {
+      window.location.href = `http://localhost:5000/auth/google`;
     }
   };
 
@@ -129,9 +154,7 @@ const UserSignup = () => {
               <Button
                 variant="outline-danger"
                 className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-                onClick={() =>
-                  (window.location.href = "http://localhost:5000/auth/google")
-                }
+                onClick={handleGoogleSignIn}
               >
                 <FaGoogle /> Sign up with Google
               </Button>
