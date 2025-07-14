@@ -39,6 +39,8 @@ import AdminOffers from "../../pages/admin/AdminOffers";
 import AdminReferrals from "../../pages/admin/AdminReferrals";
 import ReferralProgram from "../../pages/user/ReferralProgram";
 import Offers from "../../pages/user/Offers";
+import OrderSuccess from "../../pages/user/OrderSuccess";
+import OrderFailure from "../../pages/user/OrderFailure";
 
 const AppRoutes = () => {
   const [isSessionRestored, setIsSessionRestored] = useState(false);
@@ -247,6 +249,22 @@ const AppRoutes = () => {
             <Route
               path="/order-confirmation/:orderId"
               element={<OrderConfirmation />}
+            />
+            <Route
+              path="/order-success/:orderId"
+              element={
+                <UserProtectedRoute>
+                  <OrderSuccess />
+                </UserProtectedRoute>
+              }
+            />
+            <Route
+              path="/order-failure"
+              element={
+                <UserProtectedRoute>
+                  <OrderFailure />
+                </UserProtectedRoute>
+              }
             />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/contact" element={<Contact />} />

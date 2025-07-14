@@ -1885,22 +1885,47 @@ const UserProfile = () => {
                         </td>
                         <td>{item.quantity}</td>
                         <td className="fw-bold">
-                          {hasDiscount ? (
+                          {/* Per-item price display */}
+                          {(() => {
+                            // Original price per item
+                            const originalPrice = item.productVariantId?.mrp || item.price;
+                            // Proportional discount/offer calculation
+                            let discountedPrice = item.price;
+                            // If order.discount or order.offers exist, calculate proportional discount/offer for this item
+                            if (order.discount && order.discount.discountAmount > 0) {
+                              const totalOrderItems = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0) || 1;
+                              const itemDiscount = ((item.price * item.quantity) / totalOrderItems) * order.discount.discountAmount / item.quantity;
+                              discountedPrice = Math.max(0, discountedPrice - itemDiscount);
+                            }
+                            if (order.offers && order.offers.length > 0) {
+                              const totalOffer = order.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0);
+                              const totalOrderItems = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0) || 1;
+                              const itemOffer = ((item.price * item.quantity) / totalOrderItems) * totalOffer / item.quantity;
+                              discountedPrice = Math.max(0, discountedPrice - itemOffer);
+                            }
+                            // Per-item total
+                            const itemTotal = discountedPrice * item.quantity;
+                            return (
+                              <>
+                                {originalPrice > discountedPrice ? (
                             <>
                               <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.95em' }}>
-                                ₹{originalPrice}
+                                      ₹{originalPrice.toFixed(2)}
                               </span>
                               <br />
                               <span style={{ color: '#10b981', fontWeight: 600 }}>
-                                ₹{discountedTotal}
+                                      ₹{discountedPrice.toFixed(2)}
                               </span>
-                              <div className="text-success small">
-                                -₹{order.discount.discountAmount.toFixed(2)} (Discount)
-                              </div>
                             </>
                           ) : (
-                            <>₹{originalPrice}</>
+                                  <span>₹{originalPrice.toFixed(2)}</span>
                           )}
+                                <div className="text-muted small">
+                                  Total: ₹{itemTotal.toFixed(2)}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </td>
                         <td>
                           {(() => {
@@ -1982,6 +2007,16 @@ const UserProfile = () => {
                                   }
                                 >
                                   Return
+                                </Button>
+                              )}
+                            {itemStatus === "pending" && !item.cancelled && (
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={() => handleOpenCancelModal(order._id, item.productVariantId._id || item.productVariantId)}
+                                className="ms-2"
+                              >
+                                Cancel Product
                                 </Button>
                               )}
                           </div>

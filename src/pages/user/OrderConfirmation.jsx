@@ -162,18 +162,24 @@ const OrderConfirmation = () => {
       },
     });
     y = doc.lastAutoTable.finalY + 8;
-    // Price Breakdown
+    // Price Breakdown (use proportional discount logic)
+    const { adjustedTotal, proportionalDiscount } = getAdjustedTotalAndDiscount();
+    const subtotal = currentOrder.items
+      .filter((item) => item.itemPaymentStatus !== 'refunded')
+      .reduce((sum, item) => sum + item.price * item.quantity, 0);
     doc.setFontSize(11);
     doc.setFont(undefined, "bold");
     doc.text("Price Breakdown", 14, y);
     doc.setFont(undefined, "normal");
     y += 6;
     doc.setFontSize(10);
-    doc.text(`Subtotal: INR ${currentOrder.subtotal.toFixed(2)}`, 14, y);
+    doc.text(`Subtotal: INR ${subtotal.toFixed(2)}`, 14, y);
+    y += 5;
+    doc.text(`Discount (Proportional): -INR ${proportionalDiscount.toFixed(2)}`, 14, y);
     y += 5;
     if (currentOrder.discount) {
       doc.text(
-        `Discount: -INR ${currentOrder.discount.discountAmount.toFixed(2)}`,
+        `Discount Availed: ${currentOrder.discount.discountName || currentOrder.discount.code || 'Discount'}`,
         14,
         y
       );
@@ -188,6 +194,9 @@ const OrderConfirmation = () => {
         );
         y += 5;
       });
+    } else {
+      doc.text(`Offers: No offers applied`, 14, y);
+      y += 5;
     }
     doc.text(
       `Shipping: ${
@@ -201,10 +210,17 @@ const OrderConfirmation = () => {
     y += 5;
     doc.setFont(undefined, "bold");
     doc.setTextColor(79, 70, 229);
-    doc.text(`Total: INR ${currentOrder.total.toFixed(2)}`, 14, y);
+    doc.text(`Total (Excludes Refunded Items): INR ${adjustedTotal.toFixed(2)}`, 14, y);
     doc.setFont(undefined, "normal");
     doc.setTextColor(40, 40, 40);
-    y += 12;
+    y += 7;
+    if (currentOrder.items.some(item => item.itemPaymentStatus === 'refunded')) {
+      doc.setFontSize(9);
+      doc.setTextColor(220, 53, 69); // Bootstrap danger color
+      doc.text('Note: Refunded items are excluded from the total and discount is applied proportionally.', 14, y);
+      doc.setTextColor(40, 40, 40);
+      y += 5;
+    }
     // Footer
     doc.setDrawColor(220);
     doc.line(14, y, 196, y);
@@ -214,6 +230,21 @@ const OrderConfirmation = () => {
     doc.text("Thank you for shopping with CARYO!", 14, y);
     doc.text("Contact: support@caryo.com", 196, y, { align: "right" });
     doc.save(`Invoice_Order_${currentOrder.orderNumber}.pdf`);
+  };
+
+  // Helper to calculate adjusted total (excluding refunded items, with proportional discount)
+  const getAdjustedTotalAndDiscount = () => {
+    if (!currentOrder || !currentOrder.items) return { adjustedTotal: 0, proportionalDiscount: 0 };
+    const allItemsTotal = currentOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const nonRefundedItemsTotal = currentOrder.items
+      .filter((item) => item.itemPaymentStatus !== 'refunded')
+      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const discount = currentOrder.discount ? currentOrder.discount.discountAmount || 0 : 0;
+    const proportionalDiscount = allItemsTotal > 0
+      ? (nonRefundedItemsTotal / allItemsTotal) * discount
+      : 0;
+    const adjustedTotal = Math.max(0, nonRefundedItemsTotal - proportionalDiscount);
+    return { adjustedTotal, proportionalDiscount };
   };
 
   if (!currentOrder) {
@@ -478,13 +509,22 @@ const OrderConfirmation = () => {
                 <ul className="list-unstyled small mb-0">
                   <li className="d-flex justify-content-between mb-1">
                     <span>Subtotal:</span>
-                    <span>INR {currentOrder.subtotal.toFixed(2)}</span>
+                    <span>INR {currentOrder.items
+                      .filter((item) => item.itemPaymentStatus !== 'refunded')
+                      .reduce((sum, item) => sum + item.price * item.quantity, 0)
+                      .toFixed(2)}</span>
+                  </li>
+                  <li className="d-flex justify-content-between mb-1">
+                    <span>Discount (Proportional):</span>
+                    <span className="text-success">
+                      -INR {getAdjustedTotalAndDiscount().proportionalDiscount.toFixed(2)}
+                    </span>
                   </li>
                   {currentOrder.discount && (
-                    <li className="d-flex justify-content-between mb-1">
-                      <span>Discount:</span>
-                      <span className="text-success">
-                        -INR {currentOrder.discount.discountAmount.toFixed(2)}
+                    <li className="d-flex justify-content-between mb-1 text-muted">
+                      <span>Discount Availed:</span>
+                      <span>
+                        {currentOrder.discount.discountName || currentOrder.discount.code || 'Discount'}
                       </span>
                     </li>
                   )}
@@ -514,9 +554,15 @@ const OrderConfirmation = () => {
                     </span>
                   </li>
                   <li className="d-flex justify-content-between border-top pt-2 mt-2 fw-bold text-dark">
-                    <span>Total:</span>
-                    <span>INR {currentOrder.total.toFixed(2)}</span>
+                    <span>Total (Excludes Refunded Items):</span>
+                    <span>INR {getAdjustedTotalAndDiscount().adjustedTotal.toFixed(2)}</span>
                   </li>
+                  {currentOrder.items.some(item => item.itemPaymentStatus === 'refunded') && (
+                    <li className="d-flex justify-content-between mb-1 text-danger small">
+                      <span></span>
+                      <span>Note: Refunded items are excluded from the total and discount is applied proportionally.</span>
+                    </li>
+                  )}
                 </ul>
               </div>
 

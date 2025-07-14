@@ -204,6 +204,20 @@ const AdminOrderDetails = () => {
     return 0;
   };
 
+  // Helper to calculate adjusted total (excluding refunded items, with proportional discount)
+  const getAdjustedTotalAndDiscount = () => {
+    const allItemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const nonRefundedItemsTotal = order.items
+      .filter((item) => item.itemPaymentStatus !== 'refunded')
+      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const discount = getDiscountAmount();
+    const proportionalDiscount = allItemsTotal > 0
+      ? (nonRefundedItemsTotal / allItemsTotal) * discount
+      : 0;
+    const adjustedTotal = Math.max(0, nonRefundedItemsTotal - proportionalDiscount);
+    return { adjustedTotal, proportionalDiscount };
+  };
+
   // Helper to get user-friendly shipping status label
   const getShippingStatusLabel = (status) => {
     switch (status) {
@@ -348,7 +362,7 @@ const AdminOrderDetails = () => {
                         <tr
                           key={item._id || variant._id || idx}
                           style={
-                            isCancelled
+                            isCancelled && (order.paymentMethod !== 'online' || itemPaymentStatus === 'refunded')
                               ? { opacity: 0.5, textDecoration: "line-through" }
                               : {}
                           }
@@ -499,7 +513,10 @@ const AdminOrderDetails = () => {
                                 }))
                               }
                               size="sm"
-                              disabled={isCancelled}
+                              disabled={
+                                (isCancelled &&
+                                  (order.paymentMethod !== 'online' || itemPaymentStatus === 'refunded'))
+                              }
                             >
                               <option value="pending">Pending</option>
                               <option value="paid">Paid</option>
@@ -511,9 +528,9 @@ const AdminOrderDetails = () => {
                               size="sm"
                               className="mt-1"
                               disabled={
-                                isCancelled ||
-                                (itemPaymentStatusStates?.[item._id] ||
-                                  itemPaymentStatus) === itemPaymentStatus
+                                (isCancelled &&
+                                  (order.paymentMethod !== 'online' || itemPaymentStatus === 'refunded')) ||
+                                (itemPaymentStatusStates?.[item._id] || itemPaymentStatus) === itemPaymentStatus
                               }
                               onClick={async () => {
                                 const paymentStatus =
@@ -563,21 +580,18 @@ const AdminOrderDetails = () => {
                       <td className="text-end">
                         ₹
                         {order.items
-                          .filter((item) => !item.cancelled)
-                          .reduce(
-                            (sum, item) => sum + item.price * item.quantity,
-                            0
-                          )
+                          .filter((item) => !item.cancelled && item.itemPaymentStatus !== 'refunded')
+                          .reduce((sum, item) => sum + item.price * item.quantity, 0)
                           .toFixed(2)}
                       </td>
                       <td colSpan="2"></td>
                     </tr>
                     <tr>
                       <td colSpan="3" className="text-end">
-                        <strong>Discount</strong>
+                        <strong>Discount (Proportional)</strong>
                       </td>
                       <td className="text-end">
-                        -₹{getDiscountAmount().toFixed(2)}
+                        -₹{getAdjustedTotalAndDiscount().proportionalDiscount.toFixed(2)}
                       </td>
                       <td colSpan="2"></td>
                     </tr>
@@ -602,23 +616,22 @@ const AdminOrderDetails = () => {
                     </tr>
                     <tr>
                       <td colSpan="3" className="text-end">
-                        <strong>Total</strong>
+                        <strong>Total (Excludes Refunded Items)</strong>
                       </td>
                       <td className="text-end">
                         <strong>
-                          ₹
-                          {(
-                            order.items
-                              .filter((item) => !item.cancelled)
-                              .reduce(
-                                (sum, item) => sum + item.price * item.quantity,
-                                0
-                              ) - getDiscountAmount()
-                          ).toFixed(2)}
+                          ₹{getAdjustedTotalAndDiscount().adjustedTotal.toFixed(2)}
                         </strong>
                       </td>
                       <td colSpan="2"></td>
                     </tr>
+                    {order.items.some(item => item.itemPaymentStatus === 'refunded') && (
+                      <tr>
+                        <td colSpan="6" className="text-end text-danger small">
+                          Note: Refunded items are excluded from the total and discount is applied proportionally.
+                        </td>
+                      </tr>
+                    )}
                   </tfoot>
                 </Table>
               </div>

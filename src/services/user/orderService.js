@@ -32,3 +32,17 @@ export const submitReturnRequest = (orderId, items, token = null) => {
     )
   );
 };
+
+// Create Razorpay order
+export const createRazorpayOrder = (amount, currency = "INR", receipt = null) => {
+  return apiHandler(
+    userAxios.post("/orders/razorpay/order", { amount, currency, receipt })
+  );
+};
+
+// Verify Razorpay payment
+export const verifyRazorpayPayment = (razorpay_order_id, razorpay_payment_id, razorpay_signature) => {
+  return apiHandler(
+    userAxios.post("/orders/razorpay/verify", { razorpay_order_id, razorpay_payment_id, razorpay_signature })
+  );
+};

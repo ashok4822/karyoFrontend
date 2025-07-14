@@ -15,7 +15,11 @@ import {
   setSelectedDiscount,
   clearSelectedDiscount,
 } from "../../redux/reducers/userDiscountSlice";
-import { checkCOD } from "../../services/user/orderService";
+import {
+  checkCOD,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+} from "../../services/user/orderService";
 import CouponInput from "../../components/CouponInput";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 import { getBestOffersForProducts } from "../../services/user/offerService";
@@ -73,6 +77,8 @@ const Checkout = () => {
   const [productOffers, setProductOffers] = useState({});
   const [offersLoading, setOffersLoading] = useState(false);
 
+  const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "";
+
   // Initialize cart if not already done
   useEffect(() => {
     if (!cart.initialized && !cart.loading) {
@@ -121,7 +127,9 @@ const Checkout = () => {
     
     try {
       setOffersLoading(true);
-      const productIds = cart.items.map(item => item.productVariantId?.product?._id).filter(Boolean);
+      const productIds = cart.items
+        .map((item) => item.productVariantId?.product?._id)
+        .filter(Boolean);
       const response = await getBestOffersForProducts(productIds);
       if (response.success && response.data) {
         setProductOffers(response.data);
@@ -263,7 +271,9 @@ const Checkout = () => {
     return cart.items.reduce((total, item) => {
       const product = item.productVariantId?.product;
       const basePrice = item.price;
-      const finalPrice = product ? parseFloat(getFinalPrice(product, basePrice)) : basePrice;
+      const finalPrice = product
+        ? parseFloat(getFinalPrice(product, basePrice))
+        : basePrice;
       return total + finalPrice * item.quantity;
     }, 0);
   };
@@ -277,7 +287,10 @@ const Checkout = () => {
     
     if (discount.discountType === "percentage") {
       discountAmount = (subtotal * discount.discountValue) / 100;
-      if (discount.maximumDiscount && discountAmount > discount.maximumDiscount) {
+      if (
+        discount.maximumDiscount &&
+        discountAmount > discount.maximumDiscount
+      ) {
         discountAmount = discount.maximumDiscount;
       }
     } else {
@@ -607,6 +620,18 @@ const Checkout = () => {
     });
   };
 
+  // Razorpay script loader
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) return resolve(true);
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -711,6 +736,81 @@ const Checkout = () => {
         total: calculateTotal(),
       };
 
+      if (paymentMethod === "online") {
+        setLoading(true);
+        // 1. Do all async work first
+        const res = await createRazorpayOrder(orderData.total, "INR");
+        console.log("Razorpay order response:", res);
+        if (!res.success) {
+          setLoading(false);
+          throw new Error("Failed to initiate payment");
+        }
+        const razorpayOrder = res.data.order;
+        const scriptLoaded = await loadRazorpayScript();
+        console.log("frontend .env: ", import.meta.env.VITE_RAZORPAY_KEY_ID);
+        console.log("Razorpay script loaded:", window.Razorpay);
+        if (!scriptLoaded) {
+          setLoading(false);
+          throw new Error("Failed to load Razorpay SDK");
+        }
+        // 2. Prepare options
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || "", // Set in .env frontend
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          name: "Karyo1L Store",
+          description: "Order Payment",
+          order_id: razorpayOrder.id,
+          handler: async function (response) {
+            // Verify payment
+            const verifyRes = await verifyRazorpayPayment(
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature
+            );
+            if (verifyRes.success) {
+              // Place order with paymentMethod: 'online'
+              const result = await dispatch(createOrder(orderData)).unwrap();
+              const orderId = result.order?._id;
+              toast({
+                title: "Order placed successfully!",
+                description: "Your payment was successful.",
+                variant: "default",
+              });
+              // Redirect to the same confirmation page as COD
+              navigate(`/order-confirmation/${orderId}?fresh=true`);
+            } else {
+              toast({
+                title: "Payment verification failed",
+                description: verifyRes.message || "Payment could not be verified.",
+                variant: "destructive",
+              });
+              navigate("/order-failure");
+            }
+          },
+          prefill: {
+            name: auth.user?.firstName || "",
+            email: auth.user?.email || "",
+          },
+          theme: { color: "#3399cc" },
+        };
+        console.log("Opening Razorpay with options:", options);
+        // 3. Open Razorpay modal synchronously, as the very next line after all async work
+        const rzp = new window.Razorpay(options);
+        rzp.on("payment.failed", function () {
+          toast({
+            title: "Payment failed",
+            description: "Your payment was not successful.",
+            variant: "destructive",
+          });
+          navigate("/order-failure");
+        });
+        rzp.open();
+        // 4. Only set loading false after opening modal
+        setLoading(false);
+        return;
+      }
+
       const result = await dispatch(createOrder(orderData)).unwrap();
       const orderId = result.order?._id;
       toast({
@@ -749,8 +849,40 @@ const Checkout = () => {
     );
   }
 
+  // TEMP: Direct Razorpay test button for popup debugging
+  const testRazorpayDirect = async () => {
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded) {
+      alert("Failed to load Razorpay SDK");
+      return;
+    }
+    const options = {
+      key: RAZORPAY_KEY,
+      amount: 360000,
+      currency: "INR",
+      order_id: "order_QsqM2dbn4ajnrK",
+      handler: function (response) {
+        console.log("Direct Razorpay response", response);
+      },
+    };
+    new window.Razorpay(options).open();
+  };
+
   return (
     <div style={{ maxWidth: 1200, margin: "2rem auto", padding: "1rem" }}>
+      {/* TEMP: Direct Razorpay test button for popup debugging */}
+      <button
+        onClick={testRazorpayDirect}
+        style={{
+          marginBottom: 16,
+          background: "#f5f5f5",
+          border: "1px solid #ccc",
+          padding: 8,
+          borderRadius: 4,
+        }}
+      >
+        Test Razorpay Direct
+      </button>
       <div style={{ marginBottom: "2rem" }}>
         <h1>Checkout</h1>
         <p style={{ color: "#666", marginTop: "0.5rem" }}>
@@ -2002,28 +2134,41 @@ const Checkout = () => {
                       {(() => {
                         const product = item.productVariantId?.product;
                         const basePrice = item.price;
-                        const finalPrice = product ? parseFloat(getFinalPrice(product, basePrice)) : basePrice;
-                        const offer = product ? productOffers[product._id] : null;
+                        const finalPrice = product
+                          ? parseFloat(getFinalPrice(product, basePrice))
+                          : basePrice;
+                        const offer = product
+                          ? productOffers[product._id]
+                          : null;
                         const totalPrice = finalPrice * item.quantity;
                         const originalTotalPrice = basePrice * item.quantity;
                         
                         return (
                           <div>
-                            <p style={{ margin: 0, fontWeight: "bold", fontSize: "16px" }}>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontWeight: "bold",
+                                fontSize: "16px",
+                              }}
+                            >
                               ₹{totalPrice.toFixed(2)}
                             </p>
                             {offer && basePrice !== finalPrice && (
-                              <p style={{ 
+                              <p
+                                style={{
                                 margin: "4px 0 0 0", 
                                 color: "#999", 
                                 textDecoration: "line-through",
-                                fontSize: "14px"
-                              }}>
+                                  fontSize: "14px",
+                                }}
+                              >
                                 ₹{originalTotalPrice.toFixed(2)}
                               </p>
                             )}
                             {offer && (
-                              <div style={{
+                              <div
+                                style={{
                                 backgroundColor: "#dcfce7",
                                 color: "#166534",
                                 padding: "2px 6px",
@@ -2031,8 +2176,9 @@ const Checkout = () => {
                                 fontSize: "10px",
                                 fontWeight: "500",
                                 marginTop: "4px",
-                                display: "inline-block"
-                              }}>
+                                  display: "inline-block",
+                                }}
+                              >
                                 {offer.discountType === "percentage" 
                                   ? `${offer.discountValue}% OFF` 
                                   : `₹${offer.discountValue} OFF`}
@@ -2219,10 +2365,14 @@ const Checkout = () => {
                 <div style={{ textAlign: "right" }}>
                   {(() => {
                     const subtotalWithOffers = calculateSubtotal();
-                    const subtotalWithoutOffers = cart.items.reduce((total, item) => {
-                      return total + (item.price * item.quantity);
-                    }, 0);
-                    const offerSavings = subtotalWithoutOffers - subtotalWithOffers;
+                    const subtotalWithoutOffers = cart.items.reduce(
+                      (total, item) => {
+                        return total + item.price * item.quantity;
+                      },
+                      0
+                    );
+                    const offerSavings =
+                      subtotalWithoutOffers - subtotalWithOffers;
                     const hasOffers = offerSavings > 0;
                     
                     return (
@@ -2238,18 +2388,22 @@ const Checkout = () => {
                             ₹{subtotalWithoutOffers.toFixed(2)}
                           </div>
                         )}
-                        <div style={{ 
+                        <div
+                          style={{
                           fontWeight: "bold", 
-                          color: hasOffers ? "#10b981" : "inherit"
-                        }}>
+                            color: hasOffers ? "#10b981" : "inherit",
+                          }}
+                        >
                           ₹{subtotalWithOffers.toFixed(2)}
                         </div>
                         {hasOffers && (
-                          <div style={{
+                          <div
+                            style={{
                             fontSize: "0.75rem",
                             color: "#10b981",
-                            fontWeight: "500"
-                          }}>
+                              fontWeight: "500",
+                            }}
+                          >
                             Saved ₹{offerSavings.toFixed(2)} with offers
                           </div>
                         )}
@@ -2268,7 +2422,10 @@ const Checkout = () => {
                   }}
                 >
                   <span style={{ color: "#10b981" }}>
-                    Discount ({appliedCoupon?.name || userDiscounts.selectedDiscount?.name}):
+                    Discount (
+                    {appliedCoupon?.name ||
+                      userDiscounts.selectedDiscount?.name}
+                    ):
                   </span>
                   <span style={{ color: "#10b981", fontWeight: "500" }}>
                     -₹{calculateDiscount().toFixed(2)}
