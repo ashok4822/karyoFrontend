@@ -40,6 +40,8 @@ export const getAllOrders = ({
   search,
   sortBy = "createdAt",
   sortOrder = "desc",
+  dateFrom,
+  dateTo,
 }) => {
   console.log('getAllOrders service called with params:', {
     page,
@@ -48,6 +50,8 @@ export const getAllOrders = ({
     search,
     sortBy,
     sortOrder,
+    dateFrom,
+    dateTo,
   });
   return apiHandler(
     adminAxios.get("/orders", {
@@ -58,6 +62,8 @@ export const getAllOrders = ({
         search,
         sortBy,
         sortOrder,
+        dateFrom,
+        dateTo,
       },
     })
   );

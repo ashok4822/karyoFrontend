@@ -39,6 +39,7 @@ const AdminLayout = () => {
     { path: '/admin/offers', icon: <FaTags />, label: 'Offers' },
     { path: '/admin/coupons', icon: <FaTags />, label: 'Coupons' },
     { path: '/admin/referrals', icon: <FaUsers />, label: 'Referrals' },
+    { path: '/admin/sales-report', icon: <FaChartLine />, label: 'Sales Report' },
     { path: '/admin/settings', icon: <FaCog />, label: 'Settings' },
   ];
 
