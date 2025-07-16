@@ -137,6 +137,25 @@ const AdminCoupons = () => {
       Number(formData.discountValue) <= 0
     )
       errors.discountValue = "Discount value must be greater than 0";
+    if (
+      formData.minimumAmount &&
+      Number(formData.discountValue) > Number(formData.minimumAmount)
+    ) {
+      errors.discountValue = "Discount value cannot be greater than minimum amount";
+    }
+    if (formData.discountType === "fixed" && formData.maximumDiscount) {
+      if (Number(formData.maximumDiscount) < Number(formData.discountValue)) {
+        errors.maximumDiscount = "Maximum discount cannot be less than discount value for fixed coupons";
+      }
+    }
+    if (formData.discountType === "percentage" && formData.maximumDiscount) {
+      if (Number(formData.maximumDiscount) <= 0) {
+        errors.maximumDiscount = "Maximum discount must be greater than 0 for percentage coupons";
+      }
+      if (formData.minimumAmount && Number(formData.maximumDiscount) > Number(formData.minimumAmount)) {
+        errors.maximumDiscount = "Maximum discount cannot be greater than minimum amount for percentage coupons";
+      }
+    }
     if (!formData.validFrom) errors.validFrom = "Valid from date is required";
     if (!formData.validTo) errors.validTo = "Valid to date is required";
     if (
