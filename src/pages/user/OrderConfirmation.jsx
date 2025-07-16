@@ -18,13 +18,14 @@ const OrderConfirmation = () => {
   const navigate = useNavigate();
   const { orderId } = useParams();
   const location = useLocation();
+  console.log("[DEBUG] Rendering OrderConfirmation page", location.pathname, orderId);
   const [isFreshOrder, setIsFreshOrder] = useState(false);
 
   useEffect(() => {
-    if (!currentOrder && orderId) {
+    if (orderId) {
       dispatch(fetchOrderById(orderId));
     }
-  }, [currentOrder, orderId, dispatch]);
+  }, [orderId, dispatch]);
 
   useEffect(() => {
     // Check if this is a fresh order placement by looking for a query parameter
@@ -36,14 +37,11 @@ const OrderConfirmation = () => {
       // Clear the fresh parameter from URL without reloading
       const newUrl = location.pathname;
       window.history.replaceState({}, '', newUrl);
-    } else {
-      setIsFreshOrder(false);
-    }
-
-    // Only clear cart and cart state if this is a fresh order
-    if (fresh === 'true') {
+      // Only clear cart and cart state if this is a fresh order
       dispatch(clearCart());
       dispatch(clearCartState());
+    } else {
+      setIsFreshOrder(false);
     }
   }, [dispatch, location]);
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "../../hooks/use-toast";
-import { fetchCart, clearCart, clearCartState } from "../../redux/reducers/cartSlice";
+import { fetchCart, clearCart, clearCartState, removeFromCart } from "../../redux/reducers/cartSlice";
 import { createOrder, fetchOrderById } from "../../redux/reducers/orderSlice";
 import {
   fetchShippingAddresses,
@@ -26,13 +26,14 @@ import { Modal, Button, Form, Alert } from "react-bootstrap";
 import { getBestOffersForProducts } from "../../services/user/offerService";
 
 const Checkout = () => {
+  const location = useLocation();
   const cart = useSelector((state) => state.cart);
+  console.log("[DEBUG] Rendering Checkout page", location.pathname, cart);
   const auth = useSelector((state) => state.auth);
   const shippingAddress = useSelector((state) => state.shippingAddress);
   const userDiscounts = useSelector((state) => state.userDiscounts);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
@@ -82,6 +83,7 @@ const Checkout = () => {
   const [retrying, setRetrying] = useState(false);
   const hasRetried = useRef(false);
   const orderCreatedRef = useRef(false); // Prevent double order creation
+  const orderJustPlacedRef = useRef(false);
 
   const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "";
 
@@ -189,7 +191,9 @@ const Checkout = () => {
     }
 
     // Redirect if cart is empty (only after cart is initialized)
+    const params = new URLSearchParams(location.search);
     if (cart.items.length === 0) {
+      if (params.get("fresh") === "true") return;
       toast({
         title: "Empty cart",
         description: "Your cart is empty. Please add items before checkout.",
@@ -785,7 +789,7 @@ const Checkout = () => {
               })).unwrap();
               const orderId = result.order?._id;
               dispatch(clearCart());
-              dispatch(clearCartState());
+              orderJustPlacedRef.current = true;
               toast({
                 title: "Order placed successfully!",
                 description: "Your payment was successful.",
@@ -799,7 +803,18 @@ const Checkout = () => {
                 description: verifyRes.message || "Payment could not be verified.",
                 variant: "destructive",
               });
-              navigate("/cart");
+              // Create failed order and redirect to confirmation page
+              const failedOrderResult = await dispatch(createOrder({
+                ...orderData,
+                paymentStatus: "failed",
+                paymentMethod: "online",
+                razorpayOrderId: razorpayOrder.id
+              })).unwrap();
+              const failedOrderId = failedOrderResult.order?._id;
+              // dispatch(clearCart());
+              orderJustPlacedRef.current = true;
+              navigate(`/order-confirmation/${failedOrderId}?fresh=true`);
+              setTimeout(() => { orderCreatedRef.current = false; }, 1000); // Reset after navigation
             }
             setTimeout(() => { orderCreatedRef.current = false; }, 1000); // Reset after navigation
           },
@@ -828,9 +843,9 @@ const Checkout = () => {
             razorpayOrderId: razorpayOrder.id
           })).unwrap();
           const failedOrderId = failedOrderResult.order?._id;
-          dispatch(clearCart());
-          dispatch(clearCartState());
-          navigate(`/order-confirmation/${failedOrderId}`);
+          // dispatch(clearCart());
+          orderJustPlacedRef.current = true;
+          navigate(`/order-confirmation/${failedOrderId}?fresh=true`);
           setTimeout(() => { orderCreatedRef.current = false; }, 1000); // Reset after navigation
         });
         rzp.open();
@@ -841,8 +856,8 @@ const Checkout = () => {
 
       const result = await dispatch(createOrder(orderData)).unwrap();
       const orderId = result.order?._id;
-      dispatch(clearCart());
-      dispatch(clearCartState());
+      // dispatch(clearCart());
+      orderJustPlacedRef.current = true;
       toast({
         title: "Order placed successfully!",
         description:
@@ -922,8 +937,8 @@ const Checkout = () => {
                 );
                 if (verifyRes.success) {
                   await updateOnlinePaymentStatus(order._id, "paid");
-                  dispatch(clearCart());
-                  dispatch(clearCartState());
+                  // dispatch(clearCart());
+                  // dispatch(clearCartState());
                   toast({
                     title: "Payment successful!",
                     description: "Your payment was successful.",

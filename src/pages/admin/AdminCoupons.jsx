@@ -334,7 +334,9 @@ const AdminCoupons = () => {
           const result = await dispatch(updateExpiredCoupons()).unwrap();
           Swal.fire({
             title: "Updated!",
-            text: result.message || "Expired coupons have been updated successfully.",
+            text:
+              result.message ||
+              "Expired coupons have been updated successfully.",
             icon: "success",
             confirmButtonColor: "#28a745",
           });
@@ -388,16 +390,22 @@ const AdminCoupons = () => {
 
   const getStatusBadge = (coupon) => {
     const isExpired = isCouponExpired(coupon);
-    
+
     // If the coupon is expired but status is still active/inactive, show as expired
-    if (isExpired && (coupon.status === "active" || coupon.status === "inactive")) {
+    if (
+      isExpired &&
+      (coupon.status === "active" || coupon.status === "inactive")
+    ) {
       return (
-        <Badge bg="danger" title="This coupon has expired but status hasn't been updated yet">
+        <Badge
+          bg="danger"
+          title="This coupon has expired but status hasn't been updated yet"
+        >
           expired*
         </Badge>
       );
     }
-    
+
     // Normal status display
     return (
       <Badge
@@ -453,11 +461,11 @@ const AdminCoupons = () => {
                 {error}
               </Alert>
             )}
-            <Alert variant="info" className="mb-3">
+            {/* <Alert variant="info" className="mb-3">
               <strong>Auto-Expiration Feature:</strong> Coupons are automatically updated to "expired" status when their end date passes. 
               Use the "Update Expired" button to manually trigger this update, or it will happen automatically when you view the coupons list.
               Coupons marked with "expired*" have passed their end date but haven't been updated yet.
-            </Alert>
+            </Alert> */}
             <Card className="border-0 shadow-sm mb-4">
               <Card.Body>
                 <Row>
@@ -581,9 +589,7 @@ const AdminCoupons = () => {
                                 <div>To: {formatDate(coupon.validTo)}</div>
                               </div>
                             </td>
-                            <td>
-                              {getStatusBadge(coupon)}
-                            </td>
+                            <td>{getStatusBadge(coupon)}</td>
                             <td>
                               {coupon.usageCount || 0}
                               {coupon.maxUsage && ` / ${coupon.maxUsage}`}
