@@ -72,7 +72,7 @@ const UserProfile = () => {
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Note: UserProtectedRoute handles basic authentication
   // We'll handle deleted user case in the useEffect when fetching fresh data
   const [avatar, setAvatar] = useState(user?.profileImage || "/profile.png");
@@ -868,7 +868,15 @@ const UserProfile = () => {
         <div className="mb-3">
           <strong>Referral Code:</strong>
           {referralCode ? (
-            <span style={{ marginLeft: 8, fontFamily: "monospace", fontWeight: 600 }}>{referralCode}</span>
+            <span
+              style={{
+                marginLeft: 8,
+                fontFamily: "monospace",
+                fontWeight: 600,
+              }}
+            >
+              {referralCode}
+            </span>
           ) : (
             <span style={{ marginLeft: 8, color: "#888" }}>-</span>
           )}
@@ -892,7 +900,11 @@ const UserProfile = () => {
               >
                 <FaShareAlt />
               </Button>
-              {copySuccess && <span style={{ marginLeft: 8, color: "green" }}>{copySuccess}</span>}
+              {copySuccess && (
+                <span style={{ marginLeft: 8, color: "green" }}>
+                  {copySuccess}
+                </span>
+              )}
             </>
           )}
         </div>
@@ -1791,8 +1803,11 @@ const UserProfile = () => {
                       item.itemPaymentStatus ||
                       order.paymentStatus ||
                       "pending";
-                    const originalPrice = (item.price * item.quantity).toFixed(2);
-                    const hasDiscount = order.discount && order.discount.discountAmount > 0;
+                    const originalPrice = (item.price * item.quantity).toFixed(
+                      2
+                    );
+                    const hasDiscount =
+                      order.discount && order.discount.discountAmount > 0;
                     const discountedTotal = order.total.toFixed(2);
 
                     return (
@@ -1888,39 +1903,86 @@ const UserProfile = () => {
                           {/* Per-item price display */}
                           {(() => {
                             // Original price per item
-                            const originalPrice = item.productVariantId?.mrp || item.price;
+                            const originalPrice =
+                              item.productVariantId?.mrp || item.price;
                             // Proportional discount/offer calculation
                             let discountedPrice = item.price;
                             // If order.discount or order.offers exist, calculate proportional discount/offer for this item
-                            if (order.discount && order.discount.discountAmount > 0) {
-                              const totalOrderItems = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0) || 1;
-                              const itemDiscount = ((item.price * item.quantity) / totalOrderItems) * order.discount.discountAmount / item.quantity;
-                              discountedPrice = Math.max(0, discountedPrice - itemDiscount);
+                            if (
+                              order.discount &&
+                              order.discount.discountAmount > 0
+                            ) {
+                              const totalOrderItems =
+                                order.items.reduce(
+                                  (sum, i) => sum + i.price * i.quantity,
+                                  0
+                                ) || 1;
+                              const itemDiscount =
+                                (((item.price * item.quantity) /
+                                  totalOrderItems) *
+                                  order.discount.discountAmount) /
+                                item.quantity;
+                              discountedPrice = Math.max(
+                                0,
+                                discountedPrice - itemDiscount
+                              );
                             }
                             if (order.offers && order.offers.length > 0) {
-                              const totalOffer = order.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0);
-                              const totalOrderItems = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0) || 1;
-                              const itemOffer = ((item.price * item.quantity) / totalOrderItems) * totalOffer / item.quantity;
-                              discountedPrice = Math.max(0, discountedPrice - itemOffer);
+                              const totalOffer = order.offers.reduce(
+                                (sum, offer) => sum + (offer.offerAmount || 0),
+                                0
+                              );
+                              const totalOrderItems =
+                                order.items.reduce(
+                                  (sum, i) => sum + i.price * i.quantity,
+                                  0
+                                ) || 1;
+                              const itemOffer =
+                                (((item.price * item.quantity) /
+                                  totalOrderItems) *
+                                  totalOffer) /
+                                item.quantity;
+                              discountedPrice = Math.max(
+                                0,
+                                discountedPrice - itemOffer
+                              );
                             }
                             // Per-item total
                             const itemTotal = discountedPrice * item.quantity;
                             return (
                               <>
                                 {originalPrice > discountedPrice ? (
-                            <>
-                              <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.95em' }}>
+                                  <>
+                                    <span
+                                      style={{
+                                        textDecoration: "line-through",
+                                        color: "#999",
+                                        fontSize: "0.85em",
+                                      }}
+                                    >
                                       ₹{originalPrice.toFixed(2)}
-                              </span>
-                              <br />
-                              <span style={{ color: '#10b981', fontWeight: 600 }}>
+                                    </span>
+                                    <br />
+                                    <span
+                                      style={{
+                                        color: "#999",
+                                        fontSize: "0.88em",
+                                      }}
+                                    >
                                       ₹{discountedPrice.toFixed(2)}
-                              </span>
-                            </>
-                          ) : (
-                                  <span>₹{originalPrice.toFixed(2)}</span>
-                          )}
-                                <div className="text-muted small">
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span
+                                    style={{
+                                      color: "#999",
+                                      fontSize: "0.88em",
+                                    }}
+                                  >
+                                    ₹{originalPrice.toFixed(2)}
+                                  </span>
+                                )}
+                                <div className="text-muted medium">
                                   Total: ₹{itemTotal.toFixed(2)}
                                 </div>
                               </>
@@ -2013,12 +2075,18 @@ const UserProfile = () => {
                               <Button
                                 variant="outline-danger"
                                 size="sm"
-                                onClick={() => handleOpenCancelModal(order._id, item.productVariantId._id || item.productVariantId)}
+                                onClick={() =>
+                                  handleOpenCancelModal(
+                                    order._id,
+                                    item.productVariantId._id ||
+                                      item.productVariantId
+                                  )
+                                }
                                 className="ms-2"
                               >
                                 Cancel Product
-                                </Button>
-                              )}
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -2196,7 +2264,7 @@ const UserProfile = () => {
         limit: ordersPerPage,
         search: orderSearch,
       });
-      
+
       if (refreshResult.success) {
         dispatch({
           type: "order/fetchUserOrders/fulfilled",
@@ -2227,12 +2295,18 @@ const UserProfile = () => {
       console.log("UserProfile: Starting to fetch user profile");
       try {
         const { success, data, error } = await getUserProfile();
-        console.log("UserProfile: getUserProfile result:", { success, hasData: !!data, error });
+        console.log("UserProfile: getUserProfile result:", {
+          success,
+          hasData: !!data,
+          error,
+        });
 
         if (!success) {
           // Check if it's a 401 error (user deleted or token invalid)
           if (error && (error.includes("deleted") || error.includes("401"))) {
-            console.log("UserProfile: User is deleted or unauthorized, logging out");
+            console.log(
+              "UserProfile: User is deleted or unauthorized, logging out"
+            );
             dispatch(logoutUser());
             navigate("/login", { replace: true });
             return;
@@ -2243,8 +2317,11 @@ const UserProfile = () => {
         }
 
         const user = data.user;
-        console.log("UserProfile: Received user data:", { hasUser: !!user, isDeleted: user?.isDeleted });
-        
+        console.log("UserProfile: Received user data:", {
+          hasUser: !!user,
+          isDeleted: user?.isDeleted,
+        });
+
         if (user && user.isDeleted) {
           console.log("UserProfile: User is deleted, logging out");
           dispatch(logoutUser());

@@ -46,3 +46,10 @@ export const verifyRazorpayPayment = (razorpay_order_id, razorpay_payment_id, ra
     userAxios.post("/orders/razorpay/verify", { razorpay_order_id, razorpay_payment_id, razorpay_signature })
   );
 };
+
+// Update online payment status (for retry payment)
+export const updateOnlinePaymentStatus = (orderId, paymentStatus) => {
+  return apiHandler(
+    userAxios.patch(`/orders/${orderId}/payment-status`, { paymentStatus })
+  );
+};
