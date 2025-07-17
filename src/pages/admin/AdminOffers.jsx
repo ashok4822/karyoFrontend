@@ -947,12 +947,57 @@ const OfferForm = ({
   submitText,
   onCancel,
 }) => {
+  const [formErrors, setFormErrors] = React.useState({});
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const discountValue = parseFloat(formData.discountValue);
+    const minimumAmount = parseFloat(formData.minimumAmount);
+    const maximumDiscount = formData.maximumDiscount !== '' ? parseFloat(formData.maximumDiscount) : undefined;
+    const discountType = formData.discountType;
+
+    if (!formData.name.trim()) errors.name = 'Offer name is required';
+    if (!formData.discountValue || isNaN(discountValue) || discountValue <= 0) errors.discountValue = 'Discount value must be greater than 0';
+    if (!formData.validFrom) errors.validFrom = 'Valid from date is required';
+    if (!formData.validTo) errors.validTo = 'Valid to date is required';
+    if (formData.validFrom && formData.validTo && new Date(formData.validFrom) >= new Date(formData.validTo)) errors.validTo = 'Valid to date must be after valid from date';
+    if (minimumAmount && discountValue >= minimumAmount) errors.discountValue = 'Discount value must be less than minimum amount';
+
+    if (discountType === 'percentage') {
+      if (discountValue < 0 || discountValue > 100) errors.discountValue = 'Percentage discount must be between 0 and 100';
+      if (maximumDiscount === undefined || isNaN(maximumDiscount)) errors.maximumDiscount = 'Maximum discount is required for percentage offers';
+      else {
+        if (maximumDiscount <= discountValue) errors.maximumDiscount = 'Maximum discount must be greater than discount value';
+        if (minimumAmount && maximumDiscount >= minimumAmount) errors.maximumDiscount = 'Maximum discount must be less than minimum amount';
+      }
+    }
+    if (discountType === 'fixed') {
+      if (maximumDiscount !== undefined && !isNaN(maximumDiscount)) {
+        if (maximumDiscount < discountValue) errors.maximumDiscount = 'Maximum discount cannot be less than discount value';
+        if (minimumAmount && maximumDiscount >= minimumAmount) errors.maximumDiscount = 'Maximum discount must be less than minimum amount';
+      }
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateForm()) {
+      // Show error alert (optional: use toast or modal)
+      window.Swal && window.Swal.fire({
+        title: 'Validation Error',
+        text: Object.values(formErrors).join('\n'),
+        icon: 'warning',
+        confirmButtonColor: '#dc3545',
+      });
+      return;
+    }
     onSubmit();
   };
 
@@ -966,7 +1011,9 @@ const OfferForm = ({
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
+              isInvalid={!!formErrors.name}
             />
+            <Form.Control.Feedback type="invalid">{formErrors.name}</Form.Control.Feedback>
           </Form.Group>
         </Col>
         <Col md={6}>
@@ -1020,7 +1067,9 @@ const OfferForm = ({
               onChange={(e) =>
                 handleInputChange("discountValue", e.target.value)
               }
+              isInvalid={!!formErrors.discountValue}
             />
+            <Form.Control.Feedback type="invalid">{formErrors.discountValue}</Form.Control.Feedback>
           </Form.Group>
         </Col>
       </Row>
@@ -1073,7 +1122,9 @@ const OfferForm = ({
               type="datetime-local"
               value={formData.validFrom}
               onChange={(e) => handleInputChange("validFrom", e.target.value)}
+              isInvalid={!!formErrors.validFrom}
             />
+            <Form.Control.Feedback type="invalid">{formErrors.validFrom}</Form.Control.Feedback>
           </Form.Group>
         </Col>
         <Col md={6}>
@@ -1083,7 +1134,9 @@ const OfferForm = ({
               type="datetime-local"
               value={formData.validTo}
               onChange={(e) => handleInputChange("validTo", e.target.value)}
+              isInvalid={!!formErrors.validTo}
             />
+            <Form.Control.Feedback type="invalid">{formErrors.validTo}</Form.Control.Feedback>
           </Form.Group>
         </Col>
       </Row>
@@ -1104,18 +1157,38 @@ const OfferForm = ({
           </Form.Group>
         </Col>
         <Col md={6}>
-          <Form.Group className="mb-3">
-            <Form.Label>Maximum Discount</Form.Label>
-            <Form.Control
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.maximumDiscount}
-              onChange={(e) =>
-                handleInputChange("maximumDiscount", e.target.value)
-              }
-            />
-          </Form.Group>
+          {formData.discountType === 'percentage' && (
+            <Form.Group className="mb-3">
+              <Form.Label>Maximum Discount *</Form.Label>
+              <Form.Control
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.maximumDiscount}
+                onChange={(e) =>
+                  handleInputChange("maximumDiscount", e.target.value)
+                }
+                isInvalid={!!formErrors.maximumDiscount}
+              />
+              <Form.Control.Feedback type="invalid">{formErrors.maximumDiscount}</Form.Control.Feedback>
+            </Form.Group>
+          )}
+          {formData.discountType === 'fixed' && (
+            <Form.Group className="mb-3">
+              <Form.Label>Maximum Discount</Form.Label>
+              <Form.Control
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.maximumDiscount}
+                onChange={(e) =>
+                  handleInputChange("maximumDiscount", e.target.value)
+                }
+                isInvalid={!!formErrors.maximumDiscount}
+              />
+              <Form.Control.Feedback type="invalid">{formErrors.maximumDiscount}</Form.Control.Feedback>
+            </Form.Group>
+          )}
         </Col>
       </Row>
 
