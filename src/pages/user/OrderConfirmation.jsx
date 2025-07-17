@@ -245,8 +245,13 @@ const OrderConfirmation = () => {
     return { adjustedTotal, proportionalDiscount };
   };
 
-  // Add a helper to check if payment failed
-  const isPaymentFailed = currentOrder && currentOrder.paymentStatus === "failed";
+  // Add a helper to check if payment failed (but not cancelled)
+  const isPaymentFailed =
+    currentOrder &&
+    currentOrder.paymentStatus === "failed" &&
+    currentOrder.status !== "cancelled";
+
+  const isCancelled = currentOrder && currentOrder.status === "cancelled";
 
   if (!currentOrder) {
     return (
@@ -298,7 +303,7 @@ const OrderConfirmation = () => {
     );
   }
 
-  // Show failed status and retry payment if payment failed
+  // Show failed status and retry payment if payment failed (but not cancelled)
   if (isPaymentFailed) {
     return (
       <div className="order-confirmation-bg d-flex align-items-center justify-content-center min-vh-100 py-4">
@@ -426,6 +431,20 @@ const OrderConfirmation = () => {
                 </div>
               )}
 
+              {/* Show Cancelled badge and reason if order is cancelled */}
+              {isCancelled && (
+                <div className="text-center mb-3">
+                  <span className="badge bg-danger bg-opacity-25 text-danger fs-5 px-3 py-2">
+                    Cancelled
+                  </span>
+                  {currentOrder.cancellationReason && (
+                    <div className="mt-2 text-danger small">
+                      Reason: {currentOrder.cancellationReason}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="row g-4 mb-4">
                 <div className="col-md-6">
                   <h5 className="fw-semibold mb-3">Order Information</h5>
@@ -517,48 +536,25 @@ const OrderConfirmation = () => {
                           </div>
                           <div className="text-muted small">
                             {item.productVariantId?.colour}{" "}
-                            {item.productVariantId?.capacity &&
-                              `- ${item.productVariantId.capacity}`}
+                            {item.productVariantId?.capacity && `- ${item.productVariantId.capacity}`}
                           </div>
-                        </div>
-                      </Link>
-                      <div className="text-end ms-3">
-                        <div className="fw-bold text-dark">
-                          INR {(item.price * item.quantity).toFixed(2)}
                         </div>
                         <div className="text-muted small">
                           Qty: {item.quantity}
                         </div>
-                        {currentOrder.offers && currentOrder.offers.some(offer => 
-                          offer.productId === item.productVariantId?.product?._id
-                        ) && (
-                          <div className="mt-1">
-                            <span className="badge bg-success bg-opacity-25 text-success">
-                              Offer Applied
-                            </span>
-                          </div>
-                        )}
-                        <div className="mt-1">
-                          <span className={`badge me-1 ${
-                            item.itemStatus === 'delivered' ? 'bg-success bg-opacity-25 text-success' :
-                            item.itemStatus === 'processing' ? 'bg-warning bg-opacity-25 text-warning' :
-                            item.itemStatus === 'cancelled' ? 'bg-danger bg-opacity-25 text-danger' :
-                            item.itemStatus === 'returned' ? 'bg-info bg-opacity-25 text-info' :
-                            item.itemStatus === 'return_verified' ? 'bg-primary bg-opacity-25 text-primary' :
-                            'bg-secondary bg-opacity-25 text-secondary'
-                          }`}>
-                            {item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown'}
-                          </span>
-                          <span className={`badge ${
-                            item.itemPaymentStatus === 'paid' ? 'bg-success bg-opacity-25 text-success' :
-                            item.itemPaymentStatus === 'failed' ? 'bg-danger bg-opacity-25 text-danger' :
-                            item.itemPaymentStatus === 'refunded' ? 'bg-info bg-opacity-25 text-info' :
-                            'bg-warning bg-opacity-25 text-warning'
-                          }`}>
-                            Payment: {item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending'}
-                          </span>
+                        <div className="fw-semibold text-dark">
+                          INR {item.price.toFixed(2)}
                         </div>
-                      </div>
+                        <div className="fw-semibold text-dark">
+                          INR {(item.price * item.quantity).toFixed(2)}
+                        </div>
+                        <div className="text-muted small">
+                          Status: {item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown'}
+                        </div>
+                        <div className="text-muted small">
+                          Payment Status: {item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending'}
+                        </div>
+                      </Link>
                     </li>
                   ))}
                 </ul>
