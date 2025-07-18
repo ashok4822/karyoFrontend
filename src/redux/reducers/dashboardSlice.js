@@ -25,7 +25,7 @@ const dashboardSlice = createSlice({
     },
     fetchDashboardSuccess: (state, action) => {
       state.loading = false;
-      state.stats = action.payload;
+      state.stats = action.payload.data; // Only the data object!
     },
     fetchDashboardFailure: (state, action) => {
       state.loading = false;
