@@ -333,6 +333,25 @@ const AdminOrderDetails = () => {
                   </span>
                 </div>
               </div>
+              {/* Shipping Address Section */}
+              <div className="mt-3 p-3 bg-light rounded border">
+                <div className="fw-bold mb-2 d-flex align-items-center">
+                  <FaMapMarkerAlt className="me-2 text-primary" /> Shipping Address
+                </div>
+                {order.shippingAddress ? (
+                  <div style={{ lineHeight: 1.6 }}>
+                    <div><strong>Name:</strong> {order.shippingAddress.recipientName}</div>
+                    <div><strong>Address:</strong> {order.shippingAddress.addressLine1}{order.shippingAddress.addressLine2 ? `, ${order.shippingAddress.addressLine2}` : ""}</div>
+                    <div><strong>City:</strong> {order.shippingAddress.city}</div>
+                    <div><strong>State:</strong> {order.shippingAddress.state}</div>
+                    <div><strong>Postal Code:</strong> {order.shippingAddress.postalCode}</div>
+                    <div><strong>Country:</strong> {order.shippingAddress.country}</div>
+                    <div><strong>Phone:</strong> {order.shippingAddress.phoneNumber}</div>
+                  </div>
+                ) : (
+                  <div className="text-muted">No shipping address found.</div>
+                )}
+              </div>
             </div>
             <Card.Body>
               <div className="table-responsive">

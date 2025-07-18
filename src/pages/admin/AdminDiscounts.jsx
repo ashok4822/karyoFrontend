@@ -31,19 +31,24 @@ import {
   deleteDiscount,
   restoreDiscount,
   clearError,
+  setFilters,
+  clearFilters,
 } from '../../redux/reducers/discountSlice';
 import Swal from 'sweetalert2';
+import debounce from 'lodash.debounce';
 
 const AdminDiscounts = () => {
   const dispatch = useDispatch();
   const { discounts, loading, error, total, page, totalPages } = useSelector((state) => state.discounts);
   const [showModal, setShowModal] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // local input state
+  const [searchQuery, setSearchQuery] = useState(''); // debounced value for redux
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [formData, setFormData] = useState({
+    code: '', // <-- Add code field
     name: '',
     description: '',
     discountType: 'percentage',
@@ -57,6 +62,17 @@ const AdminDiscounts = () => {
     maxUsagePerUser: '',
   });
   const [formErrors, setFormErrors] = useState({});
+
+  // Debounce search input
+  const debouncedSetSearchQuery = React.useMemo(() => debounce((val) => {
+    setSearchQuery(val);
+  }, 400), []);
+
+  useEffect(() => {
+    debouncedSetSearchQuery(searchInput);
+    // Cleanup debounce on unmount
+    return () => debouncedSetSearchQuery.cancel();
+  }, [searchInput]);
 
   useEffect(() => {
     // Fetch discounts on component mount
@@ -125,6 +141,7 @@ const AdminDiscounts = () => {
     if (discount) {
       setEditingDiscount(discount);
       setFormData({
+        code: discount.code || '', // <-- Add code field
         name: discount.name,
         description: discount.description || '',
         discountType: discount.discountType,
@@ -140,6 +157,7 @@ const AdminDiscounts = () => {
     } else {
       setEditingDiscount(null);
       setFormData({
+        code: '', // <-- Add code field
         name: '',
         description: '',
         discountType: 'percentage',
@@ -208,11 +226,26 @@ const AdminDiscounts = () => {
 
   const validateForm = () => {
     const errors = {};
+    if (!formData.code.trim()) errors.code = 'Code is required'; // <-- Validate code
     if (!formData.name.trim()) errors.name = 'Name is required';
     if (!formData.discountValue || isNaN(formData.discountValue) || Number(formData.discountValue) <= 0) errors.discountValue = 'Discount value must be greater than 0';
     if (!formData.validFrom) errors.validFrom = 'Valid from date is required';
     if (!formData.validTo) errors.validTo = 'Valid to date is required';
     if (formData.validFrom && formData.validTo && new Date(formData.validFrom) >= new Date(formData.validTo)) errors.validTo = 'Valid to date must be after valid from date';
+
+    // New validation for maximumDiscount
+    const maxDisc = formData.maximumDiscount !== '' ? parseFloat(formData.maximumDiscount) : null;
+    const minAmt = formData.minimumAmount !== '' ? parseFloat(formData.minimumAmount) : null;
+    const discVal = formData.discountValue !== '' ? parseFloat(formData.discountValue) : null;
+    if (maxDisc !== null) {
+      if (minAmt !== null && maxDisc > minAmt) {
+        errors.maximumDiscount = 'Maximum discount cannot be greater than minimum amount';
+      }
+      if (discVal !== null && maxDisc <= discVal) {
+        errors.maximumDiscount = 'Maximum discount must be greater than discount value';
+      }
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -458,6 +491,22 @@ const AdminDiscounts = () => {
     return discounts.filter(discount => getEffectiveStatus(discount) === statusFilter);
   };
 
+  const handleClearFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setStatusFilter('all');
+    setSortConfig({ key: 'createdAt', direction: 'desc' });
+    dispatch(clearFilters());
+    dispatch(fetchDiscounts({
+      page: 1,
+      limit: 10,
+      search: '',
+      status: 'all',
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    }));
+  };
+
   if (loading && discounts.length === 0) {
     return (
       <Container fluid className="py-5">
@@ -514,42 +563,32 @@ const AdminDiscounts = () => {
             )}
 
             {/* Filters and Search */}
-            <Card className="border-0 shadow-sm mb-4">
-              <Card.Body>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>Search Discounts</Form.Label>
-                      <div className="input-group">
-                        <span className="input-group-text">
-                          <FaSearch />
-                        </span>
-                        <Form.Control
-                          type="text"
-                          placeholder="Search by name or description..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                      </div>
-                    </Form.Group>
-                  </Col>
-                  <Col md={3}>
-                    <Form.Group>
-                      <Form.Label>Status Filter</Form.Label>
-                      <Form.Select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                      >
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="expired">Expired</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
+            <Row className="mb-3">
+              <Col md={8} className="d-flex align-items-center gap-2">
+                {/* Existing search and filter controls here */}
+                <Form.Control
+                  type="text"
+                  placeholder="Search discounts..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  style={{ maxWidth: 250 }}
+                />
+                <Form.Select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{ maxWidth: 180 }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="expired">Expired</option>
+                </Form.Select>
+                {/* Add more filter controls if needed */}
+                <Button variant="outline-secondary" onClick={handleClearFilters}>
+                  Clear
+                </Button>
+              </Col>
+            </Row>
 
             {/* Discounts Table */}
             <Card className="border-0 shadow-sm">
@@ -718,6 +757,22 @@ const AdminDiscounts = () => {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
+                  <Form.Label>Discount Code *</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    required
+                    isInvalid={!!formErrors.code}
+                  />
+                  <Form.Control.Feedback type="invalid">{formErrors.code}</Form.Control.Feedback>
+                  <Form.Text className="text-muted">
+                    Code must be unique and is required for applying the discount.
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
                   <Form.Label>Discount Name *</Form.Label>
                   <Form.Control
                     type="text"
@@ -729,6 +784,8 @@ const AdminDiscounts = () => {
                   <Form.Control.Feedback type="invalid">{formErrors.name}</Form.Control.Feedback>
                 </Form.Group>
               </Col>
+            </Row>
+            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Description</Form.Label>
@@ -740,8 +797,6 @@ const AdminDiscounts = () => {
                   />
                 </Form.Group>
               </Col>
-            </Row>
-            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Discount Type *</Form.Label>
@@ -755,6 +810,8 @@ const AdminDiscounts = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
+            </Row>
+            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Discount Value *</Form.Label>
@@ -773,8 +830,6 @@ const AdminDiscounts = () => {
                   )}
                 </Form.Group>
               </Col>
-            </Row>
-            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Minimum Amount</Form.Label>
@@ -787,6 +842,8 @@ const AdminDiscounts = () => {
                   />
                 </Form.Group>
               </Col>
+            </Row>
+            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Maximum Discount</Form.Label>
@@ -799,8 +856,6 @@ const AdminDiscounts = () => {
                   />
                 </Form.Group>
               </Col>
-            </Row>
-            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Valid From *</Form.Label>
@@ -812,6 +867,8 @@ const AdminDiscounts = () => {
                   />
                 </Form.Group>
               </Col>
+            </Row>
+            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Valid To *</Form.Label>
@@ -823,8 +880,6 @@ const AdminDiscounts = () => {
                   />
                 </Form.Group>
               </Col>
-            </Row>
-            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Maximum Usage</Form.Label>
@@ -840,6 +895,8 @@ const AdminDiscounts = () => {
                   </Form.Text>
                 </Form.Group>
               </Col>
+            </Row>
+            <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Maximum Usage Per User</Form.Label>
