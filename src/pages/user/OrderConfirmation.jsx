@@ -160,65 +160,34 @@ const OrderConfirmation = () => {
       },
     });
     y = doc.lastAutoTable.finalY + 8;
-    // Price Breakdown (use proportional discount logic)
-    const { adjustedTotal, proportionalDiscount } = getAdjustedTotalAndDiscount();
+    // Price Breakdown Table (with offer, discount, shipping, total)
+    const { adjustedTotal, proportionalDiscount, proportionalOffer } = getAdjustedTotalAndDiscount();
     const subtotal = currentOrder.items
       .filter((item) => item.itemPaymentStatus !== 'refunded')
       .reduce((sum, item) => sum + item.price * item.quantity, 0);
-    doc.setFontSize(11);
-    doc.setFont(undefined, "bold");
-    doc.text("Price Breakdown", 14, y);
-    doc.setFont(undefined, "normal");
-    y += 6;
-    doc.setFontSize(10);
-    doc.text(`Subtotal: INR ${subtotal.toFixed(2)}`, 14, y);
-    y += 5;
-    doc.text(`Discount (Proportional): -INR ${proportionalDiscount.toFixed(2)}`, 14, y);
-    y += 5;
-    if (currentOrder.discount) {
-      doc.text(
-        `Discount Availed: ${currentOrder.discount.discountName || currentOrder.discount.code || 'Discount'}`,
-        14,
-        y
-      );
-      y += 5;
+    let priceTableRows = [];
+    priceTableRows.push(["Subtotal", `INR ${subtotal.toFixed(2)}`]);
+    if (proportionalOffer > 0) {
+      priceTableRows.push(["Offer (Proportional)", `-INR ${proportionalOffer.toFixed(2)}`]);
     }
-    if (currentOrder.offers && currentOrder.offers.length > 0) {
-      currentOrder.offers.forEach((offer) => {
-        doc.text(
-          `Offer (${offer.offerName}): -INR ${offer.offerAmount.toFixed(2)}`,
-          14,
-          y
-        );
-        y += 5;
-      });
-    } else {
-      doc.text(`Offers: No offers applied`, 14, y);
-      y += 5;
+    if (proportionalDiscount > 0) {
+      priceTableRows.push(["Discount (Proportional)", `-INR ${proportionalDiscount.toFixed(2)}`]);
     }
-    doc.text(
-      `Shipping: ${
-        currentOrder.shipping === 0
-          ? "Free"
-          : `INR ${currentOrder.shipping.toFixed(2)}`
-      }`,
-      14,
-      y
-    );
-    y += 5;
-    doc.setFont(undefined, "bold");
-    doc.setTextColor(79, 70, 229);
-    doc.text(`Total (Excludes Refunded Items): INR ${adjustedTotal.toFixed(2)}`, 14, y);
-    doc.setFont(undefined, "normal");
-    doc.setTextColor(40, 40, 40);
-    y += 7;
-    if (currentOrder.items.some(item => item.itemPaymentStatus === 'refunded')) {
-      doc.setFontSize(9);
-      doc.setTextColor(220, 53, 69); // Bootstrap danger color
-      doc.text('Note: Refunded items are excluded from the total and discount is applied proportionally.', 14, y);
-      doc.setTextColor(40, 40, 40);
-      y += 5;
-    }
+    priceTableRows.push(["Shipping", currentOrder.shipping === 0 ? "Free" : `INR ${currentOrder.shipping.toFixed(2)}`]);
+    priceTableRows.push(["Total", `INR ${adjustedTotal.toFixed(2)}`]);
+
+    y += 4;
+    autoTable(doc, {
+      startY: y,
+      head: [["Description", "Amount"]],
+      body: priceTableRows,
+      theme: "plain",
+      styles: { fontSize: 10, cellPadding: 2 },
+      headStyles: { fontStyle: "bold", fillColor: [245,245,245], textColor: 40 },
+      columnStyles: { 1: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 8;
     // Footer
     doc.setDrawColor(220);
     doc.line(14, y, 196, y);
@@ -232,17 +201,34 @@ const OrderConfirmation = () => {
 
   // Helper to calculate adjusted total (excluding refunded items, with proportional discount)
   const getAdjustedTotalAndDiscount = () => {
-    if (!currentOrder || !currentOrder.items) return { adjustedTotal: 0, proportionalDiscount: 0 };
+    if (!currentOrder || !currentOrder.items) return { adjustedTotal: 0, proportionalDiscount: 0, proportionalOffer: 0 };
     const allItemsTotal = currentOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const nonRefundedItemsTotal = currentOrder.items
       .filter((item) => item.itemPaymentStatus !== 'refunded')
       .reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    // Discount
     const discount = currentOrder.discount ? currentOrder.discount.discountAmount || 0 : 0;
     const proportionalDiscount = allItemsTotal > 0
       ? (nonRefundedItemsTotal / allItemsTotal) * discount
       : 0;
-    const adjustedTotal = Math.max(0, nonRefundedItemsTotal - proportionalDiscount);
-    return { adjustedTotal, proportionalDiscount };
+
+    // Offers
+    let totalOffer = 0;
+    if (currentOrder.offers && currentOrder.offers.length > 0) {
+      totalOffer = currentOrder.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0);
+    }
+    const proportionalOffer = allItemsTotal > 0
+      ? (nonRefundedItemsTotal / allItemsTotal) * totalOffer
+      : 0;
+
+    // Shipping
+    const shipping = currentOrder.shipping || 0;
+
+    // Final total
+    const adjustedTotal = Math.max(0, nonRefundedItemsTotal - proportionalDiscount - proportionalOffer + shipping);
+
+    return { adjustedTotal, proportionalDiscount, proportionalOffer };
   };
 
   // Add a helper to check if payment failed (but not cancelled)
