@@ -31,7 +31,7 @@ import {
   fetchDashboardFailure,
 } from "../../redux/reducers/dashboardSlice";
 import AdminLeftbar from "../../components/AdminLeftbar";
-import { getDashboardData } from "../../services/admin/adminDashboaredServices";
+import { getDashboardData, getLedgerBook } from "../../services/admin/adminDashboaredServices";
 import { ChartContainer } from "../../components/ui/chart";
 import {
   LineChart,
@@ -52,6 +52,14 @@ const AdminDashboard = () => {
   const { loading, error, stats } = useSelector((state) => state.dashboard);
   const { admin, adminAccessToken } = useSelector((state) => state.auth);
   const [period, setPeriod] = useState("monthly");
+  const [showLedger, setShowLedger] = useState(false);
+  const [ledgerData, setLedgerData] = useState(null);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerFilters, setLedgerFilters] = useState({
+    period: "monthly",
+    dateFrom: "",
+    dateTo: ""
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -119,6 +127,30 @@ const AdminDashboard = () => {
   console.log("Best Selling Products:", stats.bestSellingProducts);
   console.log("Best Selling Categories:", stats.bestSellingCategories);
   console.log("Best Selling Brands:", stats.bestSellingBrands);
+  console.log("Low Stock Products:", stats.lowStockProducts);
+
+  const handleGenerateLedger = async () => {
+    setLedgerLoading(true);
+    try {
+      const result = await getLedgerBook(ledgerFilters);
+      if (result.success) {
+        setLedgerData(result.data); // This is the correct fix
+        setShowLedger(true);
+      } else {
+        console.error("Failed to generate ledger:", result.error);
+      }
+    } catch (error) {
+      console.error("Ledger generation error:", error);
+    } finally {
+      setLedgerLoading(false);
+    }
+  };
+
+  const handleClearLedgerFilters = () => {
+    setLedgerFilters({ period: 'monthly', dateFrom: '', dateTo: '' });
+    // Optionally reload the ledger with default filters
+    handleGenerateLedger();
+  };
 
   if (loading) {
     return (
@@ -163,6 +195,21 @@ const AdminDashboard = () => {
                   <option value="weekly">Weekly</option>
                   <option value="yearly">Yearly</option>
                 </select>
+              </Col>
+              <Col xs="auto" className="ms-auto">
+                <Button
+                  variant="outline-primary"
+                  onClick={handleGenerateLedger}
+                  disabled={ledgerLoading}
+                  className="d-flex align-items-center gap-2"
+                >
+                  {ledgerLoading ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : (
+                    <FaChartLine />
+                  )}
+                  Generate Ledger
+                </Button>
               </Col>
             </Row>
             <Row className="mb-4">
@@ -385,26 +432,33 @@ const AdminDashboard = () => {
                     <h5 className="mb-0">Low Stock Products</h5>
                   </Card.Header>
                   <Card.Body>
-                    {(stats.lowStockProducts || []).map((product) => (
-                      <div key={product.id} className="mb-3">
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                          <span>{product.name}</span>
-                          <span className="text-muted">
-                            {product.stock} units left
+                    {(stats.lowStockProducts || []).length > 0 ? (
+                      (stats.lowStockProducts || []).map((product, index) => (
+                        <div key={product.variant || product._id || index} className="mb-3">
+                                                  <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span className="fw-medium">{product.name}</span>
+                          <span className="text-muted small">
+                            {product.stock} units ({product.stock}%)
                           </span>
                         </div>
-                        <ProgressBar
-                          now={(product.stock / product.maxStock) * 100}
-                          variant={
-                            product.stock < 5
-                              ? "danger"
-                              : product.stock < 10
-                              ? "warning"
-                              : "success"
-                          }
-                        />
+                          <ProgressBar
+                            now={product.stock}
+                            variant={
+                              product.stock < 5
+                                ? "danger"
+                                : product.stock < 10
+                                ? "warning"
+                                : "success"
+                            }
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center text-muted py-3">
+                        <FaBox className="mb-2" size={24} />
+                        <p className="mb-0">No low stock products</p>
                       </div>
-                    ))}
+                    )}
                   </Card.Body>
                 </Card>
               </Col>
@@ -492,6 +546,182 @@ const AdminDashboard = () => {
                 </Card>
               </Col>
             </Row>
+
+            {/* Ledger Book Modal */}
+            {showLedger && (
+              <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center" style={{ zIndex: 1050 }}>
+                <div className="bg-white rounded p-4" style={{ width: "95%", maxWidth: "1200px", maxHeight: "90vh", overflow: "auto" }}>
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h4>Ledger Book</h4>
+                    <Button variant="outline-secondary" onClick={() => setShowLedger(false)}>
+                      Close
+                    </Button>
+                  </div>
+
+                  {ledgerData && (
+                    <>
+                      {console.log('LEDGER DATA:', ledgerData)}
+                      {/* Ledger Filters */}
+                      <Row className="mb-4">
+                        <Col md={3}>
+                          <label className="form-label">Period</label>
+                          <select
+                            className="form-select"
+                            value={ledgerFilters.period}
+                            onChange={(e) => setLedgerFilters({ ...ledgerFilters, period: e.target.value })}
+                          >
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                          </select>
+                        </Col>
+                        <Col md={3}>
+                          <label className="form-label">From Date</label>
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={ledgerFilters.dateFrom}
+                            onChange={(e) => setLedgerFilters({ ...ledgerFilters, dateFrom: e.target.value })}
+                          />
+                        </Col>
+                        <Col md={3}>
+                          <label className="form-label">To Date</label>
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={ledgerFilters.dateTo}
+                            onChange={(e) => setLedgerFilters({ ...ledgerFilters, dateTo: e.target.value })}
+                          />
+                        </Col>
+                        <Col md={3} className="d-flex align-items-end gap-2">
+                          <Button onClick={handleGenerateLedger} disabled={ledgerLoading}>
+                            {ledgerLoading ? "Generating..." : "Update Ledger"}
+                          </Button>
+                          <Button variant="outline-secondary" onClick={handleClearLedgerFilters} disabled={ledgerLoading}>
+                            Clear Filters
+                          </Button>
+                        </Col>
+                      </Row>
+
+                      {/* Summary Cards */}
+                      <Row className="mb-4">
+                        <Col md={2}>
+                          <Card className="text-center">
+                            <Card.Body>
+                              <h6>Total Orders</h6>
+                              <h4>{ledgerData?.data?.summary?.totalOrders ?? 0}</h4>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                        <Col md={2}>
+                          <Card className="text-center">
+                            <Card.Body>
+                              <h6>Total Revenue</h6>
+                              <h4>₹{ledgerData?.data?.summary?.totalRevenue?.toLocaleString() ?? 0}</h4>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                        <Col md={2}>
+                          <Card className="text-center">
+                            <Card.Body>
+                              <h6>Total Discounts</h6>
+                              <h4>₹{ledgerData?.data?.summary?.totalDiscounts?.toLocaleString() ?? 0}</h4>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                        <Col md={2}>
+                          <Card className="text-center">
+                            <Card.Body>
+                              <h6>Total Offers</h6>
+                              <h4>₹{ledgerData?.data?.summary?.totalOffers?.toLocaleString() ?? 0}</h4>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                        <Col md={2}>
+                          <Card className="text-center">
+                            <Card.Body>
+                              <h6>Total Shipping</h6>
+                              <h4>₹{ledgerData?.data?.summary?.totalShipping?.toLocaleString() ?? 0}</h4>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                        <Col md={2}>
+                          <Card className="text-center">
+                            <Card.Body>
+                              <h6>Total Refunds</h6>
+                              <h4>₹{ledgerData?.data?.summary?.totalRefunds?.toLocaleString() ?? 0}</h4>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                      </Row>
+
+                      {/* Ledger Table */}
+                      <div className="table-responsive">
+                        <Table striped bordered hover>
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Order/Refund</th>
+                              <th>Customer</th>
+                              <th>Items</th>
+                              <th>Subtotal</th>
+                              <th>Discount</th>
+                              <th>Offers</th>
+                              <th>Shipping</th>
+                              <th>Total</th>
+                              <th>Payment Method</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(ledgerData?.data?.ledgerEntries || []).length === 0 ? (
+                              <tr>
+                                <td colSpan={11} className="text-center text-muted">No ledger entries found.</td>
+                              </tr>
+                            ) : (
+                              (ledgerData?.data?.ledgerEntries || []).map((entry, idx) => (
+                                <tr key={idx}>
+                                  <td>{new Date(entry.date).toLocaleDateString()}</td>
+                                  <td>{entry.type === "refund" ? "Refund" : entry.orderNumber}</td>
+                                  <td>{entry.type === "refund" ? "N/A" : entry.customer}</td>
+                                  <td>
+                                    {entry.type === "refund"
+                                      ? entry.description
+                                      : (entry.items || []).map((item, i) => (
+                                          <div key={i}>
+                                            {item.productName} ({item.quantity}x ₹{item.price})
+                                          </div>
+                                        ))}
+                                  </td>
+                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.subtotal ?? 0).toLocaleString()}`}</td>
+                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.discount ?? 0).toLocaleString()}`}</td>
+                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.offers ?? 0).toLocaleString()}`}</td>
+                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.shipping ?? 0).toLocaleString()}`}</td>
+                                  <td>
+                                    {entry.type === "refund"
+                                      ? <span className="text-danger">-₹{(entry.amount ?? 0).toLocaleString()}</span>
+                                      : `₹${(entry.total ?? 0).toLocaleString()}`}
+                                  </td>
+                                  <td>
+                                    {entry.type === "refund"
+                                      ? "N/A"
+                                      : (entry.paymentMethod || "").toUpperCase()}
+                                  </td>
+                                  <td>
+                                    {entry.type === "refund"
+                                      ? "Refunded"
+                                      : entry.orderStatus}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </Table>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </Container>
         </Col>
       </Row>

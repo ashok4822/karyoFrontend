@@ -2467,8 +2467,8 @@ const UserProfile = () => {
           {activeIndex === 2 && showAddressContent}
           {activeIndex === 3 && showOrdersContent}
           {/* {activeIndex === 4 && cancelOrdersContent} */}
-          {activeIndex === 4 && forgotPasswordContent}
-          {activeIndex === 5 && editEmailContent}
+          {activeIndex === 5 && forgotPasswordContent}
+          {activeIndex === 6 && editEmailContent}
         </Col>
       </Row>
       {/* Add Modal for cancellation reason */}
