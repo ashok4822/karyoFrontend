@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 // import api from "@/lib/utils";
+import { BiRupee } from "react-icons/bi";
 import {
   Container,
   Row,
@@ -32,7 +33,18 @@ import {
 import AdminLeftbar from "../../components/AdminLeftbar";
 import { getDashboardData } from "../../services/admin/adminDashboaredServices";
 import { ChartContainer } from "../../components/ui/chart";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const AdminDashboard = () => {
   const dispatch = useDispatch();
@@ -68,27 +80,31 @@ const AdminDashboard = () => {
   }, [admin, adminAccessToken, navigate]);
 
   // Map backend recentOrders to frontend format
-  const recentOrders = (stats.recentOrders || []).map(order => ({
+  const recentOrders = (stats.recentOrders || []).map((order) => ({
     id: order.orderNumber || order._id,
     customer: order.user
-      ? (order.user.firstName
-          ? `${order.user.firstName} ${order.user.lastName || ""}`.trim()
-          : order.user.username || order.user.email)
+      ? order.user.firstName
+        ? `${order.user.firstName} ${order.user.lastName || ""}`.trim()
+        : order.user.username || order.user.email
       : "Unknown",
     amount: order.total,
     status: order.status,
   }));
 
   // Preprocess chartData for x-axis labels
-  const chartData = (stats.chartData || []).map(item => {
+  const chartData = (stats.chartData || []).map((item) => {
     let label = "";
     if (item._id) {
       if (item._id.day && item._id.month && item._id.year) {
         // Format as dd/mm/yyyy
-        label = `${item._id.day.toString().padStart(2, "0")}/${item._id.month.toString().padStart(2, "0")}/${item._id.year}`;
+        label = `${item._id.day.toString().padStart(2, "0")}/${item._id.month
+          .toString()
+          .padStart(2, "0")}/${item._id.year}`;
       } else if (item._id.month && item._id.year) {
         // Format as mm/yyyy
-        label = `${item._id.month.toString().padStart(2, "0")}/${item._id.year}`;
+        label = `${item._id.month.toString().padStart(2, "0")}/${
+          item._id.year
+        }`;
       } else if (item._id.year) {
         label = `${item._id.year}`;
       }
@@ -140,7 +156,7 @@ const AdminDashboard = () => {
                 <select
                   className="form-select"
                   value={period}
-                  onChange={e => setPeriod(e.target.value)}
+                  onChange={(e) => setPeriod(e.target.value)}
                   style={{ width: 140, display: "inline-block" }}
                 >
                   <option value="monthly">Monthly</option>
@@ -154,26 +170,50 @@ const AdminDashboard = () => {
                 <ChartContainer id="dashboard-chart">
                   {/* Line Chart */}
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <LineChart
+                      data={chartData}
+                      margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="label" />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Line type="monotone" dataKey="totalSales" stroke="#8884d8" name="Total Sales" />
-                      <Line type="monotone" dataKey="orderCount" stroke="#82ca9d" name="Order Count" />
+                      <Line
+                        type="monotone"
+                        dataKey="totalSales"
+                        stroke="#8884d8"
+                        name="Total Sales"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="orderCount"
+                        stroke="#82ca9d"
+                        name="Order Count"
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                   {/* Bar Chart */}
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="label" />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="totalSales" fill="#8884d8" name="Total Sales" />
-                      <Bar dataKey="orderCount" fill="#82ca9d" name="Order Count" />
+                      <Bar
+                        dataKey="totalSales"
+                        fill="#8884d8"
+                        name="Total Sales"
+                      />
+                      <Bar
+                        dataKey="orderCount"
+                        fill="#82ca9d"
+                        name="Order Count"
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -200,7 +240,7 @@ const AdminDashboard = () => {
                         </h3>
                       </div>
                       <div className="bg-primary bg-opacity-10 p-3 rounded">
-                        <FaDollarSign className="text-primary" size={24} />
+                        <BiRupee className="text-primary" size={24} />
                       </div>
                     </div>
                     <div className="d-flex align-items-center">
@@ -413,12 +453,14 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {(stats.bestSellingCategories || []).map((item, idx) => (
-                          <tr key={idx}>
-                            <td>{item.categoryName}</td>
-                            <td>{item.quantity}</td>
-                          </tr>
-                        ))}
+                        {(stats.bestSellingCategories || []).map(
+                          (item, idx) => (
+                            <tr key={idx}>
+                              <td>{item.categoryName}</td>
+                              <td>{item.quantity}</td>
+                            </tr>
+                          )
+                        )}
                       </tbody>
                     </Table>
                   </Card.Body>
