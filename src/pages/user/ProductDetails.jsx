@@ -61,6 +61,7 @@ const ProductDetails = () => {
     availableStockLoading,
     items: cartItems,
   } = useSelector((state) => state.cart);
+  const { user, userAccessToken } = useSelector((state) => state.auth);
 
   // Local state
   const [product, setProduct] = useState(null);
@@ -104,7 +105,9 @@ const ProductDetails = () => {
         }
 
         fetchRelatedProducts(productFromStore);
-        dispatch(getAvailableStock(productFromStore._id));
+        if (user && userAccessToken) {
+          dispatch(getAvailableStock(productFromStore._id));
+        }
         setProductLoading(false);
         return;
       }
@@ -128,7 +131,9 @@ const ProductDetails = () => {
         }
 
         fetchRelatedProducts(productData);
-        dispatch(getAvailableStock(productData._id));
+        if (user && userAccessToken) {
+          dispatch(getAvailableStock(productData._id));
+        }
       } else {
         setProductError("Failed to load product details");
 
@@ -139,7 +144,9 @@ const ProductDetails = () => {
           if (fallback.variants?.length) {
             setSelectedVariant(fallback.variants[0]);
           }
-          dispatch(getAvailableStock(fallback._id));
+          if (user && userAccessToken) {
+            dispatch(getAvailableStock(fallback._id));
+          }
         } else {
           return navigate("/products");
         }
@@ -149,21 +156,21 @@ const ProductDetails = () => {
     };
 
     if (id) fetchProduct();
-  }, [id, products, navigate, dispatch]);
+  }, [id, products, navigate, dispatch, user, userAccessToken]);
 
   // Refresh available stock when component mounts or product changes
   useEffect(() => {
-    if (product?._id && !availableStock[product._id]) {
+    if (user && userAccessToken && product?._id && !availableStock[product._id]) {
       dispatch(getAvailableStock(product._id));
     }
-  }, [product?._id, availableStock, dispatch]);
+  }, [product?._id, availableStock, dispatch, user, userAccessToken]);
 
   // Refresh available stock when cart changes
   useEffect(() => {
-    if (product?._id) {
+    if (user && userAccessToken && product?._id) {
       dispatch(getAvailableStock(product._id));
     }
-  }, [cartItems.length, product?._id, dispatch]);
+  }, [cartItems.length, product?._id, dispatch, user, userAccessToken]);
 
   // Fetch product offer when product loads
   useEffect(() => {
@@ -222,6 +229,16 @@ const ProductDetails = () => {
 
   // Add to cart handler
   const handleAddToCart = async () => {
+    if (!user || !userAccessToken) {
+      Swal.fire({
+        title: "Login Required",
+        text: "Please log in to add items to your cart.",
+        icon: "info",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
     if (!product || !selectedVariant) {
       Swal.fire({
         title: "Error",
@@ -307,6 +324,15 @@ const ProductDetails = () => {
 
   // Toggle wishlist handler
   const handleToggleWishlist = () => {
+    if (!user || !userAccessToken) {
+      Swal.fire({
+        title: "Login Required",
+        text: "Please log in to use the wishlist feature.",
+        icon: "info",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
     if (!product || !selectedVariant) return;
     if (isWishlisted) {
       dispatch(

@@ -49,10 +49,11 @@ const AuthSync = ({ onRestored = () => {} }) => {
     ];
 
     // Skip sync on public routes and profile page (let profile page handle its own auth)
-    if (
+    const isPublicRoute =
       publicPaths.includes(location.pathname) ||
-      location.pathname === "/profile"
-    ) {
+      /^\/products\/[^/]+$/.test(location.pathname) ||
+      location.pathname === "/profile";
+    if (isPublicRoute) {
       onRestored();
       setLoading(false);
       return;
