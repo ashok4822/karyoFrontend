@@ -65,7 +65,7 @@ const ImageCropper = ({
         <div className="mb-3">
           <Form.Label>Adjust the crop area and zoom level</Form.Label>
           <Form.Range
-            min={1}
+            min={0.25}
             max={3}
             step={0.1}
             value={zoom}
@@ -81,7 +81,7 @@ const ImageCropper = ({
           style={{ 
             position: 'relative', 
             height: '400px', 
-            background: '#f8f9fa',
+            background: '#fff',
             borderRadius: '8px',
             overflow: 'hidden'
           }}
@@ -97,6 +97,9 @@ const ImageCropper = ({
               onZoomChange={onZoomChange}
               showGrid={true}
               objectFit="contain"
+              minZoom={0.25}
+              maxZoom={3}
+              restrictPosition={false}
             />
           )}
         </div>

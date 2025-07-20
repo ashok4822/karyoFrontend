@@ -17,6 +17,10 @@ export const getCroppedImg = (imageFile, pixelCrop) => {
       canvas.width = pixelCrop.width;
       canvas.height = pixelCrop.height;
 
+      // Fill background with white (for areas outside the image)
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       // Draw the cropped image
       ctx.drawImage(
         image,

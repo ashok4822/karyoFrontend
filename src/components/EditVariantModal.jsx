@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
-import { X } from "lucide-react";
+import { X, Crop } from "lucide-react";
+import ImageCropper from "./ImageCropper";
+import { validateImageFile, createPreviewUrl, revokePreviewUrl } from "../utils/imageUtils";
 import { updateVariant } from "../services/admin/adminProductService";
 
 const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) => {
@@ -20,6 +22,10 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
   const [selectedImages, setSelectedImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const fileInputRef = useRef();
+  const [showCropper, setShowCropper] = useState(false);
+  const [currentImageFile, setCurrentImageFile] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(null);
+  const [cropperLoading, setCropperLoading] = useState(false);
 
   // Populate form when modal is opened
   useEffect(() => {
@@ -63,8 +69,41 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
     const files = Array.from(e.target.files);
     setSelectedImages(files);
     // Generate previews
-    const previews = files.map(file => URL.createObjectURL(file));
+    const previews = files.map(file => createPreviewUrl(file));
     setImagePreviews(previews);
+  };
+
+  const removeImage = (index) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+    setImagePreviews(newPreviews);
+  };
+
+  const handleImageCrop = (index) => {
+    const file = selectedImages[index];
+    // Validate file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setError(validation.error);
+      return;
+    }
+    setCurrentImageFile(file);
+    setCurrentImageIndex(index);
+    setShowCropper(true);
+  };
+
+  const handleCropComplete = (croppedFile) => {
+    const newImages = [...selectedImages];
+    newImages[currentImageIndex] = croppedFile;
+    setSelectedImages(newImages);
+    // Update preview
+    const newPreviews = [...imagePreviews];
+    newPreviews[currentImageIndex] = createPreviewUrl(croppedFile);
+    setImagePreviews(newPreviews);
+    setShowCropper(false);
+    setCurrentImageFile(null);
+    setCurrentImageIndex(null);
   };
 
   const handleInputChange = (e) => {
@@ -260,13 +299,55 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
                   ref={fileInputRef}
                 />
                 <div className="d-flex flex-wrap mt-2 gap-2">
-                  {imagePreviews && imagePreviews.length > 0 && imagePreviews.map((src, idx) => (
-                    <img
-                      key={idx}
-                      src={src}
-                      alt={`Preview ${idx + 1}`}
-                      style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
-                    />
+                  {/* Show old images (from variant.imageUrls) as static previews, no icons */}
+                  {variant && variant.imageUrls && variant.imageUrls.length > 0 && selectedImages.length === 0 && variant.imageUrls.map((src, idx) => (
+                    <div key={idx} className="position-relative">
+                      <img
+                        src={src}
+                        alt={`Old Preview ${idx + 1}`}
+                        style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
+                      />
+                      {idx === 0 && (
+                        <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
+                          <small>Main</small>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {/* Show new images (selected in this session) with crop/remove icons */}
+                  {selectedImages.length > 0 && imagePreviews.map((src, idx) => (
+                    <div key={idx} className="position-relative">
+                      <img
+                        src={src}
+                        alt={`Preview ${idx + 1}`}
+                        style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
+                      />
+                      <div className="position-absolute top-0 end-0 d-flex gap-1" style={{ transform: "translate(50%, -50%)" }}>
+                        <Button
+                          type="button"
+                          variant="warning"
+                          size="sm"
+                          onClick={() => handleImageCrop(idx)}
+                          title="Crop Image"
+                        >
+                          <Crop size={12} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="sm"
+                          onClick={() => removeImage(idx)}
+                          title="Remove Image"
+                        >
+                          <X size={12} />
+                        </Button>
+                      </div>
+                      {idx === 0 && (
+                        <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
+                          <small>Main</small>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </Form.Group>
@@ -290,6 +371,20 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
           </Button>
         </Modal.Footer>
       </Form>
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        show={showCropper}
+        onHide={() => {
+          setShowCropper(false);
+          setCurrentImageFile(null);
+          setCurrentImageIndex(null);
+        }}
+        imageFile={currentImageFile}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1}
+        title="Crop Variant Image"
+        loading={cropperLoading}
+      />
     </Modal>
   );
 };
