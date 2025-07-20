@@ -39,7 +39,13 @@ const UserLogin = () => {
     } else if (location.state?.message) {
       setServerError(location.state.message);
     }
-  }, [location]);
+    // Show success message from navigation state (e.g., after signup)
+    if (location.state?.successMsg) {
+      setSuccessMsg(location.state.successMsg);
+      // Clear the message from history so it doesn't show again on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -74,6 +80,9 @@ const UserLogin = () => {
       setSuccessMsg("Login successful! Redirecting...");
       setTimeout(() => navigate("/"), 1500);
     } else {
+      // Remove any stale user data on login failure
+      localStorage.removeItem("user");
+      localStorage.removeItem("userAccessToken");
       setServerError(result.error || "Login failed");
     }
 

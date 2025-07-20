@@ -59,6 +59,13 @@ const UserSignup = () => {
     }
   }, [location.search]);
 
+  useEffect(() => {
+    // Clear OTP input whenever entering step 2 (OTP verification)
+    if (step === 2) {
+      setOtp("");
+    }
+  }, [step]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -118,12 +125,10 @@ const UserSignup = () => {
         payload.referralCode = formData.referralCode;
       }
       const res = await api.post("auth/verify-otp", payload);
-      // Save access token and user in Redux/localStorage
-      dispatch(loginSuccess({ user: res.data.user, token: res.data.token }));
-      // Fetch cart and wishlist after signup
-      dispatch(fetchCart());
-      dispatch(fetchWishlist());
-      navigate("/", { replace: true });
+      // Do NOT save access token and user in Redux/localStorage after signup
+      // Do NOT fetch cart and wishlist after signup
+      // Redirect to login page after successful signup
+      navigate("/login", { replace: true, state: { successMsg: "Signup successful! Please log in." } });
     } catch (error) {
       setServerError(
         error.response?.data?.message || "OTP verification failed"

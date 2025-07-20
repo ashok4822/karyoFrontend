@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link, useNavigate, Outlet } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { Container, Navbar, Nav, Button, Row, Col } from "react-bootstrap";
@@ -18,6 +18,16 @@ const Layout = () => {
   const { user, userAccessToken } = useSelector((state) => state.auth);
   const wishlistCount = useSelector((state) => state.wishlist.items.length);
   const cartCount = useSelector((state) => state.cart.items.length);
+
+  useEffect(() => {
+    // Remove stale user data if not logged in
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("userAccessToken");
+    if ((!user || !userAccessToken) && (storedUser || storedToken)) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("userAccessToken");
+    }
+  }, [user, userAccessToken]);
 
   console.log(user);
 

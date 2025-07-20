@@ -566,8 +566,8 @@ const ProductListing = () => {
                           </div>
                         )}
                         <Card.Text className="text-muted small mb-2" style={{ minHeight: 40 }}>
-                          {product.description && product.description.length > 60
-                            ? product.description.slice(0, 60) + "..."
+                          {product.description && product.description.length > 50
+                            ? product.description.slice(0, 50) + "..."
                             : product.description}
                         </Card.Text>
                         <div className="d-flex align-items-center gap-2 mb-2">
