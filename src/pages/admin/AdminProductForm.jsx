@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { getAllActiveCategories } from '../../services/admin/adminCategoryService';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { getAllActiveCategories } from "../../services/admin/adminCategoryService";
 import {
   Container,
   Row,
@@ -16,7 +16,7 @@ import {
   Tabs,
   Tab,
   Image,
-} from 'react-bootstrap';
+} from "react-bootstrap";
 import {
   FaArrowLeft,
   FaSave,
@@ -26,39 +26,50 @@ import {
   FaExclamationTriangle,
   FaTimes,
   FaUpload,
-} from 'react-icons/fa';
+  FaCrop,
+} from "react-icons/fa";
+import ImageCropper from "../../components/ImageCropper";
+import {
+  validateImageFile,
+  createPreviewUrl,
+  revokePreviewUrl,
+} from "../../utils/imageUtils";
 
 const AdminProductForm = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showImageModal, setShowImageModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState("details");
   const [validated, setValidated] = useState(false);
   const [nameError, setNameError] = useState("");
   const [brandError, setBrandError] = useState("");
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [showCropper, setShowCropper] = useState(false);
+  const [currentImageFile, setCurrentImageFile] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(null);
+  const [cropperLoading, setCropperLoading] = useState(false);
 
   const [product, setProduct] = useState({
-    name: '',
-    description: '',
-    price: '',
-    comparePrice: '',
-    sku: '',
-    barcode: '',
-    category: '',
-    brand: '',
-    status: 'active',
-    stock: '',
+    name: "",
+    description: "",
+    price: "",
+    comparePrice: "",
+    sku: "",
+    barcode: "",
+    category: "",
+    brand: "",
+    status: "active",
+    stock: "",
     images: [],
     variants: [],
     specifications: [],
     seo: {
-      title: '',
-      description: '',
-      keywords: '',
+      title: "",
+      description: "",
+      keywords: "",
     },
   });
 
@@ -72,7 +83,7 @@ const AdminProductForm = () => {
           setCategories(response.data || []);
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error("Error fetching categories:", error);
       } finally {
         setCategoriesLoading(false);
       }
@@ -84,16 +95,32 @@ const AdminProductForm = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Implement image upload logic
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProduct({
-          ...product,
-          images: [...product.images, reader.result],
-        });
-      };
-      reader.readAsDataURL(file);
+      // Validate file
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        setError(validation.error);
+        return;
+      }
+
+      setCurrentImageFile(file);
+      setCurrentImageIndex(product.images.length);
+      setShowCropper(true);
     }
+  };
+
+  const handleCropComplete = (croppedFile) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProduct({
+        ...product,
+        images: [...product.images, reader.result],
+      });
+    };
+    reader.readAsDataURL(croppedFile);
+
+    setShowCropper(false);
+    setCurrentImageFile(null);
+    setCurrentImageIndex(null);
   };
 
   const handleSubmit = async (e) => {
@@ -103,7 +130,9 @@ const AdminProductForm = () => {
     // Product name validation
     const trimmedName = product.name.trim();
     if (trimmedName && !/^[\w\s.,'"!?-]{0,100}$/.test(trimmedName)) {
-      setNameError("Invalid product name. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters).");
+      setNameError(
+        "Invalid product name. Only letters, numbers, spaces, and basic punctuation are allowed (max 100 characters)."
+      );
       setValidated(true);
       return;
     }
@@ -112,7 +141,9 @@ const AdminProductForm = () => {
     // Brand validation
     const trimmedBrand = product.brand.trim();
     if (trimmedBrand && !/^[A-Za-z\s.,'"!?-]{0,100}$/.test(trimmedBrand)) {
-      setBrandError("Invalid brand name. Only letters, spaces, and basic punctuation are allowed (max 100 characters).");
+      setBrandError(
+        "Invalid brand name. Only letters, spaces, and basic punctuation are allowed (max 100 characters)."
+      );
       setValidated(true);
       return;
     }
@@ -125,11 +156,11 @@ const AdminProductForm = () => {
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      await dispatch({ type: 'CREATE_PRODUCT', payload: product });
-      navigate('/admin/products');
+      await dispatch({ type: "CREATE_PRODUCT", payload: product });
+      navigate("/admin/products");
     } catch (error) {
       setError(error.message);
     } finally {
@@ -143,10 +174,10 @@ const AdminProductForm = () => {
       variants: [
         ...product.variants,
         {
-          name: '',
-          price: '',
-          stock: '',
-          sku: '',
+          name: "",
+          price: "",
+          stock: "",
+          sku: "",
         },
       ],
     });
@@ -169,7 +200,7 @@ const AdminProductForm = () => {
         <Col>
           <Button
             variant="outline-secondary"
-            onClick={() => navigate('/admin/products')}
+            onClick={() => navigate("/admin/products")}
             className="d-flex align-items-center gap-2"
           >
             <FaArrowLeft /> Back to Products
@@ -230,7 +261,7 @@ const AdminProductForm = () => {
                   <div
                     key={index}
                     className="position-relative rounded overflow-hidden"
-                    style={{ aspectRatio: '1' }}
+                    style={{ aspectRatio: "1" }}
                   >
                     <Image
                       src={image}
@@ -238,19 +269,35 @@ const AdminProductForm = () => {
                       fluid
                       className="w-100 h-100 object-fit-cover"
                     />
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      className="position-absolute top-0 end-0 m-2"
-                      onClick={() => {
-                        const newImages = product.images.filter(
-                          (_, i) => i !== index
-                        );
-                        setProduct({ ...product, images: newImages });
-                      }}
-                    >
-                      <FaTimes />
-                    </Button>
+                    <div className="position-absolute top-0 end-0 m-2 d-flex gap-1">
+                      <Button
+                        variant="warning"
+                        size="sm"
+                        onClick={() => {
+                          // For existing images, we can't crop them directly
+                          // This would require re-uploading
+                          setError(
+                            "To crop this image, please remove it and upload again"
+                          );
+                        }}
+                        title="Crop Image"
+                      >
+                        <FaCrop />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          const newImages = product.images.filter(
+                            (_, i) => i !== index
+                          );
+                          setProduct({ ...product, images: newImages });
+                        }}
+                        title="Remove Image"
+                      >
+                        <FaTimes />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -268,7 +315,11 @@ const AdminProductForm = () => {
                 className="mb-4"
               >
                 <Tab eventKey="details" title="Details">
-                  <Form noValidate validated={validated} onSubmit={handleSubmit}>
+                  <Form
+                    noValidate
+                    validated={validated}
+                    onSubmit={handleSubmit}
+                  >
                     <Row className="g-3">
                       <Col md={6}>
                         <Form.Group>
@@ -282,7 +333,11 @@ const AdminProductForm = () => {
                               setNameError("");
                             }}
                           />
-                          {nameError && <div className="text-danger small mt-1">{nameError}</div>}
+                          {nameError && (
+                            <div className="text-danger small mt-1">
+                              {nameError}
+                            </div>
+                          )}
                           <Form.Control.Feedback type="invalid">
                             Please enter a product name.
                           </Form.Control.Feedback>
@@ -363,7 +418,9 @@ const AdminProductForm = () => {
                             disabled={categoriesLoading}
                           >
                             <option value="">
-                              {categoriesLoading ? 'Loading categories...' : 'Select Category'}
+                              {categoriesLoading
+                                ? "Loading categories..."
+                                : "Select Category"}
                             </option>
                             {categories.map((category) => (
                               <option key={category._id} value={category._id}>
@@ -389,7 +446,11 @@ const AdminProductForm = () => {
                             <option value="">Select Brand</option>
                             {/* Add brand options */}
                           </Form.Select>
-                          {brandError && <div className="text-danger small mt-1">{brandError}</div>}
+                          {brandError && (
+                            <div className="text-danger small mt-1">
+                              {brandError}
+                            </div>
+                          )}
                           <Form.Control.Feedback type="invalid">
                             Please enter a valid brand name.
                           </Form.Control.Feedback>
@@ -481,7 +542,7 @@ const AdminProductForm = () => {
                                 onChange={(e) =>
                                   handleVariantChange(
                                     index,
-                                    'name',
+                                    "name",
                                     e.target.value
                                   )
                                 }
@@ -499,7 +560,7 @@ const AdminProductForm = () => {
                                 onChange={(e) =>
                                   handleVariantChange(
                                     index,
-                                    'price',
+                                    "price",
                                     e.target.value
                                   )
                                 }
@@ -516,7 +577,7 @@ const AdminProductForm = () => {
                                 onChange={(e) =>
                                   handleVariantChange(
                                     index,
-                                    'stock',
+                                    "stock",
                                     e.target.value
                                   )
                                 }
@@ -627,8 +688,23 @@ const AdminProductForm = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        show={showCropper}
+        onHide={() => {
+          setShowCropper(false);
+          setCurrentImageFile(null);
+          setCurrentImageIndex(null);
+        }}
+        imageFile={currentImageFile}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1}
+        title="Crop Product Image"
+        loading={cropperLoading}
+      />
     </Container>
   );
 };
 
-export default AdminProductForm; 
+export default AdminProductForm;

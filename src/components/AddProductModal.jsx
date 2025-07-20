@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
-import { Plus, X, Upload } from "lucide-react";
-import { createProduct, getAllProducts } from "../services/admin/adminProductService";
+import { Plus, X, Upload, Crop } from "lucide-react";
+import {
+  createProduct,
+  getAllProducts,
+} from "../services/admin/adminProductService";
 import { getAllActiveCategories } from "../services/admin/adminCategoryService";
+import ImageCropper from "./ImageCropper";
+import {
+  validateImageFile,
+  createPreviewUrl,
+  revokePreviewUrl,
+} from "../utils/imageUtils";
 
 const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   console.log("AddProductModal received categories:", categories);
@@ -35,6 +44,10 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
   const [capacityErrors, setCapacityErrors] = useState([]);
   const [nameError, setNameError] = useState("");
   const [brandError, setBrandError] = useState("");
+  const [showCropper, setShowCropper] = useState(false);
+  const [currentImageFile, setCurrentImageFile] = useState(null);
+  const [croppingForVariant, setCroppingForVariant] = useState(null);
+  const [cropperLoading, setCropperLoading] = useState(false);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -70,6 +83,10 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
     setCapacityErrors([]);
     setNameError("");
     setBrandError("");
+    setShowCropper(false);
+    setCurrentImageFile(null);
+    setCroppingForVariant(null);
+    setCropperLoading(false);
   };
 
   const handleInputChange = (e) => {
@@ -126,7 +143,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
     setImages(files);
 
     // Create preview URLs
-    const previews = files.map((file) => URL.createObjectURL(file));
+    const previews = files.map((file) => createPreviewUrl(file));
     setImagePreview(previews);
   };
 
@@ -177,6 +194,48 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
     }
 
     setVariants(newVariants);
+  };
+
+  const handleImageCrop = (variantIndex, imageIndex) => {
+    const newVariants = [...variants];
+    const file = newVariants[variantIndex].images[imageIndex];
+
+    // Validate file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setError(validation.error);
+      return;
+    }
+
+    setCurrentImageFile(file);
+    setCroppingForVariant({ variantIndex, imageIndex });
+    setShowCropper(true);
+  };
+
+  const handleCropComplete = (croppedFile) => {
+    if (croppingForVariant) {
+      const { variantIndex, imageIndex } = croppingForVariant;
+      const newVariants = [...variants];
+      newVariants[variantIndex].images[imageIndex] = croppedFile;
+      setVariants(newVariants);
+    } else {
+      // Product-level image cropping
+      const newImages = [...images];
+      const imageIndex = images.findIndex((img) => img === currentImageFile);
+      if (imageIndex !== -1) {
+        newImages[imageIndex] = croppedFile;
+        setImages(newImages);
+
+        // Update preview
+        const newPreviews = [...imagePreview];
+        newPreviews[imageIndex] = createPreviewUrl(croppedFile);
+        setImagePreview(newPreviews);
+      }
+    }
+
+    setShowCropper(false);
+    setCurrentImageFile(null);
+    setCroppingForVariant(null);
   };
 
   const validateForm = () => {
@@ -507,7 +566,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                     setNameError("");
                   }}
                   placeholder="Enter product name"
-                  
                 />
                 {nameError && (
                   <div className="text-danger small mt-1">{nameError}</div>
@@ -522,7 +580,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  
                 >
                   <option value="">Select Category</option>
                   {categories && categories.length > 0 ? (
@@ -532,7 +589,9 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                       </option>
                     ))
                   ) : (
-                    <option value="" disabled>No categories available</option>
+                    <option value="" disabled>
+                      No categories available
+                    </option>
                   )}
                 </Form.Select>
               </Form.Group>
@@ -552,7 +611,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                     setBrandError("");
                   }}
                   placeholder="Enter brand name"
-                  
                 />
                 {brandError && (
                   <div className="text-danger small mt-1">{brandError}</div>
@@ -680,7 +738,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                                 );
                               }}
                               placeholder="e.g., Red, Blue"
-                              
                             />
                           </Form.Group>
                           {colourErrors[index] && (
@@ -707,7 +764,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                                 );
                               }}
                               placeholder="e.g., 1L, 1.5L"
-                              
                             />
                           </Form.Group>
                           {capacityErrors[index] && (
@@ -739,7 +795,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                               placeholder="0.00"
                               min="0"
                               step="0.01"
-                              
                             />
                           </Form.Group>
                         </Col>
@@ -759,7 +814,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                               }
                               placeholder="0"
                               min="0"
-                              
                             />
                           </Form.Group>
                         </Col>
@@ -794,7 +848,6 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                         multiple
                         accept="image/*"
                         onChange={(e) => handleVariantImageChange(index, e)}
-                        
                       />
                       <Form.Text className="text-muted">
                         Select at least 3 images for this variant. First image
@@ -822,18 +875,33 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
                                     borderRadius: "4px",
                                   }}
                                 />
-                                <Button
-                                  type="button"
-                                  variant="danger"
-                                  size="sm"
-                                  className="position-absolute top-0 end-0"
+                                <div
+                                  className="position-absolute top-0 end-0 d-flex gap-1"
                                   style={{ transform: "translate(50%, -50%)" }}
-                                  onClick={() =>
-                                    removeVariantImage(index, imageIndex)
-                                  }
                                 >
-                                  <X size={12} />
-                                </Button>
+                                  <Button
+                                    type="button"
+                                    variant="warning"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleImageCrop(index, imageIndex)
+                                    }
+                                    title="Crop Image"
+                                  >
+                                    <Crop size={12} />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() =>
+                                      removeVariantImage(index, imageIndex)
+                                    }
+                                    title="Remove Image"
+                                  >
+                                    <X size={12} />
+                                  </Button>
+                                </div>
                                 {imageIndex === 0 && (
                                   <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
                                     <small>Main</small>
@@ -851,59 +919,7 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
             )}
           </div>
 
-          {/* Images Section - Only show if variants are not enabled */}
-          {!showVariants && (
-            <div className="mb-3">
-              <Form.Label>Product Images * (Minimum 3)</Form.Label>
-              <Form.Control
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageChange}
-                
-              />
-              <Form.Text className="text-muted">
-                Select at least 3 images. First image will be the main image.
-              </Form.Text>
-
-              {imagePreview.length > 0 && (
-                <div className="mt-3">
-                  <h6>Selected Images:</h6>
-                  <div className="d-flex flex-wrap gap-2">
-                    {imagePreview.map((preview, index) => (
-                      <div key={index} className="position-relative">
-                        <img
-                          src={preview}
-                          alt={`Preview ${index + 1}`}
-                          style={{
-                            width: "80px",
-                            height: "80px",
-                            objectFit: "cover",
-                            borderRadius: "4px",
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="danger"
-                          size="sm"
-                          className="position-absolute top-0 end-0"
-                          style={{ transform: "translate(50%, -50%)" }}
-                          onClick={() => removeImage(index)}
-                        >
-                          <X size={12} />
-                        </Button>
-                        {index === 0 && (
-                          <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
-                            <small>Main</small>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Images Section - Only show if variants are not enabled (removed this section) */}
         </Modal.Body>
 
         <Modal.Footer>
@@ -922,6 +938,25 @@ const AddProductModal = ({ show, onHide, onProductAdded, categories }) => {
           </Button>
         </Modal.Footer>
       </Form>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        show={showCropper}
+        onHide={() => {
+          setShowCropper(false);
+          setCurrentImageFile(null);
+          setCroppingForVariant(null);
+        }}
+        imageFile={currentImageFile}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1}
+        title={
+          croppingForVariant
+            ? `Crop Variant ${croppingForVariant.variantIndex + 1} Image`
+            : "Crop Product Image"
+        }
+        loading={cropperLoading}
+      />
     </Modal>
   );
 };

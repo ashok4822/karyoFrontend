@@ -31,7 +31,10 @@ import {
   FaSave,
   FaTimes,
   FaUpload,
+  FaCrop,
 } from 'react-icons/fa';
+import ImageCropper from '../../components/ImageCropper';
+import { validateImageFile, createPreviewUrl, revokePreviewUrl } from '../../utils/imageUtils';
 
 const AdminProductDetails = () => {
   const { id } = useParams();
@@ -42,6 +45,10 @@ const AdminProductDetails = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
+  const [showCropper, setShowCropper] = useState(false);
+  const [currentImageFile, setCurrentImageFile] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(null);
+  const [cropperLoading, setCropperLoading] = useState(false);
 
   const [product, setProduct] = useState({
     id: '',
@@ -77,9 +84,32 @@ const AdminProductDetails = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Implement image upload logic
-      console.log('Uploading image:', file);
+      // Validate file
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        setError(validation.error);
+        return;
+      }
+
+      setCurrentImageFile(file);
+      setCurrentImageIndex(product.images.length);
+      setShowCropper(true);
     }
+  };
+
+  const handleCropComplete = (croppedFile) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProduct({
+        ...product,
+        images: [...product.images, reader.result],
+      });
+    };
+    reader.readAsDataURL(croppedFile);
+    
+    setShowCropper(false);
+    setCurrentImageFile(null);
+    setCurrentImageIndex(null);
   };
 
   const handleDeleteProduct = async () => {
@@ -178,16 +208,30 @@ const AdminProductDetails = () => {
                       fluid
                       className="w-100 h-100 object-fit-cover"
                     />
+                    <div className="position-absolute top-0 end-0 m-2 d-flex gap-1">
+                      <Button
+                        variant="warning"
+                        size="sm"
+                        onClick={() => {
+                          // For existing images, we can't crop them directly
+                          // This would require re-uploading
+                          setError("To crop this image, please remove it and upload again");
+                        }}
+                        title="Crop Image"
+                      >
+                        <FaCrop />
+                      </Button>
                     <Button
                       variant="danger"
                       size="sm"
-                      className="position-absolute top-0 end-0 m-2"
                       onClick={() => {
                         // Implement image delete logic
                       }}
+                        title="Remove Image"
                     >
                       <FaTimes />
                     </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -522,6 +566,21 @@ const AdminProductDetails = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        show={showCropper}
+        onHide={() => {
+          setShowCropper(false);
+          setCurrentImageFile(null);
+          setCurrentImageIndex(null);
+        }}
+        imageFile={currentImageFile}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1}
+        title="Crop Product Image"
+        loading={cropperLoading}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>

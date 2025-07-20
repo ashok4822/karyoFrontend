@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from "react-bootstrap";
-import { X } from "lucide-react";
+import { X, Crop } from "lucide-react";
 import { createVariant } from "../services/admin/adminProductService";
+import ImageCropper from "./ImageCropper";
+import { validateImageFile, createPreviewUrl, revokePreviewUrl } from "../utils/imageUtils";
 
 const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
   const [formData, setFormData] = useState({
@@ -17,6 +19,10 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showCropper, setShowCropper] = useState(false);
+  const [currentImageFile, setCurrentImageFile] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(null);
+  const [cropperLoading, setCropperLoading] = useState(false);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -37,6 +43,10 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
     setImagePreview([]);
     setError("");
     setSuccess("");
+    setShowCropper(false);
+    setCurrentImageFile(null);
+    setCurrentImageIndex(null);
+    setCropperLoading(false);
   };
 
   const handleInputChange = (e) => {
@@ -64,7 +74,7 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
     setImages(files);
 
     // Create preview URLs
-    const previews = files.map(file => URL.createObjectURL(file));
+    const previews = files.map(file => createPreviewUrl(file));
     setImagePreview(previews);
   };
 
@@ -80,6 +90,36 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
     
     setImages(newImages);
     setImagePreview(newPreviews);
+  };
+
+  const handleImageCrop = (index) => {
+    const file = images[index];
+    
+    // Validate file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setError(validation.error);
+      return;
+    }
+
+    setCurrentImageFile(file);
+    setCurrentImageIndex(index);
+    setShowCropper(true);
+  };
+
+  const handleCropComplete = (croppedFile) => {
+    const newImages = [...images];
+    newImages[currentImageIndex] = croppedFile;
+    setImages(newImages);
+    
+    // Update preview
+    const newPreviews = [...imagePreview];
+    newPreviews[currentImageIndex] = createPreviewUrl(croppedFile);
+    setImagePreview(newPreviews);
+    
+    setShowCropper(false);
+    setCurrentImageFile(null);
+    setCurrentImageIndex(null);
   };
 
   const validateForm = () => {
@@ -273,16 +313,26 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
                           borderRadius: "4px",
                         }}
                       />
+                      <div className="position-absolute top-0 end-0 d-flex gap-1" style={{ transform: "translate(50%, -50%)" }}>
+                        <Button
+                          type="button"
+                          variant="warning"
+                          size="sm"
+                          onClick={() => handleImageCrop(index)}
+                          title="Crop Image"
+                        >
+                          <Crop size={12} />
+                        </Button>
                       <Button
                         type="button"
                         variant="danger"
                         size="sm"
-                        className="position-absolute top-0 end-0"
-                        style={{ transform: "translate(50%, -50%)" }}
                         onClick={() => removeImage(index)}
+                          title="Remove Image"
                       >
                         <X size={12} />
                       </Button>
+                      </div>
                       {index === 0 && (
                         <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
                           <small>Main</small>
@@ -312,6 +362,21 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
           </Button>
         </Modal.Footer>
       </Form>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        show={showCropper}
+        onHide={() => {
+          setShowCropper(false);
+          setCurrentImageFile(null);
+          setCurrentImageIndex(null);
+        }}
+        imageFile={currentImageFile}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1}
+        title="Crop Variant Image"
+        loading={cropperLoading}
+      />
     </Modal>
   );
 };
