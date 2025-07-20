@@ -205,76 +205,41 @@ const AppRoutes = () => {
           {/* User Routes - With Layout */}
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
-            <Route
-              path="/profile"
-              element={
-                <UserProtectedRoute>
-                  <UserProfile />
-                </UserProtectedRoute>
-              }
-            />
-            <Route
-              path="/products"
-              element={
-                <UserProtectedRoute>
-                  <ProductListing />
-                </UserProtectedRoute>
-              }
-            />
-            <Route
-              path="/products/:id"
-              element={
-                <UserProtectedRoute>
-                  <ProductDetails />
-                </UserProtectedRoute>
-              }
-            />
-            <Route
-              path="/referral-program"
-              element={
-                <UserProtectedRoute>
-                  <ReferralProgram />
-                </UserProtectedRoute>
-              }
-            />
-            <Route
-              path="/offers"
-              element={
-                <UserProtectedRoute>
-                  <Offers />
-                </UserProtectedRoute>
-              }
-            />
+            <Route path="/profile" element={
+              <UserProtectedRoute>
+                <UserProfile />
+              </UserProtectedRoute>
+            } />
+            <Route path="/products" element={<ProductListing />} />
+            <Route path="/products/:id" element={<ProductDetails />} />
+            <Route path="/referral-program" element={
+              <UserProtectedRoute>
+                <ReferralProgram />
+              </UserProtectedRoute>
+            } />
+            <Route path="/offers" element={
+              <UserProtectedRoute>
+                <Offers />
+              </UserProtectedRoute>
+            } />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/cart" element={<Cart />} />
-            <Route
-              path="/checkout"
-              element={
-                <UserProtectedRoute>
-                  <Checkout />
-                </UserProtectedRoute>
-              }
-            />
-            <Route
-              path="/order-confirmation/:orderId"
-              element={<OrderConfirmation />}
-            />
-            <Route
-              path="/order-success/:orderId"
-              element={
-                <UserProtectedRoute>
-                  <OrderSuccess />
-                </UserProtectedRoute>
-              }
-            />
-            <Route
-              path="/order-failure"
-              element={
-                <UserProtectedRoute>
-                  <OrderFailure />
-                </UserProtectedRoute>
-              }
-            />
+            <Route path="/checkout" element={
+              <UserProtectedRoute>
+                <Checkout />
+              </UserProtectedRoute>
+            } />
+            <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+            <Route path="/order-success/:orderId" element={
+              <UserProtectedRoute>
+                <OrderSuccess />
+              </UserProtectedRoute>
+            } />
+            <Route path="/order-failure" element={
+              <UserProtectedRoute>
+                <OrderFailure />
+              </UserProtectedRoute>
+            } />
             <Route path="/wallet" element={<Wallet />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />

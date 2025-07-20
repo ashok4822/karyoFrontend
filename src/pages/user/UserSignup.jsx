@@ -141,6 +141,13 @@ const UserSignup = () => {
 
   return (
     <Container className="py-5">
+      <Row className="justify-content-center mb-3">
+        <Col md={8} lg={6} className="text-center">
+          <Link to="/" className="btn btn-outline-secondary mb-3">
+            Home
+          </Link>
+        </Col>
+      </Row>
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
           <Card className="border-0 shadow-sm">

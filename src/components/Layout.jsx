@@ -144,12 +144,12 @@ const Layout = () => {
                 </Button>
               ) : (
                 <div className="d-flex gap-2">
-                  {/* <Button as={Link} to="/login" variant="outline-primary">
+                  <Button as={Link} to="/login" variant="outline-primary">
                     Login
                   </Button>
                   <Button as={Link} to="/signup" variant="primary">
-                    Register
-                  </Button> */}
+                    Sign Up
+                  </Button>
                 </div>
               )}
             </div>

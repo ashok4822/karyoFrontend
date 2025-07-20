@@ -36,11 +36,16 @@ const AuthSync = ({ onRestored = () => {} }) => {
 
   useEffect(() => {
     const publicPaths = [
+      "/",
+      "/products",
+      "/products/:id",
       "/login",
       "/signup",
       "/forgot-password",
       "/admin/login",
       "/google-auth-success",
+      "/contact",
+      "/about",
     ];
 
     // Skip sync on public routes and profile page (let profile page handle its own auth)
