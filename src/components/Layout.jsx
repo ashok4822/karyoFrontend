@@ -9,6 +9,8 @@ import {
 } from "../redux/reducers/authSlice";
 import api from "../lib/utils";
 import { logoutUser as logoutUserApi } from "../services/user/authService";
+import { clearCartState } from "../redux/reducers/cartSlice";
+import { resetWishlist } from "../redux/reducers/wishlistSlice";
 
 const Layout = () => {
   const dispatch = useDispatch();
@@ -49,6 +51,8 @@ const Layout = () => {
     localStorage.removeItem("user");
     // Do NOT clear admin tokens
     dispatch(logoutUser());
+    dispatch(clearCartState());
+    dispatch(resetWishlist());
     navigate("/");
   };
 

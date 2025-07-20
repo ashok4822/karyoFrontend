@@ -14,6 +14,8 @@ import {
 } from "react-bootstrap";
 import { FaEnvelope, FaLock, FaGoogle } from "react-icons/fa";
 import { loginUser } from "../../services/user/authService";
+import { fetchCart } from "../../redux/reducers/cartSlice";
+import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
 const UserLogin = () => {
   const navigate = useNavigate();
@@ -66,6 +68,9 @@ const UserLogin = () => {
           userAccessToken: result.data.token,
         })
       );
+      // Fetch cart and wishlist after login
+      dispatch(fetchCart());
+      dispatch(fetchWishlist());
       setSuccessMsg("Login successful! Redirecting...");
       setTimeout(() => navigate("/"), 1500);
     } else {

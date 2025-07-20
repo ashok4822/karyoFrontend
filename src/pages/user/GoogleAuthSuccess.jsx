@@ -6,6 +6,8 @@ import {
   setUserAccessToken,
 } from "../../redux/reducers/authSlice";
 import { fetchUserProfile } from "../../services/user/authService";
+import { fetchCart } from "../../redux/reducers/cartSlice";
+import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
 const GoogleAuthSuccess = () => {
   const dispatch = useDispatch();
@@ -37,6 +39,10 @@ const GoogleAuthSuccess = () => {
 
         // Dispatch login
         dispatch(loginSuccess({ user, userAccessToken: token }));
+
+        // Fetch cart and wishlist after Google login
+        dispatch(fetchCart());
+        dispatch(fetchWishlist());
 
         console.log("Login success dispatched, navigating to home...");
 

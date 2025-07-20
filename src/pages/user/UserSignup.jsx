@@ -21,6 +21,8 @@ import {
   FaGoogle,
 } from "react-icons/fa";
 import api, { OTP_EXPIRY_SECONDS } from "../../lib/utils";
+import { fetchCart } from "../../redux/reducers/cartSlice";
+import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
 const UserSignup = () => {
   const navigate = useNavigate();
@@ -118,7 +120,10 @@ const UserSignup = () => {
       const res = await api.post("auth/verify-otp", payload);
       // Save access token and user in Redux/localStorage
       dispatch(loginSuccess({ user: res.data.user, token: res.data.token }));
-      navigate("/");
+      // Fetch cart and wishlist after signup
+      dispatch(fetchCart());
+      dispatch(fetchWishlist());
+      navigate("/", { replace: true });
     } catch (error) {
       setServerError(
         error.response?.data?.message || "OTP verification failed"
