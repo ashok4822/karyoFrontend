@@ -484,14 +484,18 @@ const ProductListing = () => {
                     onMouseOut={e => (e.currentTarget.style.transform = "translateY(0)")}
                   >
                     <div
-                      className={`position-relative ${view === "list" ? "col-md-4" : ""}`}
-                      style={{ height: view === "list" ? "auto" : "240px" }}
+                      className={`position-relative d-flex justify-content-center align-items-center${view === "list" ? "" : ""}`}
+                      style={view === "list"
+                        ? { background: '#fff', padding: '12px', height: '180px', width: '180px', minWidth: '180px', maxWidth: '180px', borderRadius: '12px', margin: '16px' }
+                        : { background: '#fff', padding: '12px', height: '224px' }}
                     >
                       <Card.Img
                         src={getImageUrl(product.mainImage, product)}
                         alt={product.name}
-                        className="h-100 rounded-top object-fit-cover"
-                        style={{ objectFit: "cover", borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem" }}
+                        className="object-fit-contain"
+                        style={view === "list"
+                          ? { height: '160px', width: '160px', objectFit: 'contain', background: 'transparent', cursor: 'pointer' }
+                          : { height: '200px', width: '100%', objectFit: 'contain', background: 'transparent', cursor: 'pointer' }}
                       />
                       {product.isNew && (
                         <Badge bg="primary" className="position-absolute top-0 start-0 m-2">New</Badge>
