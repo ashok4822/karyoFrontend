@@ -283,7 +283,7 @@ const Wallet = () => {
           onClose={() => setShowToast(false)}
           show={showToast}
           bg={toastVariant}
-          delay={3000}
+          delay={1500}
           autohide
         >
           <Toast.Body className="text-white">{toastMsg}</Toast.Body>

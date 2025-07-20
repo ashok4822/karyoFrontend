@@ -30,6 +30,7 @@ import userAxios from "../lib/userAxios";
 import { toast } from "react-toastify";
 import { addToCart } from "../redux/reducers/cartSlice";
 import { fetchBrandOptions } from "../services/user/productService";
+import { TOAST_AUTO_CLOSE } from "../utils/toastConfig";
 
 const Index = () => {
   const dispatch = useDispatch();
@@ -206,7 +207,8 @@ const Index = () => {
     const productId = product._id || product.id;
     if (!variantId) {
       toast.error(
-        "This product does not have a valid variant to add to wishlist."
+        "This product does not have a valid variant to add to wishlist.",
+        { autoClose: TOAST_AUTO_CLOSE }
       );
       return;
     }
@@ -215,7 +217,7 @@ const Index = () => {
     );
     if (isWishlisted) {
       dispatch(removeFromWishlist({ id: productId, variant: variantId }));
-      toast.success("Removed from wishlist!");
+      toast.success("Removed from wishlist!", { autoClose: TOAST_AUTO_CLOSE });
     } else {
       dispatch(
         addToWishlist({
@@ -229,7 +231,7 @@ const Index = () => {
             : "",
         })
       );
-      toast.success("Added to wishlist!");
+      toast.success("Added to wishlist!", { autoClose: TOAST_AUTO_CLOSE });
     }
   };
 
@@ -241,14 +243,14 @@ const Index = () => {
         : null;
     const variantId = variant?._id || variant?.id;
     if (!variantId) {
-      toast.error("This product does not have a valid variant to add to cart.");
+      toast.error("This product does not have a valid variant to add to cart.", { autoClose: TOAST_AUTO_CLOSE });
       return;
     }
     try {
       await dispatch(
         addToCart({ productVariantId: variantId, quantity: 1 })
       ).unwrap();
-      toast.success(`${product.name} has been added to your cart!`);
+      toast.success(`${product.name} has been added to your cart!`, { autoClose: TOAST_AUTO_CLOSE });
     } catch (err) {
       let errorMsg = "Failed to add to cart.";
       if (err && typeof err === "object" && err.error) errorMsg = err.error;
@@ -257,9 +259,9 @@ const Index = () => {
         errorMsg.toLowerCase().includes("stock") ||
         errorMsg.toLowerCase().includes("sold")
       ) {
-        toast.error(errorMsg);
+        toast.error(errorMsg, { autoClose: TOAST_AUTO_CLOSE });
       } else {
-        toast.error(errorMsg);
+        toast.error(errorMsg, { autoClose: TOAST_AUTO_CLOSE });
       }
     }
   };
@@ -270,7 +272,7 @@ const Index = () => {
       <div className="bg-primary text-white py-5">
         <Container>
           <Row className="align-items-center">
-            <Col lg={6}>
+            <Col lg={6} >
               <h1 className="display-4 fw-bold mb-4">
                 Discover Your Perfect Backpack
               </h1>
@@ -289,9 +291,9 @@ const Index = () => {
                 Shop Now
               </Button>
             </Col>
-            <Col lg={6} className="d-none d-lg-block">
+            <Col lg={4} className="d-none d-lg-block">
               <img
-                src="/herobg2.png"
+                src="/home4.png"
                 alt="Laptop Backpack PNGTree"
                 className="img-fluid rounded-3 shadow"
               />
@@ -362,13 +364,25 @@ const Index = () => {
                         onClick={() => navigate(`/products/${product._id}`)}
                         style={{ cursor: "pointer" }}
                       >
-                        <div className="position-relative d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '224px' }}>
+                        <div
+                          className="position-relative d-flex justify-content-center align-items-center"
+                          style={{
+                            background: "#fff",
+                            padding: "12px",
+                            height: "224px",
+                          }}
+                        >
                           <Card.Img
                             variant="top"
                             src={image}
                             alt={product.name}
                             className="object-fit-contain"
-                            style={{ height: '200px', width: '100%', objectFit: 'contain', background: 'transparent' }}
+                            style={{
+                              height: "200px",
+                              width: "100%",
+                              objectFit: "contain",
+                              background: "transparent",
+                            }}
                           />
                           {/* Wishlist Icon */}
                           <Button
@@ -439,13 +453,25 @@ const Index = () => {
                 [1, 2, 3, 4].map((i) => (
                   <Col key={`placeholder-${i}`}>
                     <Card className="h-100 shadow-sm hover-shadow">
-                      <div className="d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '224px' }}>
+                      <div
+                        className="d-flex justify-content-center align-items-center"
+                        style={{
+                          background: "#fff",
+                          padding: "12px",
+                          height: "224px",
+                        }}
+                      >
                         <Card.Img
                           variant="top"
                           src={`https://via.placeholder.com/300x300?text=No+Image`}
                           alt={`Placeholder Product ${i}`}
                           className="object-fit-contain"
-                          style={{ height: "200px", width: "100%", objectFit: "contain", background: "transparent" }}
+                          style={{
+                            height: "200px",
+                            width: "100%",
+                            objectFit: "contain",
+                            background: "transparent",
+                          }}
                         />
                       </div>
                       <Card.Body>
@@ -511,14 +537,29 @@ const Index = () => {
                           position: "relative",
                         }}
                       >
-                        <div className="position-relative d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '224px' }}>
+                        <div
+                          className="position-relative d-flex justify-content-center align-items-center"
+                          style={{
+                            background: "#fff",
+                            padding: "12px",
+                            height: "224px",
+                          }}
+                        >
                           <Card.Img
                             variant="top"
                             src={image}
                             alt={product.name}
                             className="object-fit-contain"
-                            style={{ height: '200px', width: '100%', objectFit: 'contain', background: 'transparent', cursor: 'pointer' }}
-                            onClick={() => navigate(`/products/${product._id || product.id}`)}
+                            style={{
+                              height: "200px",
+                              width: "100%",
+                              objectFit: "contain",
+                              background: "transparent",
+                              cursor: "pointer",
+                            }}
+                            onClick={() =>
+                              navigate(`/products/${product._id || product.id}`)
+                            }
                           />
                           {/* Wishlist Icon */}
                           {(() => {
@@ -575,8 +616,15 @@ const Index = () => {
                           })()}
                         </div>
                         <Card.Body className="text-center">
-                          <Card.Title style={{ cursor: "pointer" }} onClick={() => navigate(`/products/${product._id || product.id}`)}>
-                            {product.name.length > 35 ? product.name.slice(0, 35) + "..." : product.name}
+                          <Card.Title
+                            style={{ cursor: "pointer" }}
+                            onClick={() =>
+                              navigate(`/products/${product._id || product.id}`)
+                            }
+                          >
+                            {product.name.length > 35
+                              ? product.name.slice(0, 35) + "..."
+                              : product.name}
                           </Card.Title>
                           <Card.Text className="text-muted small">
                             {brand}
@@ -605,13 +653,25 @@ const Index = () => {
                       className="h-100 shadow-sm"
                       style={{ width: "100%", maxWidth: 250 }}
                     >
-                      <div className="d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '224px' }}>
+                      <div
+                        className="d-flex justify-content-center align-items-center"
+                        style={{
+                          background: "#fff",
+                          padding: "12px",
+                          height: "224px",
+                        }}
+                      >
                         <Card.Img
                           variant="top"
                           src={`https://via.placeholder.com/300x300?text=No+Image`}
                           alt={`Placeholder Product ${i}`}
                           className="object-fit-contain"
-                          style={{ height: "200px", width: "100%", objectFit: "contain", background: "transparent" }}
+                          style={{
+                            height: "200px",
+                            width: "100%",
+                            objectFit: "contain",
+                            background: "transparent",
+                          }}
                         />
                       </div>
                       <Card.Body className="text-center">
@@ -686,14 +746,29 @@ const Index = () => {
                           position: "relative",
                         }}
                       >
-                        <div className="position-relative d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '200px' }}>
+                        <div
+                          className="position-relative d-flex justify-content-center align-items-center"
+                          style={{
+                            background: "#fff",
+                            padding: "12px",
+                            height: "200px",
+                          }}
+                        >
                           <Card.Img
                             variant="top"
                             src={image}
                             alt={product.name}
                             className="object-fit-contain"
-                            style={{ height: '180px', width: '100%', objectFit: 'contain', background: 'transparent', cursor: 'pointer' }}
-                            onClick={() => navigate(`/products/${product._id || product.id}`)}
+                            style={{
+                              height: "180px",
+                              width: "100%",
+                              objectFit: "contain",
+                              background: "transparent",
+                              cursor: "pointer",
+                            }}
+                            onClick={() =>
+                              navigate(`/products/${product._id || product.id}`)
+                            }
                           />
                           {/* Wishlist Icon */}
                           <Button
@@ -735,8 +810,15 @@ const Index = () => {
                           </Button>
                         </div>
                         <Card.Body className="text-center">
-                          <Card.Title style={{ cursor: "pointer" }} onClick={() => navigate(`/products/${product._id || product.id}`)}>
-                            {product.name.length > 35 ? product.name.slice(0, 35) + "..." : product.name}
+                          <Card.Title
+                            style={{ cursor: "pointer" }}
+                            onClick={() =>
+                              navigate(`/products/${product._id || product.id}`)
+                            }
+                          >
+                            {product.name.length > 35
+                              ? product.name.slice(0, 35) + "..."
+                              : product.name}
                           </Card.Title>
                           <Card.Text className="text-muted small">
                             Just Launched
@@ -765,13 +847,25 @@ const Index = () => {
                       className="h-100 shadow-sm"
                       style={{ width: "100%", maxWidth: 220 }}
                     >
-                      <div className="d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '200px' }}>
+                      <div
+                        className="d-flex justify-content-center align-items-center"
+                        style={{
+                          background: "#fff",
+                          padding: "12px",
+                          height: "200px",
+                        }}
+                      >
                         <Card.Img
                           variant="top"
                           src={`https://via.placeholder.com/300x300?text=No+Image`}
                           alt={`New Launch Product ${i}`}
                           className="object-fit-contain"
-                          style={{ height: "180px", width: "100%", objectFit: "contain", background: "transparent" }}
+                          style={{
+                            height: "180px",
+                            width: "100%",
+                            objectFit: "contain",
+                            background: "transparent",
+                          }}
                         />
                       </div>
                       <Card.Body className="text-center">
@@ -841,14 +935,29 @@ const Index = () => {
                           position: "relative",
                         }}
                       >
-                        <div className="position-relative d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '224px' }}>
+                        <div
+                          className="position-relative d-flex justify-content-center align-items-center"
+                          style={{
+                            background: "#fff",
+                            padding: "12px",
+                            height: "224px",
+                          }}
+                        >
                           <Card.Img
                             variant="top"
                             src={image}
                             alt={product.name}
                             className="object-fit-contain"
-                            style={{ height: '200px', width: '100%', objectFit: 'contain', background: 'transparent', cursor: 'pointer' }}
-                            onClick={() => navigate(`/products/${product._id || product.id}`)}
+                            style={{
+                              height: "200px",
+                              width: "100%",
+                              objectFit: "contain",
+                              background: "transparent",
+                              cursor: "pointer",
+                            }}
+                            onClick={() =>
+                              navigate(`/products/${product._id || product.id}`)
+                            }
                           />
                           {/* Wishlist Icon */}
                           <Button
@@ -890,8 +999,15 @@ const Index = () => {
                           </Button>
                         </div>
                         <Card.Body className="text-center">
-                          <Card.Title style={{ cursor: "pointer" }} onClick={() => navigate(`/products/${product._id || product.id}`)}>
-                            {product.name.length > 35 ? product.name.slice(0, 35) + "..." : product.name}
+                          <Card.Title
+                            style={{ cursor: "pointer" }}
+                            onClick={() =>
+                              navigate(`/products/${product._id || product.id}`)
+                            }
+                          >
+                            {product.name.length > 35
+                              ? product.name.slice(0, 35) + "..."
+                              : product.name}
                           </Card.Title>
                           <Card.Text className="text-muted small">
                             Colour: {colour}
@@ -920,13 +1036,25 @@ const Index = () => {
                       className="h-100 shadow-sm"
                       style={{ width: "100%", maxWidth: 250 }}
                     >
-                      <div className="d-flex justify-content-center align-items-center" style={{ background: '#fff', padding: '12px', height: '224px' }}>
+                      <div
+                        className="d-flex justify-content-center align-items-center"
+                        style={{
+                          background: "#fff",
+                          padding: "12px",
+                          height: "224px",
+                        }}
+                      >
                         <Card.Img
                           variant="top"
                           src={`https://via.placeholder.com/300x300?text=No+Image`}
                           alt={`Hand Picked Product ${i}`}
                           className="object-fit-contain"
-                          style={{ height: "200px", width: "100%", objectFit: "contain", background: "transparent" }}
+                          style={{
+                            height: "200px",
+                            width: "100%",
+                            objectFit: "contain",
+                            background: "transparent",
+                          }}
                         />
                       </div>
                       <Card.Body className="text-center">

@@ -4,6 +4,7 @@ import { useState } from "react";
 import AppRoutes from "./components/routes/AppRoutes";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { TOAST_AUTO_CLOSE } from "./utils/toastConfig";
 
 const queryClient = new QueryClient();
 
@@ -14,7 +15,7 @@ function App() {
         <AppRoutes />
         <ToastContainer
           position="top-right"
-          autoClose={3000}
+          autoClose={TOAST_AUTO_CLOSE}
           hideProgressBar={false}
           newestOnTop
           closeOnClick

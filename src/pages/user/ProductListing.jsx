@@ -36,6 +36,7 @@ import { addToCart } from "../../redux/reducers/cartSlice";
 import { addToWishlist, removeFromWishlist } from "../../redux/reducers/wishlistSlice";
 import { getBestOffersForProducts } from "../../services/user/offerService";
 import { toast } from "react-toastify";
+import { TOAST_AUTO_CLOSE } from "../../utils/toastConfig";
 
 const ProductListing = () => {
   const dispatch = useDispatch();
@@ -248,20 +249,20 @@ const ProductListing = () => {
     const variant = product.variantDetails && product.variantDetails.length > 0 ? product.variantDetails[0] : null;
     const variantId = variant?._id || variant?.id;
     if (!variantId) {
-      toast.error("This product does not have a valid variant to add to cart.");
+      toast.error("This product does not have a valid variant to add to cart.", { autoClose: TOAST_AUTO_CLOSE });
       return;
     }
     try {
       await dispatch(addToCart({ productVariantId: variantId, quantity: 1 })).unwrap();
-      toast.success(`${product.name} has been added to your cart!`);
+      toast.success(`${product.name} has been added to your cart!`, { autoClose: TOAST_AUTO_CLOSE });
     } catch (err) {
       let errorMsg = "Failed to add to cart.";
       if (err && typeof err === "object" && err.error) errorMsg = err.error;
       else if (typeof err === "string") errorMsg = err;
       if (errorMsg.toLowerCase().includes("stock") || errorMsg.toLowerCase().includes("sold")) {
-        toast.error(errorMsg);
+        toast.error(errorMsg, { autoClose: TOAST_AUTO_CLOSE });
       } else {
-        toast.error(errorMsg);
+        toast.error(errorMsg, { autoClose: TOAST_AUTO_CLOSE });
       }
     }
   };
@@ -273,7 +274,7 @@ const ProductListing = () => {
     const productId = product._id || product.id;
     
     if (!variantId) {
-      toast.error("This product does not have a valid variant to add to wishlist.");
+      toast.error("This product does not have a valid variant to add to wishlist.", { autoClose: TOAST_AUTO_CLOSE });
       return;
     }
 
@@ -286,7 +287,7 @@ const ProductListing = () => {
         id: productId, 
         variant: variantId 
       }));
-      toast.success("Removed from wishlist!");
+      toast.success("Removed from wishlist!", { autoClose: TOAST_AUTO_CLOSE });
     } else {
       dispatch(addToWishlist({
         id: productId,
@@ -296,7 +297,7 @@ const ProductListing = () => {
         variant: variantId,
         variantName: variant ? `${variant.colour || ''} - ${variant.capacity || ''}`.trim() : "",
       }));
-      toast.success("Added to wishlist!");
+      toast.success("Added to wishlist!", { autoClose: TOAST_AUTO_CLOSE });
     }
   };
 

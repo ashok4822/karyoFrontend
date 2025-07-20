@@ -55,13 +55,14 @@ import {
 } from "../../services/user/userService";
 import { submitReturnRequest } from "../../services/user/orderService";
 import userAxios from "../../lib/userAxios";
+import ReferralProgram from "./ReferralProgram";
 
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
   { label: "Edit profile", icon: <FaEdit /> },
   { label: "Address Management", icon: <FaMapMarkerAlt /> },
   { label: "Show orders", icon: <FaBoxOpen /> },
-  { label: "Referral Program", icon: <FaGift />, link: "/referral-program" },
+  { label: "Referral Program", icon: <FaGift /> },
   { label: "Reset password", icon: <FaKey /> },
   { label: "Edit Email", icon: <FaEdit /> },
 ];
@@ -2444,13 +2445,7 @@ const UserProfile = () => {
                     padding: "14px 18px",
                   }}
                   className="border-0"
-                  onClick={() => {
-                    if (item.link) {
-                      navigate(item.link);
-                    } else {
-                      setActiveIndex(idx);
-                    }
-                  }}
+                  onClick={() => setActiveIndex(idx)}
                 >
                   <span style={{ fontSize: 18, marginRight: 10 }}>
                     {item.icon}
@@ -2466,7 +2461,7 @@ const UserProfile = () => {
           {activeIndex === 1 && editProfileContent}
           {activeIndex === 2 && showAddressContent}
           {activeIndex === 3 && showOrdersContent}
-          {/* {activeIndex === 4 && cancelOrdersContent} */}
+          {activeIndex === 4 && <ReferralProgram />}
           {activeIndex === 5 && forgotPasswordContent}
           {activeIndex === 6 && editEmailContent}
         </Col>

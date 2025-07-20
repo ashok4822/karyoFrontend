@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import adminAxios from "@/lib/adminAxios";
 import { format } from "date-fns";
+import { TOAST_AUTO_CLOSE } from "../../utils/toastConfig";
 
 const AdminReferrals = () => {
   const [referrals, setReferrals] = useState([]);
@@ -49,7 +50,7 @@ const AdminReferrals = () => {
         totalItems: response.data.pagination.totalItems,
       }));
     } catch (error) {
-      toast.error("Failed to fetch referrals");
+      toast.error("Failed to fetch referrals", { autoClose: TOAST_AUTO_CLOSE });
       console.error("Error fetching referrals:", error);
     } finally {
       setLoading(false);

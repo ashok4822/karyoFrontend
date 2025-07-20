@@ -35,6 +35,7 @@ import {
   FaTimes,
   FaCheck,
 } from "react-icons/fa";
+import { Heart } from "lucide-react";
 import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
 import {
   addToWishlist,
@@ -1140,12 +1141,12 @@ const ProductDetails = () => {
               className="p-0"
               onClick={handleToggleWishlist}
             >
-              <FaHeart
-                className={isWishlisted ? "text-danger" : ""}
-                size={20}
-                fill={isWishlisted ? "#dc3545" : "none"}
-                stroke="#dc3545"
-                strokeWidth={4}
+              <Heart
+                size={24}
+                color={isWishlisted ? "#b91c1c" : "#222"}
+                fill={isWishlisted ? "#b91c1c" : "none"}
+                strokeWidth={2.8}
+                style={{ verticalAlign: "middle", filter: isWishlisted ? "drop-shadow(0 1px 2px rgba(0,0,0,0.15))" : "none" }}
               />
             </Button>
           </div>
@@ -1510,15 +1511,10 @@ const ProductDetails = () => {
                                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
                               }}
                             >
-                              <FaHeart
-                                className={isWishlisted ? "text-danger" : ""}
-                                style={{
-                                  color: isWishlisted ? undefined : "#555",
-                                  filter: !isWishlisted ? "drop-shadow(0 1px 2px rgba(0,0,0,0.10))" : "none"
-                                }}
+                              <Heart
                                 size={20}
-                                fill={isWishlisted ? "#dc3545" : "none"}
-                                stroke="#dc3545"
+                                color={isWishlisted ? "#b91c1c" : "#555"}
+                                fill={isWishlisted ? "#b91c1c" : "none"}
                                 strokeWidth={4}
                               />
                             </Button>
