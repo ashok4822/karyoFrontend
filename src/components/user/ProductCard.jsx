@@ -127,7 +127,9 @@ const ProductCard = ({ product }) => {
         </Link>
         
         <Card.Text className="text-muted small mb-3 flex-grow-1">
-          {product.description}
+          {product.description && product.description.length > 60
+            ? product.description.slice(0, 60) + "..."
+            : product.description}
         </Card.Text>
         
         <div className="d-flex align-items-center mb-3">
