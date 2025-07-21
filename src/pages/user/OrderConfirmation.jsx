@@ -563,10 +563,12 @@ const OrderConfirmation = () => {
                     </span>
                   </li>
                   {currentOrder.discount && (
-                    <li className="d-flex justify-content-between mb-1 text-muted">
-                      <span>Discount Availed:</span>
+                    <li className="mb-1 text-muted">
                       <span>
-                        {currentOrder.discount.discountName || currentOrder.discount.code || 'Discount'}
+                        Discount Availed: {" "}
+                        <span className="fw-semibold text-dark">
+                          {currentOrder.discount.discountName || currentOrder.discount.code || 'Discount'}
+                        </span>
                       </span>
                     </li>
                   )}

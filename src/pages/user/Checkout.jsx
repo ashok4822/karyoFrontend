@@ -84,6 +84,7 @@ const Checkout = () => {
   const hasRetried = useRef(false);
   const orderCreatedRef = useRef(false); // Prevent double order creation
   const orderJustPlacedRef = useRef(false);
+  const [showCodChecking, setShowCodChecking] = useState(false);
 
   const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "";
 
@@ -366,6 +367,17 @@ const Checkout = () => {
       checkCODAvailability();
     }
   }, [paymentMethod, selectedAddressId, cartInitialized, checkCODAvailability]);
+
+  // Delay showing COD checking indicator to prevent flicker
+  useEffect(() => {
+    let timer;
+    if (codChecking) {
+      timer = setTimeout(() => setShowCodChecking(true), 300);
+    } else {
+      setShowCodChecking(false);
+    }
+    return () => clearTimeout(timer);
+  }, [codChecking]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -1949,7 +1961,7 @@ const Checkout = () => {
                         }}
                       >
                         Cash on Delivery (COD)
-                        {codChecking && (
+                        {showCodChecking && (
                           <span
                             style={{
                               marginLeft: "0.5rem",
@@ -1981,7 +1993,7 @@ const Checkout = () => {
                       >
                         ✓ Secure and convenient
                       </div>
-                      {!codAvailable && !codChecking && (
+                      {!codAvailable && !showCodChecking && (
                         <div
                           style={{
                             fontSize: "0.75rem",
@@ -2098,7 +2110,7 @@ const Checkout = () => {
                 )}
 
                 {/* COD Not Available Warning */}
-                {paymentMethod === "cod" && !codAvailable && !codChecking && (
+                {paymentMethod === "cod" && !codAvailable && !showCodChecking && (
                   <div
                     style={{
                       marginTop: "1rem",

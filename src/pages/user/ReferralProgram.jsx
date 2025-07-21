@@ -316,25 +316,41 @@ const ReferralProgram = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {referralHistory.map((referral) => (
-                    <tr key={referral._id}>
-                      <td>{referral.referred?.firstName} {referral.referred?.lastName}</td>
-                      <td>{referral.referred?.email}</td>
-                      <td>{getStatusBadge(referral.status)}</td>
-                      <td>{format(new Date(referral.createdAt), "dd/MM/yyyy HH:mm:ss")}</td>
-                      <td>{format(new Date(referral.expiresAt), "dd/MM/yyyy HH:mm:ss")}</td>
-                      <td>
-                        {referral.rewardCoupon ? (
-                          <Badge bg="success">
-                            {referral.rewardCoupon.code} ({referral.rewardCoupon.discountValue}
-                            {referral.rewardCoupon.discountType === "percentage" ? "%" : "₹"})
-                          </Badge>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {referralHistory.map((referral) => {
+                    const firstName = referral.referred?.firstName;
+                    const lastName = referral.referred?.lastName;
+                    const username = referral.referred?.username;
+                    const email = referral.referred?.email;
+                    let displayName = "";
+                    if (firstName || lastName) {
+                      displayName = `${firstName || ""} ${lastName || ""}`.trim();
+                    } else if (username) {
+                      displayName = username;
+                    } else if (email) {
+                      displayName = email;
+                    } else {
+                      displayName = "-";
+                    }
+                    return (
+                      <tr key={referral._id}>
+                        <td>{displayName}</td>
+                        <td>{email || "-"}</td>
+                        <td>{getStatusBadge(referral.status)}</td>
+                        <td>{format(new Date(referral.createdAt), "dd/MM/yyyy HH:mm:ss")}</td>
+                        <td>{format(new Date(referral.expiresAt), "dd/MM/yyyy HH:mm:ss")}</td>
+                        <td>
+                          {referral.rewardCoupon ? (
+                            <Badge bg="success">
+                              {referral.rewardCoupon.code} ({referral.rewardCoupon.discountValue}
+                              {referral.rewardCoupon.discountType === "percentage" ? "%" : "₹"})
+                            </Badge>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </Table>
             </div>
