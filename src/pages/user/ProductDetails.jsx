@@ -1159,7 +1159,7 @@ const ProductDetails = () => {
               <span className="h3 text-primary fw-bold">
                 ₹{getFinalPrice()}
               </span>
-              {getCurrentPrice() !== getFinalPrice() && (
+              {(productOffer || product.discount > 0 || activeCoupon) && getCurrentPrice() !== getFinalPrice() && (
                 <span className="text-muted text-decoration-line-through ms-2">
                   ₹{getCurrentPrice()}
                 </span>
