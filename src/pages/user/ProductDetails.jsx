@@ -161,7 +161,12 @@ const ProductDetails = () => {
 
   // Refresh available stock when component mounts or product changes
   useEffect(() => {
-    if (user && userAccessToken && product?._id && !availableStock[product._id]) {
+    if (
+      user &&
+      userAccessToken &&
+      product?._id &&
+      !availableStock[product._id]
+    ) {
       dispatch(getAvailableStock(product._id));
     }
   }, [product?._id, availableStock, dispatch, user, userAccessToken]);
@@ -206,8 +211,8 @@ const ProductDetails = () => {
       console.log("Fetching offer for product:", productId);
       const response = await getBestOfferForProduct(productId);
       console.log("Offer response:", response);
-      if (response.success && response.data) {
-        setProductOffer(response.data);
+      if (response.success && response.data.data) {
+        setProductOffer(response.data.data);
         console.log("Offer set:", response.data);
       } else {
         console.log("No offer found for this product");
@@ -544,16 +549,24 @@ const ProductDetails = () => {
 
     // Apply offer discount
     if (productOffer) {
-      const offerDiscount = productOffer.discountType === "percentage"
-        ? (basePrice * productOffer.discountValue) / 100
-        : productOffer.discountValue;
-      
+      const offerDiscount =
+        productOffer.discountType === "percentage"
+          ? (basePrice * productOffer.discountValue) / 100
+          : productOffer.discountValue;
+
       // Apply maximum discount limit if set
       let finalOfferDiscount = offerDiscount;
-      if (productOffer.maximumDiscount && productOffer.discountType === "percentage") {
-        finalOfferDiscount = Math.min(offerDiscount, productOffer.maximumDiscount);
+      console.log("offerDiscount: ", offerDiscount);
+      if (
+        productOffer.maximumDiscount &&
+        productOffer.discountType === "percentage"
+      ) {
+        finalOfferDiscount = Math.min(
+          offerDiscount,
+          productOffer.maximumDiscount
+        );
       }
-      
+
       finalPrice = Math.max(0, finalPrice - finalOfferDiscount);
       console.log("After offer discount:", finalPrice, "Offer:", productOffer);
     }
@@ -1146,7 +1159,12 @@ const ProductDetails = () => {
                 color={isWishlisted ? "#b91c1c" : "#222"}
                 fill={isWishlisted ? "#b91c1c" : "none"}
                 strokeWidth={2.8}
-                style={{ verticalAlign: "middle", filter: isWishlisted ? "drop-shadow(0 1px 2px rgba(0,0,0,0.15))" : "none" }}
+                style={{
+                  verticalAlign: "middle",
+                  filter: isWishlisted
+                    ? "drop-shadow(0 1px 2px rgba(0,0,0,0.15))"
+                    : "none",
+                }}
               />
             </Button>
           </div>
@@ -1159,11 +1177,12 @@ const ProductDetails = () => {
               <span className="h3 text-primary fw-bold">
                 ₹{getFinalPrice()}
               </span>
-              {(productOffer || product.discount > 0 || activeCoupon) && getCurrentPrice() !== getFinalPrice() && (
-                <span className="text-muted text-decoration-line-through ms-2">
-                  ₹{getCurrentPrice()}
-                </span>
-              )}
+              {(productOffer || product.discount > 0 || activeCoupon) &&
+                getCurrentPrice() !== getFinalPrice() && (
+                  <span className="text-muted text-decoration-line-through ms-2">
+                    ₹{getCurrentPrice()}
+                  </span>
+                )}
               {activeCoupon && (
                 <Badge bg="success">
                   <FaCheck className="me-1" />
@@ -1174,13 +1193,23 @@ const ProductDetails = () => {
 
             {/* Offer Display */}
             {offerLoading ? (
-              <div className="alert alert-info py-2 px-3 mb-2 small">Checking for offers...</div>
+              <div className="alert alert-info py-2 px-3 mb-2 small">
+                Checking for offers...
+              </div>
             ) : productOffer ? (
               <div className="alert alert-success py-2 px-3 mb-2 small d-flex align-items-center gap-2">
                 <FaTag className="me-2 text-success" />
                 <span>
-                  <strong>{productOffer.name}</strong>: {productOffer.discountType === 'percentage' ? `${productOffer.discountValue}% OFF` : `₹${productOffer.discountValue} OFF`} &nbsp;
-                  <span className="text-muted">(Valid till {new Date(productOffer.validTo).toLocaleDateString('en-GB')})</span>
+                  <strong>{productOffer.name}</strong>:{" "}
+                  {productOffer.discountType === "percentage"
+                    ? `${productOffer.discountValue}% OFF`
+                    : `₹${productOffer.discountValue} OFF`}{" "}
+                  &nbsp;
+                  <span className="text-muted">
+                    (Valid till{" "}
+                    {new Date(productOffer.validTo).toLocaleDateString("en-GB")}
+                    )
+                  </span>
                 </span>
               </div>
             ) : null}
@@ -1458,67 +1487,85 @@ const ProductDetails = () => {
                       />
                       {/* Wishlist Icon for Related Products */}
                       {(() => {
-                        const variant = rel.variantDetails && rel.variantDetails.length > 0 ? rel.variantDetails[0] : 
-                                       rel.variants && rel.variants.length > 0 ? rel.variants[0] : null;
+                        const variant =
+                          rel.variantDetails && rel.variantDetails.length > 0
+                            ? rel.variantDetails[0]
+                            : rel.variants && rel.variants.length > 0
+                            ? rel.variants[0]
+                            : null;
                         const variantId = variant?._id || variant?.id;
-                        const isWishlisted = variantId ? wishlist.some(item => 
-                          item.id === rel._id && item.variant === variantId
-                        ) : false;
-                        
-                                                  return (
-                            <Button
-                              variant="light"
-                              size="sm"
-                              className="position-absolute rounded-circle d-flex align-items-center justify-content-center"
-                              style={{ 
-                                top: '8px',
-                                right: '8px',
-                                width: '30px', 
-                                height: '30px', 
-                                padding: 0,
-                                border: 'none',
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                                zIndex: 10,
-                                transition: 'all 0.2s ease'
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (variantId) {
-                                  if (isWishlisted) {
-                                    dispatch(removeFromWishlist({ 
-                                      id: rel._id, 
-                                      variant: variantId 
-                                    }));
-                                  } else {
-                                    dispatch(addToWishlist({
+                        const isWishlisted = variantId
+                          ? wishlist.some(
+                              (item) =>
+                                item.id === rel._id &&
+                                item.variant === variantId
+                            )
+                          : false;
+
+                        return (
+                          <Button
+                            variant="light"
+                            size="sm"
+                            className="position-absolute rounded-circle d-flex align-items-center justify-content-center"
+                            style={{
+                              top: "8px",
+                              right: "8px",
+                              width: "30px",
+                              height: "30px",
+                              padding: 0,
+                              border: "none",
+                              backgroundColor: "rgba(255, 255, 255, 0.95)",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                              zIndex: 10,
+                              transition: "all 0.2s ease",
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (variantId) {
+                                if (isWishlisted) {
+                                  dispatch(
+                                    removeFromWishlist({
+                                      id: rel._id,
+                                      variant: variantId,
+                                    })
+                                  );
+                                } else {
+                                  dispatch(
+                                    addToWishlist({
                                       id: rel._id,
                                       name: rel.name,
                                       price: variant.price || relPrice,
                                       image: relImage,
                                       variant: variantId,
-                                      variantName: variant ? `${variant.colour || ''} - ${variant.capacity || ''}`.trim() : "",
-                                    }));
-                                  }
+                                      variantName: variant
+                                        ? `${variant.colour || ""} - ${
+                                            variant.capacity || ""
+                                          }`.trim()
+                                        : "",
+                                    })
+                                  );
                                 }
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
-                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-                              }}
-                            >
-                              <Heart
-                                size={20}
-                                color={isWishlisted ? "#b91c1c" : "#555"}
-                                fill={isWishlisted ? "#b91c1c" : "none"}
-                                strokeWidth={4}
-                              />
-                            </Button>
-                          );
+                              }
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "scale(1.1)";
+                              e.currentTarget.style.backgroundColor =
+                                "rgba(255, 255, 255, 1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "scale(1)";
+                              e.currentTarget.style.backgroundColor =
+                                "rgba(255, 255, 255, 0.95)";
+                            }}
+                          >
+                            <Heart
+                              size={20}
+                              color={isWishlisted ? "#b91c1c" : "#555"}
+                              fill={isWishlisted ? "#b91c1c" : "none"}
+                              strokeWidth={4}
+                            />
+                          </Button>
+                        );
                       })()}
                     </div>
                     <Card.Body>
