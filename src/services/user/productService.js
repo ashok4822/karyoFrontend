@@ -37,3 +37,43 @@ export const fetchBrandOptions = () => {
 export const fetchVariantOptions = () => {
   return apiHandler(userAxios.get("/products/variant-options"));
 };
+
+export const getFeaturedProductByCategory = (categoryId) => {
+  return apiHandler(
+    userAxios.get("/products", {
+      params: { category: categoryId, limit: 1 },
+    })
+  );
+};
+
+export const getFeaturedProductByBrand = (brand) => {
+  return apiHandler(
+    userAxios.get("/products", {
+      params: { brand, limit: 1 },
+    })
+  );
+};
+
+export const fetchNewLaunchProducts = () => {
+  return apiHandler(
+    userAxios.get("/products", {
+      params: {
+        sort: "createdAt",
+        order: "desc",
+        limit: 6,
+      },
+    })
+  );
+};
+
+export const fetchHandPickedProducts = () => {
+  return apiHandler(
+    userAxios.get("/products", {
+      params: {
+        sort: "variantDetails.colour",
+        order: "asc",
+        limit: 4,
+      },
+    })
+  );
+};

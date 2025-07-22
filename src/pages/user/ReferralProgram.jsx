@@ -1,8 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Button, InputGroup, Form, Badge, Spinner, Table, Alert } from "react-bootstrap";
-import { FaGift, FaUsers, FaTrophy, FaCopy, FaShareAlt, FaLink, FaCheckCircle, FaClock, FaTimesCircle } from "react-icons/fa";
-import userAxios from "../../lib/userAxios";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Button,
+  InputGroup,
+  Form,
+  Badge,
+  Spinner,
+  Table,
+  Alert,
+} from "react-bootstrap";
+import {
+  FaGift,
+  FaUsers,
+  FaTrophy,
+  FaCopy,
+  FaShareAlt,
+  FaLink,
+  FaCheckCircle,
+  FaClock,
+  FaTimesCircle,
+} from "react-icons/fa";
 import { format } from "date-fns";
+import {
+  getReferralCode,
+  getReferralHistory,
+  getReferralStats,
+  postGenerateReferralCode,
+  postGenerateReferralLink,
+} from "../../services/user/referralService";
 
 const ReferralProgram = () => {
   const [referralData, setReferralData] = useState({
@@ -26,8 +54,8 @@ const ReferralProgram = () => {
 
   const fetchReferralData = async () => {
     try {
-      const response = await userAxios.get("/api/user/referral/code");
-      setReferralData(response.data.data);
+      const data = await getReferralCode();
+      setReferralData(data.data);
     } catch (error) {
       setError("Error fetching referral data");
     }
@@ -35,8 +63,9 @@ const ReferralProgram = () => {
 
   const fetchReferralHistory = async () => {
     try {
-      const response = await userAxios.get("/api/user/referral/history");
-      setReferralHistory(response.data.data);
+      const data = await getReferralHistory();
+      console.log("Referral history API response:", data);
+      setReferralHistory(Array.isArray(data.data?.data) ? data.data.data : []);
     } catch (error) {
       setError("Error fetching referral history");
     }
@@ -44,8 +73,8 @@ const ReferralProgram = () => {
 
   const fetchReferralStats = async () => {
     try {
-      const response = await userAxios.get("/api/user/referral/stats");
-      setReferralStats(response.data.data);
+      const data = await getReferralStats();
+      setReferralStats(data.data);
     } catch (error) {
       setError("Error fetching referral stats");
     } finally {
@@ -55,23 +84,25 @@ const ReferralProgram = () => {
 
   const generateReferralCode = async () => {
     try {
-      const response = await userAxios.post("/api/user/referral/generate-code");
-      setReferralData(prev => ({
+      const data = await postGenerateReferralCode();
+      setReferralData((prev) => ({
         ...prev,
-        referralCode: response.data.data.referralCode,
+        referralCode: data.data.referralCode,
       }));
       setCopyMsg("Referral code generated!");
       setTimeout(() => setCopyMsg(""), 1500);
     } catch (error) {
-      setError(error.response?.data?.message || "Failed to generate referral code");
+      setError(
+        error.response?.data?.message || "Failed to generate referral code"
+      );
     }
   };
 
   const generateReferralLink = async () => {
     try {
       setGeneratingLink(true);
-      const response = await userAxios.post("/api/user/referral/generate-link");
-      setReferralLink(response.data.data.referralLink);
+      const data = await postGenerateReferralLink();
+      setReferralLink(data.data.referralLink);
       setCopyMsg("Referral link generated!");
       setTimeout(() => setCopyMsg(""), 1500);
     } catch (error) {
@@ -109,9 +140,27 @@ const ReferralProgram = () => {
   };
 
   const getStatusBadge = (status) => {
-    if (status === "completed") return <Badge bg="success"><FaCheckCircle className="me-1" />Completed</Badge>;
-    if (status === "pending") return <Badge bg="secondary"><FaClock className="me-1" />Pending</Badge>;
-    if (status === "expired") return <Badge bg="danger"><FaTimesCircle className="me-1" />Expired</Badge>;
+    if (status === "completed")
+      return (
+        <Badge bg="success">
+          <FaCheckCircle className="me-1" />
+          Completed
+        </Badge>
+      );
+    if (status === "pending")
+      return (
+        <Badge bg="secondary">
+          <FaClock className="me-1" />
+          Pending
+        </Badge>
+      );
+    if (status === "expired")
+      return (
+        <Badge bg="danger">
+          <FaTimesCircle className="me-1" />
+          Expired
+        </Badge>
+      );
     return <Badge bg="light">{status}</Badge>;
   };
 
@@ -130,7 +179,8 @@ const ReferralProgram = () => {
         <FaGift size={48} className="text-primary mb-3" />
         <h1 className="fw-bold mb-2">Referral Program</h1>
         <p className="lead text-muted mx-auto" style={{ maxWidth: 600 }}>
-          Invite friends and earn rewards! Share your referral code and get exclusive discounts.
+          Invite friends and earn rewards! Share your referral code and get
+          exclusive discounts.
         </p>
       </div>
 
@@ -140,7 +190,9 @@ const ReferralProgram = () => {
           <Card className="shadow-sm text-center border-0">
             <Card.Body>
               <FaUsers size={32} className="mb-2 text-primary" />
-              <div className="fw-bold" style={{ fontSize: 28 }}>{referralData.referralCount}</div>
+              <div className="fw-bold" style={{ fontSize: 28 }}>
+                {referralData.referralCount}
+              </div>
               <div className="text-muted">Total Referrals</div>
             </Card.Body>
           </Card>
@@ -149,7 +201,9 @@ const ReferralProgram = () => {
           <Card className="shadow-sm text-center border-0">
             <Card.Body>
               <FaTrophy size={32} className="mb-2 text-success" />
-              <div className="fw-bold" style={{ fontSize: 28 }}>{referralData.totalReferralRewards}</div>
+              <div className="fw-bold" style={{ fontSize: 28 }}>
+                {referralData.totalReferralRewards}
+              </div>
               <div className="text-muted">Total Rewards</div>
             </Card.Body>
           </Card>
@@ -159,7 +213,8 @@ const ReferralProgram = () => {
             <Card.Body>
               <FaCheckCircle size={32} className="mb-2 text-info" />
               <div className="fw-bold" style={{ fontSize: 28 }}>
-                {referralStats.statusBreakdown?.completed || 0}/{referralData.referralCount || 0}
+                {referralStats.statusBreakdown?.completed || 0}/
+                {referralData.referralCount || 0}
               </div>
               <div className="text-muted">Success Rate</div>
             </Card.Body>
@@ -182,7 +237,11 @@ const ReferralProgram = () => {
                     value={referralData.referralCode}
                     readOnly
                     className="fw-bold text-primary text-center me-2"
-                    style={{ maxWidth: 180, fontFamily: 'monospace', fontSize: 20 }}
+                    style={{
+                      maxWidth: 180,
+                      fontFamily: "monospace",
+                      fontSize: 20,
+                    }}
                   />
                   <Button
                     variant="outline-secondary"
@@ -207,7 +266,9 @@ const ReferralProgram = () => {
                   Generate Referral Code
                 </Button>
               )}
-              {copyMsg && <div className="text-success mt-2 small">{copyMsg}</div>}
+              {copyMsg && (
+                <div className="text-success mt-2 small">{copyMsg}</div>
+              )}
             </Card.Body>
           </Card>
         </Col>
@@ -250,7 +311,9 @@ const ReferralProgram = () => {
                   </>
                 )}
               </InputGroup>
-              {copyMsg && <div className="text-success mt-2 small">{copyMsg}</div>}
+              {copyMsg && (
+                <div className="text-success mt-2 small">{copyMsg}</div>
+              )}
             </Card.Body>
           </Card>
         </Col>
@@ -266,7 +329,9 @@ const ReferralProgram = () => {
                 <FaShareAlt size={32} className="text-primary" />
               </div>
               <div className="fw-bold mb-1">Share Your Code</div>
-              <div className="text-muted small">Share your referral code or link with friends and family.</div>
+              <div className="text-muted small">
+                Share your referral code or link with friends and family.
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -277,7 +342,9 @@ const ReferralProgram = () => {
                 <FaUsers size={32} className="text-success" />
               </div>
               <div className="fw-bold mb-1">They Register</div>
-              <div className="text-muted small">When they register using your code, the referral is tracked.</div>
+              <div className="text-muted small">
+                When they register using your code, the referral is tracked.
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -288,7 +355,9 @@ const ReferralProgram = () => {
                 <FaTrophy size={32} className="text-warning" />
               </div>
               <div className="fw-bold mb-1">Earn Rewards</div>
-              <div className="text-muted small">You both receive exclusive discount coupons as rewards.</div>
+              <div className="text-muted small">
+                You both receive exclusive discount coupons as rewards.
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -323,7 +392,9 @@ const ReferralProgram = () => {
                     const email = referral.referred?.email;
                     let displayName = "";
                     if (firstName || lastName) {
-                      displayName = `${firstName || ""} ${lastName || ""}`.trim();
+                      displayName = `${firstName || ""} ${
+                        lastName || ""
+                      }`.trim();
                     } else if (username) {
                       displayName = username;
                     } else if (email) {
@@ -336,13 +407,28 @@ const ReferralProgram = () => {
                         <td>{displayName}</td>
                         <td>{email || "-"}</td>
                         <td>{getStatusBadge(referral.status)}</td>
-                        <td>{format(new Date(referral.createdAt), "dd/MM/yyyy HH:mm:ss")}</td>
-                        <td>{format(new Date(referral.expiresAt), "dd/MM/yyyy HH:mm:ss")}</td>
+                        <td>
+                          {format(
+                            new Date(referral.createdAt),
+                            "dd/MM/yyyy HH:mm:ss"
+                          )}
+                        </td>
+                        <td>
+                          {format(
+                            new Date(referral.expiresAt),
+                            "dd/MM/yyyy HH:mm:ss"
+                          )}
+                        </td>
                         <td>
                           {referral.rewardCoupon ? (
                             <Badge bg="success">
-                              {referral.rewardCoupon.code} ({referral.rewardCoupon.discountValue}
-                              {referral.rewardCoupon.discountType === "percentage" ? "%" : "₹"})
+                              {referral.rewardCoupon.code} (
+                              {referral.rewardCoupon.discountValue}
+                              {referral.rewardCoupon.discountType ===
+                              "percentage"
+                                ? "%"
+                                : "₹"}
+                              )
                             </Badge>
                           ) : (
                             <span className="text-muted">-</span>
@@ -362,4 +448,4 @@ const ReferralProgram = () => {
   );
 };
 
-export default ReferralProgram; 
+export default ReferralProgram;

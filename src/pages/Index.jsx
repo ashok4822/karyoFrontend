@@ -25,8 +25,14 @@ import {
   addToWishlist,
   removeFromWishlist,
 } from "../redux/reducers/wishlistSlice";
-import { fetchCategories as fetchCategoriesApi } from "../services/user/productService";
-import userAxios from "../lib/userAxios";
+import {
+  fetchCategories,
+  fetchCategories as fetchCategoriesApi,
+  fetchHandPickedProducts,
+  fetchNewLaunchProducts,
+  getFeaturedProductByBrand,
+  getFeaturedProductByCategory,
+} from "../services/user/productService";
 import { toast } from "react-toastify";
 import { addToCart } from "../redux/reducers/cartSlice";
 import { fetchBrandOptions } from "../services/user/productService";
@@ -63,13 +69,11 @@ const Index = () => {
     const fetchFeatured = async () => {
       setLoadingFeatured(true);
       try {
-        const catRes = await fetchCategoriesApi();
+        const catRes = await fetchCategories();
         let categories =
           catRes?.data?.categories || catRes?.categories || catRes?.data || [];
-        console.log("Fetched categories:", categories);
-        // Fallback: use last 4 categories if createdAt is missing
+
         if (categories.length > 0) {
-          // If createdAt exists, sort by it, else just take last 4
           if (categories[0].createdAt) {
             categories = categories
               .filter((cat) => cat.status !== "deleted")
@@ -79,27 +83,23 @@ const Index = () => {
             categories = categories.slice(-4);
           }
         }
-        console.log("Categories used for featured:", categories);
-        // For each category, fetch the first product
-        const productPromises = categories.map((cat) =>
-          userAxios
-            .get("/products", { params: { category: cat._id, limit: 1 } })
-            .then((res) => {
-              const prod = res.data.products?.[0] || null;
-              console.log("Fetched product for category", cat.name, prod);
-              return { product: prod, category: cat };
-            })
-            .catch((err) => {
-              console.log("Error fetching product for category", cat.name, err);
-              return { product: null, category: cat };
-            })
-        );
+
+        const productPromises = categories.map(async (cat) => {
+          try {
+            const prodRes = await getFeaturedProductByCategory(cat._id);
+            const product = prodRes?.data?.products?.[0] || null;
+            return { product, category: cat };
+          } catch (err) {
+            console.log("Error fetching product for category", cat.name, err);
+            return { product: null, category: cat };
+          }
+        });
+
         const results = await Promise.all(productPromises);
         setFeaturedProducts(results);
-        console.log("Featured products:", results);
       } catch (err) {
-        setFeaturedProducts([]);
         console.log("Error in fetchFeatured:", err);
+        setFeaturedProducts([]);
       } finally {
         setLoadingFeatured(false);
       }
@@ -114,13 +114,20 @@ const Index = () => {
       try {
         const brandRes = await fetchBrandOptions();
         let brands = brandRes?.data?.brands || brandRes?.brands || [];
-        brands = brands.slice(0, 4);
-        const productPromises = brands.map((brand) =>
-          userAxios
-            .get("/products", { params: { brand, limit: 1 } })
-            .then((res) => ({ product: res.data.products?.[0] || null, brand }))
-            .catch(() => ({ product: null, brand }))
-        );
+        brands = brands.slice(0, 4); // limit to first 4 brands
+
+        const productPromises = brands.map(async (brand) => {
+          try {
+            const res = await getFeaturedProductByBrand(brand);
+            return {
+              product: res?.data?.products?.[0] || null,
+              brand,
+            };
+          } catch {
+            return { product: null, brand };
+          }
+        });
+
         const results = await Promise.all(productPromises);
         setBrandProducts(results);
       } catch (err) {
@@ -137,10 +144,8 @@ const Index = () => {
     const fetchNewLaunches = async () => {
       setLoadingNewLaunches(true);
       try {
-        const res = await userAxios.get("/products", {
-          params: { sort: "createdAt", order: "desc", limit: 6 },
-        });
-        setNewLaunches(res.data.products || []);
+        const res = await fetchNewLaunchProducts();
+        setNewLaunches(res?.data?.products || []);
       } catch (err) {
         setNewLaunches([]);
       } finally {
@@ -155,11 +160,8 @@ const Index = () => {
     const fetchHandPicked = async () => {
       setLoadingHandPicked(true);
       try {
-        // Assuming the backend supports sort by 'variantDetails.colour' or similar
-        const res = await userAxios.get("/products", {
-          params: { sort: "variantDetails.colour", order: "asc", limit: 4 },
-        });
-        setHandPicked(res.data.products || []);
+        const res = await fetchHandPickedProducts();
+        setHandPicked(res?.data?.products || []);
       } catch (err) {
         setHandPicked([]);
       } finally {
@@ -243,14 +245,19 @@ const Index = () => {
         : null;
     const variantId = variant?._id || variant?.id;
     if (!variantId) {
-      toast.error("This product does not have a valid variant to add to cart.", { autoClose: TOAST_AUTO_CLOSE });
+      toast.error(
+        "This product does not have a valid variant to add to cart.",
+        { autoClose: TOAST_AUTO_CLOSE }
+      );
       return;
     }
     try {
       await dispatch(
         addToCart({ productVariantId: variantId, quantity: 1 })
       ).unwrap();
-      toast.success(`${product.name} has been added to your cart!`, { autoClose: TOAST_AUTO_CLOSE });
+      toast.success(`${product.name} has been added to your cart!`, {
+        autoClose: TOAST_AUTO_CLOSE,
+      });
     } catch (err) {
       let errorMsg = "Failed to add to cart.";
       if (err && typeof err === "object" && err.error) errorMsg = err.error;
@@ -272,7 +279,7 @@ const Index = () => {
       <div className="bg-primary text-white py-5">
         <Container>
           <Row className="align-items-center">
-            <Col lg={6} >
+            <Col lg={6}>
               <h1 className="display-4 fw-bold mb-4">
                 Discover Your Perfect Backpack
               </h1>

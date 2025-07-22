@@ -4,11 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import adminAxios from "@/lib/adminAxios";
 import { format } from "date-fns";
 import { TOAST_AUTO_CLOSE } from "../../utils/toastConfig";
+import { fetchAdminReferrals } from "../../services/user/referralService";
 
 const AdminReferrals = () => {
   const [referrals, setReferrals] = useState([]);
@@ -31,23 +37,25 @@ const AdminReferrals = () => {
   const fetchReferrals = async () => {
     try {
       setLoading(true);
-      // Filter out "all" values and empty strings
+
+      // Clean filters
       const filteredParams = Object.fromEntries(
-        Object.entries(filters).filter(([key, value]) => value && value !== "all")
+        Object.entries(filters).filter(([_, value]) => value && value !== "all")
       );
-      
-      const params = new URLSearchParams({
+
+      const queryParams = {
         page: pagination.currentPage,
         limit: pagination.itemsPerPage,
         ...filteredParams,
-      });
+      };
 
-      const response = await adminAxios.get(`/api/referrals?${params}`);
-      setReferrals(response.data.data);
-      setPagination(prev => ({
+      const data = await fetchAdminReferrals(queryParams);
+
+      setReferrals(data.data);
+      setPagination((prev) => ({
         ...prev,
-        totalPages: response.data.pagination.totalPages,
-        totalItems: response.data.pagination.totalItems,
+        totalPages: data.pagination.totalPages,
+        totalItems: data.pagination.totalItems,
       }));
     } catch (error) {
       toast.error("Failed to fetch referrals", { autoClose: TOAST_AUTO_CLOSE });
@@ -92,12 +100,19 @@ const AdminReferrals = () => {
               <Input
                 placeholder="Search referrals..."
                 value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, search: e.target.value }))
+                }
               />
             </div>
             <div>
               <Label>Status</Label>
-              <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+              <Select
+                value={filters.status}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, status: value }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
@@ -110,7 +125,10 @@ const AdminReferrals = () => {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button onClick={() => setFilters({ status: "all", search: "" })} variant="outline">
+              <Button
+                onClick={() => setFilters({ status: "all", search: "" })}
+                variant="outline"
+              >
                 Clear Filters
               </Button>
             </div>
@@ -130,49 +148,72 @@ const AdminReferrals = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold">
-                        {referral.referrer?.firstName} {referral.referrer?.lastName}
+                        {referral.referrer?.firstName}{" "}
+                        {referral.referrer?.lastName}
                       </h3>
                       {getStatusBadge(referral.status)}
                       {getReferralTypeBadge(referral)}
                     </div>
-                    
+
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                       <div>
-                        <span className="font-medium">Referrer:</span> {referral.referrer?.email}
+                        <span className="font-medium">Referrer:</span>{" "}
+                        {referral.referrer?.email}
                       </div>
                       <div>
-                        <span className="font-medium">Referred:</span> {referral.referred?.email || "Pending"}
+                        <span className="font-medium">Referred:</span>{" "}
+                        {referral.referred?.email || "Pending"}
                       </div>
                       <div>
-                        <span className="font-medium">Created:</span> {format(new Date(referral.createdAt), "dd/MM/yyyy HH:mm:ss")}
+                        <span className="font-medium">Created:</span>{" "}
+                        {format(
+                          new Date(referral.createdAt),
+                          "dd/MM/yyyy HH:mm:ss"
+                        )}
                       </div>
                       <div>
-                        <span className="font-medium">Expires:</span> {format(new Date(referral.expiresAt), "dd/MM/yyyy HH:mm:ss")}
+                        <span className="font-medium">Expires:</span>{" "}
+                        {format(
+                          new Date(referral.expiresAt),
+                          "dd/MM/yyyy HH:mm:ss"
+                        )}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Referral Code:</span> {referral.referralCode}
+                        <span className="font-medium">Referral Code:</span>{" "}
+                        {referral.referralCode}
                       </div>
                       {referral.referralToken && (
                         <div>
-                          <span className="font-medium">Referral Token:</span> {referral.referralToken.substring(0, 16)}...
+                          <span className="font-medium">Referral Token:</span>{" "}
+                          {referral.referralToken.substring(0, 16)}...
                         </div>
                       )}
                       {referral.completedAt && (
                         <div>
-                          <span className="font-medium">Completed:</span> {format(new Date(referral.completedAt), "dd/MM/yyyy HH:mm:ss")}
+                          <span className="font-medium">Completed:</span>{" "}
+                          {format(
+                            new Date(referral.completedAt),
+                            "dd/MM/yyyy HH:mm:ss"
+                          )}
                         </div>
                       )}
                     </div>
 
                     {referral.rewardCoupon && (
                       <div className="mt-2 p-2 bg-green-50 rounded">
-                        <span className="font-medium text-green-800">Reward Coupon:</span> {referral.rewardCoupon.code}
+                        <span className="font-medium text-green-800">
+                          Reward Coupon:
+                        </span>{" "}
+                        {referral.rewardCoupon.code}
                         <span className="ml-2 text-green-600">
                           ({referral.rewardCoupon.discountValue}
-                          {referral.rewardCoupon.discountType === "percentage" ? "%" : "₹"})
+                          {referral.rewardCoupon.discountType === "percentage"
+                            ? "%"
+                            : "₹"}
+                          )
                         </span>
                       </div>
                     )}
@@ -191,7 +232,12 @@ const AdminReferrals = () => {
             <Button
               variant="outline"
               disabled={pagination.currentPage === 1}
-              onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  currentPage: prev.currentPage - 1,
+                }))
+              }
             >
               Previous
             </Button>
@@ -201,7 +247,12 @@ const AdminReferrals = () => {
             <Button
               variant="outline"
               disabled={pagination.currentPage === pagination.totalPages}
-              onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
+              onClick={() =>
+                setPagination((prev) => ({
+                  ...prev,
+                  currentPage: prev.currentPage + 1,
+                }))
+              }
             >
               Next
             </Button>
@@ -210,12 +261,10 @@ const AdminReferrals = () => {
       )}
 
       {referrals.length === 0 && !loading && (
-        <div className="text-center py-8 text-gray-500">
-          No referrals found
-        </div>
+        <div className="text-center py-8 text-gray-500">No referrals found</div>
       )}
     </div>
   );
 };
 
-export default AdminReferrals; 
+export default AdminReferrals;

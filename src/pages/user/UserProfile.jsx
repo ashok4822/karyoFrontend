@@ -54,8 +54,8 @@ import {
   verifyEmailChangeOtp,
 } from "../../services/user/userService";
 import { submitReturnRequest } from "../../services/user/orderService";
-import userAxios from "../../lib/userAxios";
 import ReferralProgram from "./ReferralProgram";
+import { getReferralCode } from "../../services/user/referralService";
 
 const sidebarItems = [
   { label: "User Details", icon: <FaUser /> },
@@ -758,8 +758,8 @@ const UserProfile = () => {
     // Fetch referral code on mount
     const fetchReferralCode = async () => {
       try {
-        const response = await userAxios.get("/api/user/referral/code");
-        setReferralCode(response.data.data.referralCode || "");
+        const data = await getReferralCode();
+        setReferralCode(data.data.referralCode || "");
       } catch (error) {
         setReferralCode("");
       }

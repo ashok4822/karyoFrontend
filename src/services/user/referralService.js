@@ -1,64 +1,44 @@
 import userAxios from "../../lib/userAxios";
+import adminAxios from "../../lib/adminAxios";
+import { apiHandler } from "../../utils/apiHandler";
 
-// Generate referral code for user
-export const generateReferralCode = async () => {
-  try {
-    const response = await userAxios.post("/api/user/referral/generate-code");
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
+// User Referral APIs
+
+export const getReferralCode = () => {
+  return apiHandler(userAxios.get("/api/user/referral/code"));
 };
 
-// Get user's referral code and stats
-export const getReferralCode = async () => {
-  try {
-    const response = await userAxios.get("/api/user/referral/code");
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
+export const postGenerateReferralCode = () => {
+  return apiHandler(userAxios.post("/api/user/referral/generate-code"));
 };
 
-// Generate referral link with token
-export const generateReferralLink = async () => {
-  try {
-    const response = await userAxios.post("/api/user/referral/generate-link");
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
+export const postGenerateReferralLink = () => {
+  return apiHandler(userAxios.post("/api/user/referral/generate-link"));
 };
 
-// Get user's referral history
-export const getReferralHistory = async (page = 1, limit = 10) => {
-  try {
-    const response = await userAxios.get(`/api/user/referral/history?page=${page}&limit=${limit}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
+export const getReferralHistory = (page = 1, limit = 10) => {
+  return apiHandler(
+    userAxios.get("/api/user/referral/history", {
+      params: { page, limit },
+    })
+  );
 };
 
-// Get user's referral statistics
-export const getReferralStats = async () => {
-  try {
-    const response = await userAxios.get("/api/user/referral/stats");
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
+export const getReferralStats = () => {
+  return apiHandler(userAxios.get("/api/user/referral/stats"));
 };
 
-// Validate referral code/token
-export const validateReferral = async (referralCode, referralToken) => {
-  try {
-    const response = await userAxios.post("/api/referral/validate", {
+export const validateReferral = (referralCode, referralToken) => {
+  return apiHandler(
+    userAxios.post("/api/referral/validate", {
       referralCode,
       referralToken,
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
-}; 
+    })
+  );
+};
+
+// Admin Referral APIs
+
+export const fetchAdminReferrals = (params = {}) => {
+  return apiHandler(adminAxios.get("/api/referrals", { params }));
+};

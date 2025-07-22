@@ -69,3 +69,5 @@ export const deleteVariant = (productId, variantId) => {
     adminAxios.delete(`/products/${productId}/variants/${variantId}`)
   );
 };
+
+

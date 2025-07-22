@@ -32,8 +32,16 @@ import {
 } from "react-icons/fa";
 import AdminLeftbar from "../../components/AdminLeftbar";
 import Swal from "sweetalert2";
-import adminAxios from "../../lib/adminAxios";
 import { format } from "date-fns";
+import {
+  createOffer,
+  deleteOffer,
+  getOffers,
+  toggleOfferStatus,
+  updateOffer,
+} from "../../services/admin/offerService";
+import { getAllProducts } from "../../services/admin/adminProductService";
+import { getAllCategories } from "../../services/admin/adminCategoryService";
 
 const AdminOffers = () => {
   const [offers, setOffers] = useState([]);
@@ -84,7 +92,7 @@ const AdminOffers = () => {
   const fetchOffers = async () => {
     try {
       setLoading(true);
-      // Only send basic filters to backend
+
       const basicFilters = {
         offerType: filters.offerType,
         status: filters.status,
@@ -97,46 +105,48 @@ const AdminOffers = () => {
         )
       );
 
-      const params = new URLSearchParams({
+      const queryParams = {
         page: pagination.currentPage,
         limit: pagination.itemsPerPage,
         ...filteredParams,
-      });
+      };
 
-      const response = await adminAxios.get(`/offers?${params}`);
-      let filteredOffers = response.data.data;
+      const { success, data, error } = await getOffers(queryParams);
 
-      // Apply client-side filtering for target product and category
+      if (!success) {
+        throw new Error(error || "Failed to fetch offers");
+      }
+
+      let filteredOffers = data.data;
+
+      // Client-side filter: target product
       if (filters.targetProduct !== "all") {
         filteredOffers = filteredOffers.filter(
           (offer) =>
             offer.offerType === "product" &&
-            offer.products &&
-            offer.products.some(
-              (product) => product._id === filters.targetProduct
-            )
+            offer.products?.some((p) => p._id === filters.targetProduct)
         );
       }
 
+      // Client-side filter: target category
       if (filters.targetCategory !== "all") {
         filteredOffers = filteredOffers.filter(
           (offer) =>
             offer.offerType === "category" &&
-            offer.category &&
-            offer.category._id === filters.targetCategory
+            offer.category?._id === filters.targetCategory
         );
       }
 
       setOffers(filteredOffers);
       setPagination((prev) => ({
         ...prev,
-        totalPages: response.data.pagination.totalPages,
-        totalItems: response.data.pagination.totalItems,
+        totalPages: data.pagination.totalPages,
+        totalItems: data.pagination.totalItems,
       }));
     } catch (error) {
       Swal.fire({
         title: "Error",
-        text: "Failed to fetch offers",
+        text: error.message || "Failed to fetch offers",
         icon: "error",
         confirmButtonColor: "#dc3545",
       });
@@ -148,8 +158,8 @@ const AdminOffers = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await adminAxios.get("/products?limit=1000");
-      setProducts(response.data.products || []);
+      const data = await getAllProducts({ limit: 1000 });
+      setProducts(data.products || []);
     } catch (error) {
       console.error("Error fetching products:", error);
     }
@@ -157,8 +167,8 @@ const AdminOffers = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await adminAxios.get("/categories?limit=1000");
-      setCategories(response.data.categories || []);
+      const data = await getAllCategories({ limit: 1000 });
+      setCategories(data.categories || []);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -185,7 +195,8 @@ const AdminOffers = () => {
         validTo: new Date(formData.validTo).toISOString(),
       };
 
-      await adminAxios.post("/offers", offerData);
+      await createOffer(offerData);
+
       setIsCreateModalOpen(false);
       Swal.fire({
         title: "Success",
@@ -197,7 +208,7 @@ const AdminOffers = () => {
     } catch (error) {
       Swal.fire({
         title: "Error",
-        text: error.response?.data?.message || "Failed to create offer",
+        text: error?.message || "Failed to create offer",
         icon: "error",
         confirmButtonColor: "#dc3545",
       });
@@ -225,7 +236,8 @@ const AdminOffers = () => {
         validTo: new Date(formData.validTo).toISOString(),
       };
 
-      await adminAxios.put(`/offers/${selectedOffer._id}`, offerData);
+      await updateOffer(selectedOffer._id, offerData);
+
       setIsEditModalOpen(false);
       Swal.fire({
         title: "Success",
@@ -237,7 +249,7 @@ const AdminOffers = () => {
     } catch (error) {
       Swal.fire({
         title: "Error",
-        text: error.response?.data?.message || "Failed to update offer",
+        text: error?.message || "Failed to update offer",
         icon: "error",
         confirmButtonColor: "#dc3545",
       });
@@ -257,7 +269,7 @@ const AdminOffers = () => {
 
     if (result.isConfirmed) {
       try {
-        await adminAxios.delete(`/offers/${offerId}`);
+        await deleteOffer(offerId);
         Swal.fire({
           title: "Deleted!",
           text: "Offer has been deleted.",
@@ -268,7 +280,7 @@ const AdminOffers = () => {
       } catch (error) {
         Swal.fire({
           title: "Error",
-          text: "Failed to delete offer",
+          text: error?.message || "Failed to delete offer",
           icon: "error",
           confirmButtonColor: "#dc3545",
         });
@@ -279,9 +291,7 @@ const AdminOffers = () => {
   const handleToggleStatus = async (offerId, currentStatus) => {
     try {
       const newStatus = currentStatus === "active" ? "inactive" : "active";
-      await adminAxios.patch(`/offers/${offerId}/status`, {
-        status: newStatus,
-      });
+      await toggleOfferStatus(offerId, newStatus);
       Swal.fire({
         title: "Success",
         text: `Offer ${newStatus}`,
@@ -292,7 +302,7 @@ const AdminOffers = () => {
     } catch (error) {
       Swal.fire({
         title: "Error",
-        text: "Failed to update offer status",
+        text: error?.message || "Failed to update offer status",
         icon: "error",
         confirmButtonColor: "#dc3545",
       });
@@ -354,15 +364,27 @@ const AdminOffers = () => {
   };
 
   const getStatusBadge = (offer) => {
-    if (isOfferExpired(offer) && (offer.status === "active" || offer.status === "inactive")) {
-      return <Badge bg="danger" title="This offer has expired but status hasn't been updated yet">expired*</Badge>;
+    if (
+      isOfferExpired(offer) &&
+      (offer.status === "active" || offer.status === "inactive")
+    ) {
+      return (
+        <Badge
+          bg="danger"
+          title="This offer has expired but status hasn't been updated yet"
+        >
+          expired*
+        </Badge>
+      );
     }
     const variants = {
       active: "success",
       inactive: "secondary",
       expired: "danger",
     };
-    return <Badge bg={variants[offer.status] || "secondary"}>{offer.status}</Badge>;
+    return (
+      <Badge bg={variants[offer.status] || "secondary"}>{offer.status}</Badge>
+    );
   };
 
   const getOfferTypeBadge = (type) => {
@@ -573,7 +595,7 @@ const AdminOffers = () => {
                         <option value="all">All products</option>
                         {products.map((product) => (
                           <option key={product._id} value={product._id}>
-                            {product?.name || 'Product Name Not Available'}
+                            {product?.name || "Product Name Not Available"}
                           </option>
                         ))}
                       </Form.Select>
@@ -594,7 +616,7 @@ const AdminOffers = () => {
                         <option value="all">All categories</option>
                         {categories.map((category) => (
                           <option key={category._id} value={category._id}>
-                            {category?.name || 'Category Name Not Available'}
+                            {category?.name || "Category Name Not Available"}
                           </option>
                         ))}
                       </Form.Select>
@@ -715,7 +737,11 @@ const AdminOffers = () => {
                                     <div className="small text-muted">
                                       {offer.products
                                         .slice(0, 2)
-                                        .map((product) => product?.name || 'Product Name Not Available')
+                                        .map(
+                                          (product) =>
+                                            product?.name ||
+                                            "Product Name Not Available"
+                                        )
                                         .join(", ")}
                                       {offer.products.length > 2 &&
                                         ` +${offer.products.length - 2} more`}
@@ -725,7 +751,8 @@ const AdminOffers = () => {
                                   offer.category ? (
                                   <div>
                                     <div className="fw-bold text-warning">
-                                      {offer.category?.name || 'Category Name Not Available'}
+                                      {offer.category?.name ||
+                                        "Category Name Not Available"}
                                     </div>
                                     {offer.category.description && (
                                       <div className="small text-muted">
@@ -760,9 +787,7 @@ const AdminOffers = () => {
                                   <div>To: {formatDate(offer.validTo)}</div>
                                 </div>
                               </td>
-                              <td>
-                                {getStatusBadge(offer)}
-                              </td>
+                              <td>{getStatusBadge(offer)}</td>
                               <td>
                                 {offer.usageCount || 0}
                                 {offer.maxUsage && ` / ${offer.maxUsage}`}
@@ -958,28 +983,49 @@ const OfferForm = ({
     const errors = {};
     const discountValue = parseFloat(formData.discountValue);
     const minimumAmount = parseFloat(formData.minimumAmount);
-    const maximumDiscount = formData.maximumDiscount !== '' ? parseFloat(formData.maximumDiscount) : undefined;
+    const maximumDiscount =
+      formData.maximumDiscount !== ""
+        ? parseFloat(formData.maximumDiscount)
+        : undefined;
     const discountType = formData.discountType;
 
-    if (!formData.name.trim()) errors.name = 'Offer name is required';
-    if (!formData.discountValue || isNaN(discountValue) || discountValue <= 0) errors.discountValue = 'Discount value must be greater than 0';
-    if (!formData.validFrom) errors.validFrom = 'Valid from date is required';
-    if (!formData.validTo) errors.validTo = 'Valid to date is required';
-    if (formData.validFrom && formData.validTo && new Date(formData.validFrom) >= new Date(formData.validTo)) errors.validTo = 'Valid to date must be after valid from date';
-    if (minimumAmount && discountValue >= minimumAmount) errors.discountValue = 'Discount value must be less than minimum amount';
+    if (!formData.name.trim()) errors.name = "Offer name is required";
+    if (!formData.discountValue || isNaN(discountValue) || discountValue <= 0)
+      errors.discountValue = "Discount value must be greater than 0";
+    if (!formData.validFrom) errors.validFrom = "Valid from date is required";
+    if (!formData.validTo) errors.validTo = "Valid to date is required";
+    if (
+      formData.validFrom &&
+      formData.validTo &&
+      new Date(formData.validFrom) >= new Date(formData.validTo)
+    )
+      errors.validTo = "Valid to date must be after valid from date";
+    if (minimumAmount && discountValue >= minimumAmount)
+      errors.discountValue = "Discount value must be less than minimum amount";
 
-    if (discountType === 'percentage') {
-      if (discountValue < 0 || discountValue > 100) errors.discountValue = 'Percentage discount must be between 0 and 100';
-      if (maximumDiscount === undefined || isNaN(maximumDiscount)) errors.maximumDiscount = 'Maximum discount is required for percentage offers';
+    if (discountType === "percentage") {
+      if (discountValue < 0 || discountValue > 100)
+        errors.discountValue = "Percentage discount must be between 0 and 100";
+      if (maximumDiscount === undefined || isNaN(maximumDiscount))
+        errors.maximumDiscount =
+          "Maximum discount is required for percentage offers";
       else {
-        if (maximumDiscount <= discountValue) errors.maximumDiscount = 'Maximum discount must be greater than discount value';
-        if (minimumAmount && maximumDiscount >= minimumAmount) errors.maximumDiscount = 'Maximum discount must be less than minimum amount';
+        if (maximumDiscount <= discountValue)
+          errors.maximumDiscount =
+            "Maximum discount must be greater than discount value";
+        if (minimumAmount && maximumDiscount >= minimumAmount)
+          errors.maximumDiscount =
+            "Maximum discount must be less than minimum amount";
       }
     }
-    if (discountType === 'fixed') {
+    if (discountType === "fixed") {
       if (maximumDiscount !== undefined && !isNaN(maximumDiscount)) {
-        if (maximumDiscount < discountValue) errors.maximumDiscount = 'Maximum discount cannot be less than discount value';
-        if (minimumAmount && maximumDiscount >= minimumAmount) errors.maximumDiscount = 'Maximum discount must be less than minimum amount';
+        if (maximumDiscount < discountValue)
+          errors.maximumDiscount =
+            "Maximum discount cannot be less than discount value";
+        if (minimumAmount && maximumDiscount >= minimumAmount)
+          errors.maximumDiscount =
+            "Maximum discount must be less than minimum amount";
       }
     }
     setFormErrors(errors);
@@ -990,12 +1036,13 @@ const OfferForm = ({
     e.preventDefault();
     if (!validateForm()) {
       // Show error alert (optional: use toast or modal)
-      window.Swal && window.Swal.fire({
-        title: 'Validation Error',
-        text: Object.values(formErrors).join('\n'),
-        icon: 'warning',
-        confirmButtonColor: '#dc3545',
-      });
+      window.Swal &&
+        window.Swal.fire({
+          title: "Validation Error",
+          text: Object.values(formErrors).join("\n"),
+          icon: "warning",
+          confirmButtonColor: "#dc3545",
+        });
       return;
     }
     onSubmit();
@@ -1013,7 +1060,9 @@ const OfferForm = ({
               onChange={(e) => handleInputChange("name", e.target.value)}
               isInvalid={!!formErrors.name}
             />
-            <Form.Control.Feedback type="invalid">{formErrors.name}</Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">
+              {formErrors.name}
+            </Form.Control.Feedback>
           </Form.Group>
         </Col>
         <Col md={6}>
@@ -1069,7 +1118,9 @@ const OfferForm = ({
               }
               isInvalid={!!formErrors.discountValue}
             />
-            <Form.Control.Feedback type="invalid">{formErrors.discountValue}</Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">
+              {formErrors.discountValue}
+            </Form.Control.Feedback>
           </Form.Group>
         </Col>
       </Row>
@@ -1090,7 +1141,7 @@ const OfferForm = ({
           >
             {products.map((product) => (
               <option key={product._id} value={product._id}>
-                {product?.name || 'Product Name Not Available'}
+                {product?.name || "Product Name Not Available"}
               </option>
             ))}
           </Form.Select>
@@ -1107,7 +1158,7 @@ const OfferForm = ({
             <option value="">Select a category</option>
             {categories.map((category) => (
               <option key={category._id} value={category._id}>
-                {category?.name || 'Category Name Not Available'}
+                {category?.name || "Category Name Not Available"}
               </option>
             ))}
           </Form.Select>
@@ -1124,7 +1175,9 @@ const OfferForm = ({
               onChange={(e) => handleInputChange("validFrom", e.target.value)}
               isInvalid={!!formErrors.validFrom}
             />
-            <Form.Control.Feedback type="invalid">{formErrors.validFrom}</Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">
+              {formErrors.validFrom}
+            </Form.Control.Feedback>
           </Form.Group>
         </Col>
         <Col md={6}>
@@ -1136,7 +1189,9 @@ const OfferForm = ({
               onChange={(e) => handleInputChange("validTo", e.target.value)}
               isInvalid={!!formErrors.validTo}
             />
-            <Form.Control.Feedback type="invalid">{formErrors.validTo}</Form.Control.Feedback>
+            <Form.Control.Feedback type="invalid">
+              {formErrors.validTo}
+            </Form.Control.Feedback>
           </Form.Group>
         </Col>
       </Row>
@@ -1157,7 +1212,7 @@ const OfferForm = ({
           </Form.Group>
         </Col>
         <Col md={6}>
-          {formData.discountType === 'percentage' && (
+          {formData.discountType === "percentage" && (
             <Form.Group className="mb-3">
               <Form.Label>Maximum Discount *</Form.Label>
               <Form.Control
@@ -1170,10 +1225,12 @@ const OfferForm = ({
                 }
                 isInvalid={!!formErrors.maximumDiscount}
               />
-              <Form.Control.Feedback type="invalid">{formErrors.maximumDiscount}</Form.Control.Feedback>
+              <Form.Control.Feedback type="invalid">
+                {formErrors.maximumDiscount}
+              </Form.Control.Feedback>
             </Form.Group>
           )}
-          {formData.discountType === 'fixed' && (
+          {formData.discountType === "fixed" && (
             <Form.Group className="mb-3">
               <Form.Label>Maximum Discount</Form.Label>
               <Form.Control
@@ -1186,7 +1243,9 @@ const OfferForm = ({
                 }
                 isInvalid={!!formErrors.maximumDiscount}
               />
-              <Form.Control.Feedback type="invalid">{formErrors.maximumDiscount}</Form.Control.Feedback>
+              <Form.Control.Feedback type="invalid">
+                {formErrors.maximumDiscount}
+              </Form.Control.Feedback>
             </Form.Group>
           )}
         </Col>
@@ -1231,11 +1290,7 @@ const OfferForm = ({
       </Form.Group>
 
       <div className="d-flex justify-content-end gap-2">
-        <Button
-          variant="secondary"
-          type="button"
-          onClick={onCancel}
-        >
+        <Button variant="secondary" type="button" onClick={onCancel}>
           Cancel
         </Button>
         <Button variant="primary" type="submit">
@@ -1433,7 +1488,9 @@ const OfferDetails = ({ offer }) => {
                   <div key={product._id} className="col-md-6 mb-2">
                     <div className="d-flex align-items-center gap-2 p-2 bg-light rounded">
                       <FaBox className="text-primary" />
-                      <span>{product?.name || 'Product Name Not Available'}</span>
+                      <span>
+                        {product?.name || "Product Name Not Available"}
+                      </span>
                       {product?.price && (
                         <Badge bg="secondary" className="ms-auto">
                           ₹{product.price}
@@ -1453,7 +1510,9 @@ const OfferDetails = ({ offer }) => {
             <h6>Eligible Category</h6>
             <div className="d-flex align-items-center gap-2 p-3 bg-light rounded">
               <FaTag className="text-warning" />
-              <span className="fw-bold">{offer.category?.name || 'Category Name Not Available'}</span>
+              <span className="fw-bold">
+                {offer.category?.name || "Category Name Not Available"}
+              </span>
               {offer.category.description && (
                 <span className="text-muted ms-2">
                   ({offer.category.description})

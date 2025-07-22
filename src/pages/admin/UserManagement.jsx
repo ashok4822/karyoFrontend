@@ -17,7 +17,6 @@ import {
 } from "react-bootstrap";
 import { FaSearch, FaPlus, FaUserTimes, FaUserCheck } from "react-icons/fa";
 import AdminLeftbar from "../../components/AdminLeftbar";
-import adminAxios from "../../lib/adminAxios";
 import {
   getUsers,
   toggleBlockUser,

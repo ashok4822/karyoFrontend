@@ -44,7 +44,9 @@ export const restoreCategory = (categoryId) => {
 
 // Fetch all active categories (no pagination)
 export const getAllActiveCategories = () => {
-  return apiHandler(
-    adminAxios.get("/categories/active")
-  );
+  return apiHandler(adminAxios.get("/categories/active"));
+};
+
+export const getAllCategories = (params = {}) => {
+  return apiHandler(adminAxios.get("/categories", { params }));
 };
