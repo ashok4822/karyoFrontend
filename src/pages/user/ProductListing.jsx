@@ -554,7 +554,11 @@ const ProductListing = () => {
                     </div>
                     <Card.Body className={view === "list" ? "col-md-8" : "d-flex flex-column justify-content-between"} style={{ padding: "1.25rem" }}>
                       <div>
-                        <Card.Title className="h5 mb-1 text-truncate" title={product.name}>{product.name}</Card.Title>
+                        <Card.Title className="h5 mb-1 text-truncate" title={product.name}>
+                          {view === "list" && product.name && product.name.length > 50
+                            ? product.name.slice(0, 50) + "..."
+                            : product.name}
+                        </Card.Title>
                         <div className="mb-1">
                           <span className="badge bg-info text-dark small">
                             {product.brand || 'Unknown Brand'}
