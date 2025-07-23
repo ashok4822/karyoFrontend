@@ -759,7 +759,8 @@ const UserProfile = () => {
     const fetchReferralCode = async () => {
       try {
         const data = await getReferralCode();
-        setReferralCode(data.data.referralCode || "");
+
+        setReferralCode(data.data.data.referralCode || "");
       } catch (error) {
         setReferralCode("");
       }

@@ -483,67 +483,94 @@ const OrderConfirmation = () => {
                 </div>
               </div>
 
-              <div className="mb-4">
-                <h5 className="fw-semibold mb-3">Order Items</h5>
-                <ul className="list-group list-group-flush">
-                  {currentOrder.items.map((item, index) => (
-                    <li
-                      key={index}
-                      className="list-group-item px-0 py-3 d-flex align-items-center"
-                    >
-                      <Link
-                        to={`/products/${item.productVariantId.product?._id}`}
-                        className="d-flex align-items-center flex-grow-1 text-decoration-none"
-                        style={{ color: "inherit" }}
-                      >
-                        <div className="order-item-img me-3 flex-shrink-0">
-                          {item.productVariantId?.imageUrls?.[0] ? (
-                            <img
-                              src={item.productVariantId.imageUrls[0]}
-                              alt={item.productVariantId.product?.name}
-                              className="img-fluid rounded-3"
-                              style={{
-                                width: "48px",
-                                height: "48px",
-                                objectFit: "cover",
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
-                              style={{ width: "48px", height: "48px" }}
-                            ></div>
-                          )}
-                        </div>
-                        <div className="flex-grow-1">
-                          <div className="fw-semibold text-dark">
-                            {item.productVariantId?.product?.name ||
-                              "Product Name"}
-                          </div>
-                          <div className="text-muted small">
-                            {item.productVariantId?.colour}{" "}
-                            {item.productVariantId?.capacity && `- ${item.productVariantId.capacity}`}
-                          </div>
-                        </div>
-                        <div className="text-muted small">
-                          Qty: {item.quantity}
-                        </div>
-                        <div className="fw-semibold text-dark">
-                          INR {item.price.toFixed(2)}
-                        </div>
-                        <div className="fw-semibold text-dark">
-                          INR {(item.price * item.quantity).toFixed(2)}
-                        </div>
-                        <div className="text-muted small">
-                          Status: {item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown'}
-                        </div>
-                        <div className="text-muted small">
-                          Payment Status: {item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending'}
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+              <div className="mb-4"> 
+                <h5 className="fw-semibold mb-3">Order Items</h5> 
+                <div className="card border-0 shadow-sm"> 
+                  <div className="card-header bg-light py-3"> 
+                    <div className="row align-items-center text-muted small fw-semibold"> 
+                      <div className="col-md-6">Product</div> 
+                      <div className="col-md-2 text-center">Quantity</div> 
+                      <div className="col-md-2 text-center">Price</div> 
+                      <div className="col-md-2 text-center">Status</div> 
+                    </div> 
+                  </div> 
+                  <ul className="list-group list-group-flush"> 
+                    {currentOrder.items.map((item, index) => ( 
+                      <li 
+                        key={index} 
+                        className="list-group-item px-3 py-3" 
+                      > 
+                        <div className="row align-items-center"> 
+                          <div className="col-md-6"> 
+                            <Link 
+                              to={`/products/${item.productVariantId.product?._id}`} 
+                              className="d-flex align-items-center text-decoration-none" 
+                              style={{ color: "inherit" }} 
+                            > 
+                              <div className="order-item-img me-3 flex-shrink-0"> 
+                                {item.productVariantId?.imageUrls?.[0] ? ( 
+                                  <img 
+                                    src={item.productVariantId.imageUrls[0]} 
+                                    alt={item.productVariantId.product?.name} 
+                                    className="img-fluid rounded-3" 
+                                    style={{ 
+                                      width: "60px", 
+                                      height: "60px", 
+                                      objectFit: "cover", 
+                                    }} 
+                                  /> 
+                                ) : ( 
+                                  <div 
+                                    className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" 
+                                    style={{ width: "60px", height: "60px" }} 
+                                  ></div> 
+                                )} 
+                              </div> 
+                              <div> 
+                                <div className="fw-semibold text-dark mb-1"> 
+                                  {item.productVariantId?.product?.name || 
+                                    "Product Name"} 
+                                </div> 
+                                <div className="text-muted small"> 
+                                  {item.productVariantId?.colour}{" "} 
+                                  {item.productVariantId?.capacity && `- ${item.productVariantId.capacity}`} 
+                                </div> 
+                              </div> 
+                            </Link> 
+                          </div> 
+                          <div className="col-md-2 text-center"> 
+                            <span className="badge bg-light text-dark border">{item.quantity}</span> 
+                          </div> 
+                          <div className="col-md-2 text-center"> 
+                            <div className="fw-semibold text-dark mb-1"> 
+                              INR {(item.price * item.quantity).toFixed(2)} 
+                            </div> 
+                            <div className="text-muted small"> 
+                              @ INR {item.price.toFixed(2)} 
+                            </div> 
+                          </div> 
+                          <div className="col-md-2 text-center"> 
+                            <div className="mb-1"> 
+                              <span className={`badge ${item.itemStatus === 'delivered' ? 'bg-success' : 
+                                item.itemStatus === 'shipped' ? 'bg-info' : 
+                                item.itemStatus === 'processing' ? 'bg-warning' : 
+                                item.itemStatus === 'cancelled' ? 'bg-danger' : 'bg-secondary'}`}> 
+                                {item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown'} 
+                              </span> 
+                            </div> 
+                            <div> 
+                              <span className={`badge ${item.itemPaymentStatus === 'paid' ? 'bg-success bg-opacity-10 text-success' : 
+                                item.itemPaymentStatus === 'refunded' ? 'bg-info bg-opacity-10 text-info' : 
+                                'bg-warning bg-opacity-10 text-warning'}`}> 
+                                {item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending'} 
+                              </span> 
+                            </div> 
+                          </div> 
+                        </div> 
+                      </li> 
+                    ))} 
+                  </ul> 
+                </div> 
               </div>
 
               <div className="mb-4">

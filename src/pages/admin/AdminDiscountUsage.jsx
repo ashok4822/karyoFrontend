@@ -227,7 +227,9 @@ const AdminDiscountUsage = () => {
                                   </small>
                                 </div>
                               </td>
-                              <td>{usage.discount?.name}</td>
+                              <td>
+                                {discounts.find(d => d._id === usage.discount)?.name || 'N/A'}
+                              </td>
                               <td>
                                 <Badge bg="primary">{usage.usageCount}</Badge>
                               </td>

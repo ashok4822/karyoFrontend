@@ -116,7 +116,7 @@ const AdminOrderDetails = () => {
 
       const result = await getOrderById(id);
 
-      console.log("AdminOrder Details result: ", result);
+      console.log("AdminOrder Details result: ", result.data);
 
       if (result.success) {
         setOrder(result.data.order);
@@ -206,15 +206,22 @@ const AdminOrderDetails = () => {
 
   // Helper to calculate adjusted total (excluding refunded items, with proportional discount)
   const getAdjustedTotalAndDiscount = () => {
-    const allItemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const allItemsTotal = order.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
     const nonRefundedItemsTotal = order.items
-      .filter((item) => item.itemPaymentStatus !== 'refunded')
+      .filter((item) => item.itemPaymentStatus !== "refunded")
       .reduce((sum, item) => sum + item.price * item.quantity, 0);
     const discount = getDiscountAmount();
-    const proportionalDiscount = allItemsTotal > 0
-      ? (nonRefundedItemsTotal / allItemsTotal) * discount
-      : 0;
-    const adjustedTotal = Math.max(0, nonRefundedItemsTotal - proportionalDiscount);
+    const proportionalDiscount =
+      allItemsTotal > 0
+        ? (nonRefundedItemsTotal / allItemsTotal) * discount
+        : 0;
+    const adjustedTotal = Math.max(
+      0,
+      nonRefundedItemsTotal - proportionalDiscount + (order.shippingCharge || 0)
+    );
     return { adjustedTotal, proportionalDiscount };
   };
 
@@ -336,17 +343,39 @@ const AdminOrderDetails = () => {
               {/* Shipping Address Section */}
               <div className="mt-3 p-3 bg-light rounded border">
                 <div className="fw-bold mb-2 d-flex align-items-center">
-                  <FaMapMarkerAlt className="me-2 text-primary" /> Shipping Address
+                  <FaMapMarkerAlt className="me-2 text-primary" /> Shipping
+                  Address
                 </div>
                 {order.shippingAddress ? (
                   <div style={{ lineHeight: 1.6 }}>
-                    <div><strong>Name:</strong> {order.shippingAddress.recipientName}</div>
-                    <div><strong>Address:</strong> {order.shippingAddress.addressLine1}{order.shippingAddress.addressLine2 ? `, ${order.shippingAddress.addressLine2}` : ""}</div>
-                    <div><strong>City:</strong> {order.shippingAddress.city}</div>
-                    <div><strong>State:</strong> {order.shippingAddress.state}</div>
-                    <div><strong>Postal Code:</strong> {order.shippingAddress.postalCode}</div>
-                    <div><strong>Country:</strong> {order.shippingAddress.country}</div>
-                    <div><strong>Phone:</strong> {order.shippingAddress.phoneNumber}</div>
+                    <div>
+                      <strong>Name:</strong>{" "}
+                      {order.shippingAddress.recipientName}
+                    </div>
+                    <div>
+                      <strong>Address:</strong>{" "}
+                      {order.shippingAddress.addressLine1}
+                      {order.shippingAddress.addressLine2
+                        ? `, ${order.shippingAddress.addressLine2}`
+                        : ""}
+                    </div>
+                    <div>
+                      <strong>City:</strong> {order.shippingAddress.city}
+                    </div>
+                    <div>
+                      <strong>State:</strong> {order.shippingAddress.state}
+                    </div>
+                    <div>
+                      <strong>Postal Code:</strong>{" "}
+                      {order.shippingAddress.postalCode}
+                    </div>
+                    <div>
+                      <strong>Country:</strong> {order.shippingAddress.country}
+                    </div>
+                    <div>
+                      <strong>Phone:</strong>{" "}
+                      {order.shippingAddress.phoneNumber}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-muted">No shipping address found.</div>
@@ -381,7 +410,9 @@ const AdminOrderDetails = () => {
                         <tr
                           key={item._id || variant._id || idx}
                           style={
-                            isCancelled && (order.paymentMethod !== 'online' || itemPaymentStatus === 'refunded')
+                            isCancelled &&
+                            (order.paymentMethod !== "online" ||
+                              itemPaymentStatus === "refunded")
                               ? { opacity: 0.5, textDecoration: "line-through" }
                               : {}
                           }
@@ -533,8 +564,9 @@ const AdminOrderDetails = () => {
                               }
                               size="sm"
                               disabled={
-                                (isCancelled &&
-                                  (order.paymentMethod !== 'online' || itemPaymentStatus === 'refunded'))
+                                isCancelled &&
+                                (order.paymentMethod !== "online" ||
+                                  itemPaymentStatus === "refunded")
                               }
                             >
                               <option value="pending">Pending</option>
@@ -548,8 +580,10 @@ const AdminOrderDetails = () => {
                               className="mt-1"
                               disabled={
                                 (isCancelled &&
-                                  (order.paymentMethod !== 'online' || itemPaymentStatus === 'refunded')) ||
-                                (itemPaymentStatusStates?.[item._id] || itemPaymentStatus) === itemPaymentStatus
+                                  (order.paymentMethod !== "online" ||
+                                    itemPaymentStatus === "refunded")) ||
+                                (itemPaymentStatusStates?.[item._id] ||
+                                  itemPaymentStatus) === itemPaymentStatus
                               }
                               onClick={async () => {
                                 const paymentStatus =
@@ -599,8 +633,15 @@ const AdminOrderDetails = () => {
                       <td className="text-end">
                         ₹
                         {order.items
-                          .filter((item) => !item.cancelled && item.itemPaymentStatus !== 'refunded')
-                          .reduce((sum, item) => sum + item.price * item.quantity, 0)
+                          .filter(
+                            (item) =>
+                              !item.cancelled &&
+                              item.itemPaymentStatus !== "refunded"
+                          )
+                          .reduce(
+                            (sum, item) => sum + item.price * item.quantity,
+                            0
+                          )
                           .toFixed(2)}
                       </td>
                       <td colSpan="2"></td>
@@ -610,7 +651,10 @@ const AdminOrderDetails = () => {
                         <strong>Discount (Proportional)</strong>
                       </td>
                       <td className="text-end">
-                        -₹{getAdjustedTotalAndDiscount().proportionalDiscount.toFixed(2)}
+                        -₹
+                        {getAdjustedTotalAndDiscount().proportionalDiscount.toFixed(
+                          2
+                        )}
                       </td>
                       <td colSpan="2"></td>
                     </tr>
@@ -630,7 +674,11 @@ const AdminOrderDetails = () => {
                       <td colSpan="3" className="text-end">
                         <strong>Shipping</strong>
                       </td>
-                      <td className="text-end">₹0.00</td>
+                      <td className="text-end">
+                        {order.shippingCharge === 0
+                          ? "₹0.00"
+                          : `₹${order.shippingCharge.toFixed(2)}`}
+                      </td>
                       <td colSpan="2"></td>
                     </tr>
                     <tr>
@@ -639,15 +687,21 @@ const AdminOrderDetails = () => {
                       </td>
                       <td className="text-end">
                         <strong>
-                          ₹{getAdjustedTotalAndDiscount().adjustedTotal.toFixed(2)}
+                          ₹
+                          {getAdjustedTotalAndDiscount().adjustedTotal.toFixed(
+                            2
+                          )}
                         </strong>
                       </td>
                       <td colSpan="2"></td>
                     </tr>
-                    {order.items.some(item => item.itemPaymentStatus === 'refunded') && (
+                    {order.items.some(
+                      (item) => item.itemPaymentStatus === "refunded"
+                    ) && (
                       <tr>
                         <td colSpan="6" className="text-end text-danger small">
-                          Note: Refunded items are excluded from the total and discount is applied proportionally.
+                          Note: Refunded items are excluded from the total and
+                          discount is applied proportionally.
                         </td>
                       </tr>
                     )}
