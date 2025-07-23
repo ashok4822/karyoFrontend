@@ -43,7 +43,8 @@ const ReferralProgram = () => {
   const [loading, setLoading] = useState(true);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [referralLink, setReferralLink] = useState("");
-  const [copyMsg, setCopyMsg] = useState("");
+  const [copyCodeMsg, setCopyCodeMsg] = useState("");
+  const [copyLinkMsg, setCopyLinkMsg] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -55,7 +56,8 @@ const ReferralProgram = () => {
   const fetchReferralData = async () => {
     try {
       const data = await getReferralCode();
-      setReferralData(data.data);
+      console.log("referalData: ", data);
+      setReferralData(data.data.data);
     } catch (error) {
       setError("Error fetching referral data");
     }
@@ -89,8 +91,8 @@ const ReferralProgram = () => {
         ...prev,
         referralCode: data.data.referralCode,
       }));
-      setCopyMsg("Referral code generated!");
-      setTimeout(() => setCopyMsg(""), 1500);
+      setCopyCodeMsg("Referral code generated!");
+      setTimeout(() => setCopyCodeMsg(""), 1500);
     } catch (error) {
       setError(
         error.response?.data?.message || "Failed to generate referral code"
@@ -102,9 +104,10 @@ const ReferralProgram = () => {
     try {
       setGeneratingLink(true);
       const data = await postGenerateReferralLink();
-      setReferralLink(data.data.referralLink);
-      setCopyMsg("Referral link generated!");
-      setTimeout(() => setCopyMsg(""), 1500);
+      console.log("referalLink: ", data);
+      setReferralLink(data.data.data.referralLink);
+      setCopyLinkMsg("Referral link generated!");
+      setTimeout(() => setCopyLinkMsg(""), 1500);
     } catch (error) {
       setError("Failed to generate referral link");
     } finally {
@@ -112,11 +115,16 @@ const ReferralProgram = () => {
     }
   };
 
-  const copyToClipboard = async (text) => {
+  const copyToClipboard = async (text, type) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopyMsg("Copied!");
-      setTimeout(() => setCopyMsg(""), 1500);
+      if (type === "code") {
+        setCopyCodeMsg("Copied!");
+        setTimeout(() => setCopyCodeMsg(""), 1500);
+      } else if (type === "link") {
+        setCopyLinkMsg("Copied!");
+        setTimeout(() => setCopyLinkMsg(""), 1500);
+      }
     } catch (error) {
       setError("Failed to copy to clipboard");
     }
@@ -247,7 +255,7 @@ const ReferralProgram = () => {
                     variant="outline-secondary"
                     size="sm"
                     className="me-2"
-                    onClick={() => copyToClipboard(referralData.referralCode)}
+                    onClick={() => copyToClipboard(referralData.referralCode, "code")}
                     title="Copy referral code"
                   >
                     <FaCopy />
@@ -266,8 +274,8 @@ const ReferralProgram = () => {
                   Generate Referral Code
                 </Button>
               )}
-              {copyMsg && (
-                <div className="text-success mt-2 small">{copyMsg}</div>
+              {copyCodeMsg && (
+                <div className="text-success mt-2 small">{copyCodeMsg}</div>
               )}
             </Card.Body>
           </Card>
@@ -296,7 +304,7 @@ const ReferralProgram = () => {
                   <>
                     <Button
                       variant="outline-secondary"
-                      onClick={() => copyToClipboard(referralLink)}
+                      onClick={() => copyToClipboard(referralLink, "link")}
                       title="Copy referral link"
                     >
                       <FaCopy />
@@ -311,8 +319,8 @@ const ReferralProgram = () => {
                   </>
                 )}
               </InputGroup>
-              {copyMsg && (
-                <div className="text-success mt-2 small">{copyMsg}</div>
+              {copyLinkMsg && (
+                <div className="text-success mt-2 small">{copyLinkMsg}</div>
               )}
             </Card.Body>
           </Card>

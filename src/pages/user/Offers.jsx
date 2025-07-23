@@ -1,17 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { getAllActiveOffers } from '../../services/user/offerService';
-import OfferCard from '../../components/user/OfferCard';
-import { Container, Row, Col, Button, Form, InputGroup, Spinner, Alert } from 'react-bootstrap';
-import { FaSearch, FaGift } from 'react-icons/fa';
-import { useToast } from '../../hooks/use-toast';
+import React, { useState, useEffect } from "react";
+import { getAllActiveOffers } from "../../services/user/offerService";
+import OfferCard from "../../components/user/OfferCard";
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Form,
+  InputGroup,
+  Spinner,
+  Alert,
+} from "react-bootstrap";
+import { FaSearch, FaGift } from "react-icons/fa";
+import { useToast } from "../../hooks/use-toast";
 
 const Offers = () => {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -22,10 +31,11 @@ const Offers = () => {
     try {
       setLoading(true);
       const response = await getAllActiveOffers(currentPage, 12);
-      setOffers(response.data);
-      setTotalPages(response.pagination.totalPages);
+      console.log("fetchData: ", response);
+      setOffers(response.data.data);
+      setTotalPages(response.data.pagination.totalPages);
     } catch (error) {
-      console.error('Error fetching offers:', error);
+      console.error("Error fetching offers:", error);
       toast({
         title: "Error",
         description: "Failed to fetch offers. Please try again.",
@@ -36,12 +46,14 @@ const Offers = () => {
     }
   };
 
-  const filteredOffers = offers.filter(offer => {
-    const matchesSearch = offer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         offer.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = filterType === 'all' || offer.offerType === filterType;
-    
+  const filteredOffers = offers.filter((offer) => {
+    const matchesSearch =
+      offer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      offer.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesFilter =
+      filterType === "all" || offer.offerType === filterType;
+
     return matchesSearch && matchesFilter;
   });
 
@@ -79,8 +91,8 @@ const Offers = () => {
             <FaGift className="text-primary" size={48} />
             <h1 className="display-4 fw-bold text-dark mb-0">Special Offers</h1>
           </div>
-          <p className="lead text-muted mx-auto" style={{ maxWidth: '600px' }}>
-            Discover amazing deals and discounts on your favorite products. 
+          <p className="lead text-muted mx-auto" style={{ maxWidth: "600px" }}>
+            Discover amazing deals and discounts on your favorite products.
             Don't miss out on these limited-time offers!
           </p>
         </div>
@@ -121,10 +133,9 @@ const Offers = () => {
             <FaGift className="text-muted mb-4" size={64} />
             <h3 className="h4 text-muted mb-2">No offers found</h3>
             <p className="text-muted">
-              {searchTerm || filterType !== 'all' 
+              {searchTerm || filterType !== "all"
                 ? "Try adjusting your search or filters"
-                : "Check back later for new offers!"
-              }
+                : "Check back later for new offers!"}
             </p>
           </div>
         ) : (
@@ -151,7 +162,7 @@ const Offers = () => {
             >
               Previous
             </Button>
-            
+
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <Button
                 key={page}
@@ -161,7 +172,7 @@ const Offers = () => {
                 {page}
               </Button>
             ))}
-            
+
             <Button
               variant="outline-primary"
               onClick={() => handlePageChange(currentPage + 1)}
@@ -176,4 +187,4 @@ const Offers = () => {
   );
 };
 
-export default Offers; 
+export default Offers;

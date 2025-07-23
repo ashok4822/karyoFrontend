@@ -161,13 +161,14 @@ const AdminDiscountUsage = () => {
                           <th>Total Users</th>
                           <th>Total Usage</th>
                           <th>Avg Usage Per User</th>
+                          <th>Per User Limit</th>
                         </tr>
                       </thead>
                       <tbody>
                         {usageStats.discountSummary?.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={4}
+                              colSpan={5}
                               className="text-center text-muted py-4"
                             >
                               No usage data found.
@@ -184,6 +185,7 @@ const AdminDiscountUsage = () => {
                                 <Badge bg="success">{summary.totalUsage}</Badge>
                               </td>
                               <td>{summary.avgUsagePerUser}</td>
+                              <td>{summary.maxUsagePerUser ? summary.maxUsagePerUser : "Unlimited"}</td>
                             </tr>
                           ))
                         )}
@@ -199,14 +201,13 @@ const AdminDiscountUsage = () => {
                           <th>Discount</th>
                           <th>Usage Count</th>
                           <th>Last Used</th>
-                          <th>Per User Limit</th>
                         </tr>
                       </thead>
                       <tbody>
                         {usageStats.usageStats?.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={5}
+                              colSpan={4}
                               className="text-center text-muted py-4"
                             >
                               No detailed usage data found.
@@ -234,11 +235,6 @@ const AdminDiscountUsage = () => {
                                 {usage.lastUsedAt
                                   ? formatDate(usage.lastUsedAt)
                                   : "Never"}
-                              </td>
-                              <td>
-                                {usage.discount?.maxUsagePerUser
-                                  ? usage.discount.maxUsagePerUser
-                                  : "Unlimited"}
                               </td>
                             </tr>
                           ))
