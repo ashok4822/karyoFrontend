@@ -1879,6 +1879,17 @@ const UserProfile = () => {
                                 {item.productVariantId?.capacity &&
                                   `- ${item.productVariantId.capacity}`}
                               </div>
+                              {/* Show offer(s) for this item if present */}
+                              {item.offers && item.offers.length > 0 && (
+                                <div className="text-success small mt-1">
+                                  {item.offers.map((offer, idx) => (
+                                    <div key={idx}>
+                                      Offer: <span className="fw-semibold">{offer.offerName}</span> -
+                                      <span> -₹{offer.offerAmount?.toFixed(2) || 0}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -1902,85 +1913,38 @@ const UserProfile = () => {
                         </td>
                         <td>{item.quantity}</td>
                         <td className="fw-bold">
-                          {/* Per-item price display */}
+                          {/* Per-item price display with offer logic */}
                           {(() => {
                             // Original price per item
-                            const originalPrice =
-                              item.productVariantId?.mrp || item.price;
-                            // Proportional discount/offer calculation
-                            let discountedPrice = item.price;
-                            // If order.discount or order.offers exist, calculate proportional discount/offer for this item
-                            if (
-                              order.discount &&
-                              order.discount.discountAmount > 0
-                            ) {
-                              const totalOrderItems =
-                                order.items.reduce(
-                                  (sum, i) => sum + i.price * i.quantity,
-                                  0
-                                ) || 1;
-                              const itemDiscount =
-                                (((item.price * item.quantity) /
-                                  totalOrderItems) *
-                                  order.discount.discountAmount) /
-                                item.quantity;
-                              discountedPrice = Math.max(
-                                0,
-                                discountedPrice - itemDiscount
-                              );
+                            const originalPrice = item.productVariantId?.mrp || item.price;
+                            // Offer calculation (per item)
+                            let finalPrice = item.price;
+                            if (item.offers && item.offers.length > 0) {
+                              const offerTotal = item.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0);
+                              finalPrice = Math.max(0, (item.price * item.quantity - offerTotal) / item.quantity);
                             }
-                            if (order.offers && order.offers.length > 0) {
-                              const totalOffer = order.offers.reduce(
-                                (sum, offer) => sum + (offer.offerAmount || 0),
-                                0
-                              );
-                              const totalOrderItems =
-                                order.items.reduce(
-                                  (sum, i) => sum + i.price * i.quantity,
-                                  0
-                                ) || 1;
-                              const itemOffer =
-                                (((item.price * item.quantity) /
-                                  totalOrderItems) *
-                                  totalOffer) /
-                                item.quantity;
-                              discountedPrice = Math.max(
-                                0,
-                                discountedPrice - itemOffer
-                              );
+                            // Discount logic (keep as is, proportional per order)
+                            if (order.discount && order.discount.discountAmount > 0) {
+                              const totalOrderItems = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0) || 1;
+                              const itemDiscount = (((item.price * item.quantity) / totalOrderItems) * order.discount.discountAmount) / item.quantity;
+                              finalPrice = Math.max(0, finalPrice - itemDiscount);
                             }
                             // Per-item total
-                            const itemTotal = discountedPrice * item.quantity;
+                            const itemTotal = finalPrice * item.quantity;
                             return (
                               <>
-                                {originalPrice > discountedPrice ? (
+                                {originalPrice > finalPrice ? (
                                   <>
-                                    <span
-                                      style={{
-                                        textDecoration: "line-through",
-                                        color: "#999",
-                                        fontSize: "0.85em",
-                                      }}
-                                    >
+                                    <span style={{ textDecoration: "line-through", color: "#999", fontSize: "0.85em" }}>
                                       ₹{originalPrice.toFixed(2)}
                                     </span>
                                     <br />
-                                    <span
-                                      style={{
-                                        color: "#999",
-                                        fontSize: "0.88em",
-                                      }}
-                                    >
-                                      ₹{discountedPrice.toFixed(2)}
+                                    <span style={{ color: "#999", fontSize: "0.88em" }}>
+                                      ₹{finalPrice.toFixed(2)}
                                     </span>
                                   </>
                                 ) : (
-                                  <span
-                                    style={{
-                                      color: "#999",
-                                      fontSize: "0.88em",
-                                    }}
-                                  >
+                                  <span style={{ color: "#999", fontSize: "0.88em" }}>
                                     ₹{originalPrice.toFixed(2)}
                                   </span>
                                 )}

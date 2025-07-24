@@ -729,6 +729,7 @@ const Checkout = () => {
               offerType: offer.discountType,
               offerValue: offer.discountValue,
               productId: product._id,
+              productVariantId: item.productVariantId._id, // <-- Add this line
             });
           }
         }

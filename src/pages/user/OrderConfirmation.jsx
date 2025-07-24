@@ -18,7 +18,11 @@ const OrderConfirmation = () => {
   const navigate = useNavigate();
   const { orderId } = useParams();
   const location = useLocation();
-  console.log("[DEBUG] Rendering OrderConfirmation page", location.pathname, orderId);
+  console.log(
+    "[DEBUG] Rendering OrderConfirmation page",
+    location.pathname,
+    orderId
+  );
   const [isFreshOrder, setIsFreshOrder] = useState(false);
 
   useEffect(() => {
@@ -30,13 +34,13 @@ const OrderConfirmation = () => {
   useEffect(() => {
     // Check if this is a fresh order placement by looking for a query parameter
     const params = new URLSearchParams(location.search);
-    const fresh = params.get('fresh');
-    
-    if (fresh === 'true') {
+    const fresh = params.get("fresh");
+
+    if (fresh === "true") {
       setIsFreshOrder(true);
       // Clear the fresh parameter from URL without reloading
       const newUrl = location.pathname;
-      window.history.replaceState({}, '', newUrl);
+      window.history.replaceState({}, "", newUrl);
       // Only clear cart and cart state if this is a fresh order
       dispatch(clearCart());
       dispatch(clearCartState());
@@ -126,19 +130,58 @@ const OrderConfirmation = () => {
     // Order Items Table with status columns
     autoTable(doc, {
       startY: y,
-      head: [["#", "Product", "Variant", "Qty", "Unit Price", "Total", "Status", "Payment Status"]],
-      body: currentOrder.items.map((item, idx) => [
-        idx + 1,
-        item.productVariantId?.product?.name || "Product",
-        `${item.productVariantId?.colour || ""}${
-          item.productVariantId?.capacity ? ", " + item.productVariantId.capacity : ""
-        }`,
-        item.quantity,
-        `INR ${item.price.toFixed(2)}`,
-        `INR ${(item.price * item.quantity).toFixed(2)}`,
-        item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown',
-        item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending',
-      ]),
+      head: [
+        [
+          "#",
+          "Product",
+          "Variant",
+          "Qty",
+          "Unit Price (INR)",
+          "Total (INR)",
+          "Status",
+          "Payment Status",
+        ],
+      ],
+      body: currentOrder.items.map((item, idx) => {
+        // Calculate offer and final price
+        const offers = item.offers && item.offers.length > 0 ? item.offers : [];
+        const offerNames = offers.map((offer) => offer.offerName).join(", ");
+        const offerAmount = offers.reduce(
+          (sum, offer) => sum + (offer.offerAmount || 0),
+          0
+        );
+        const basePrice = item.price;
+        const finalPrice =
+          (basePrice * item.quantity - offerAmount) / item.quantity;
+        // Compose variant string with offer
+        let variantStr = `${item.productVariantId?.colour || ""}`;
+        if (item.productVariantId?.capacity)
+          variantStr += `, ${item.productVariantId.capacity}`;
+        if (offerNames) variantStr += `\nOffer: ${offerNames}`;
+        // Compose unit price cell
+        let unitPriceCell = finalPrice.toFixed(2);
+        if (offers.length > 0) {
+          unitPriceCell += `\n(${basePrice.toFixed(2)})`;
+        }
+        // Compose total cell
+        let totalCell = (finalPrice * item.quantity).toFixed(2);
+        return [
+          idx + 1,
+          item.productVariantId?.product?.name || "Product",
+          variantStr,
+          item.quantity,
+          unitPriceCell,
+          totalCell,
+          item.itemStatus
+            ? item.itemStatus.charAt(0).toUpperCase() +
+              item.itemStatus.slice(1).replace("_", " ")
+            : "Status Unknown",
+          item.itemPaymentStatus
+            ? item.itemPaymentStatus.charAt(0).toUpperCase() +
+              item.itemPaymentStatus.slice(1)
+            : "Pending",
+        ];
+      }),
       theme: "grid",
       headStyles: {
         fillColor: [79, 70, 229],
@@ -161,19 +204,32 @@ const OrderConfirmation = () => {
     });
     y = doc.lastAutoTable.finalY + 8;
     // Price Breakdown Table (with offer, discount, shipping, total)
-    const { adjustedTotal, proportionalDiscount, proportionalOffer } = getAdjustedTotalAndDiscount();
+    const { adjustedTotal, proportionalDiscount } =
+      getAdjustedTotalAndDiscount();
     const subtotal = currentOrder.items
-      .filter((item) => item.itemPaymentStatus !== 'refunded')
-      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+      .filter((item) => item.itemPaymentStatus !== "refunded")
+      .reduce((sum, item) => {
+        const offers = item.offers && item.offers.length > 0 ? item.offers : [];
+        const offerAmount = offers.reduce(
+          (sum, offer) => sum + (offer.offerAmount || 0),
+          0
+        );
+        return sum + (item.price * item.quantity - offerAmount);
+      }, 0);
     let priceTableRows = [];
     priceTableRows.push(["Subtotal", `INR ${subtotal.toFixed(2)}`]);
-    if (proportionalOffer > 0) {
-      priceTableRows.push(["Offer (Proportional)", `-INR ${proportionalOffer.toFixed(2)}`]);
-    }
     if (proportionalDiscount > 0) {
-      priceTableRows.push(["Discount (Proportional)", `-INR ${proportionalDiscount.toFixed(2)}`]);
+      priceTableRows.push([
+        "Discount (Proportional)",
+        `-INR ${proportionalDiscount.toFixed(2)}`,
+      ]);
     }
-    priceTableRows.push(["Shipping", currentOrder.shipping === 0 ? "Free" : `INR ${currentOrder.shipping.toFixed(2)}`]);
+    priceTableRows.push([
+      "Shipping",
+      currentOrder.shipping === 0
+        ? "Free"
+        : `INR ${currentOrder.shipping.toFixed(2)}`,
+    ]);
     priceTableRows.push(["Total", `INR ${adjustedTotal.toFixed(2)}`]);
 
     y += 4;
@@ -183,8 +239,12 @@ const OrderConfirmation = () => {
       body: priceTableRows,
       theme: "plain",
       styles: { fontSize: 10, cellPadding: 2 },
-      headStyles: { fontStyle: "bold", fillColor: [245,245,245], textColor: 40 },
-      columnStyles: { 1: { halign: 'right' } },
+      headStyles: {
+        fontStyle: "bold",
+        fillColor: [245, 245, 245],
+        textColor: 40,
+      },
+      columnStyles: { 1: { halign: "right" } },
       margin: { left: 14, right: 14 },
     });
     y = doc.lastAutoTable.finalY + 8;
@@ -201,32 +261,57 @@ const OrderConfirmation = () => {
 
   // Helper to calculate adjusted total (excluding refunded items, with proportional discount)
   const getAdjustedTotalAndDiscount = () => {
-    if (!currentOrder || !currentOrder.items) return { adjustedTotal: 0, proportionalDiscount: 0, proportionalOffer: 0 };
-    const allItemsTotal = currentOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    if (!currentOrder || !currentOrder.items)
+      return {
+        adjustedTotal: 0,
+        proportionalDiscount: 0,
+        proportionalOffer: 0,
+      };
+
+    // Use post-offer values for allItemsTotal and nonRefundedItemsTotal
+    const allItemsTotal = currentOrder.items.reduce((sum, item) => {
+      const offerTotal = item.offers && item.offers.length > 0
+        ? item.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0)
+        : 0;
+      return sum + (item.price * item.quantity - offerTotal);
+    }, 0);
+
     const nonRefundedItemsTotal = currentOrder.items
-      .filter((item) => item.itemPaymentStatus !== 'refunded')
-      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+      .filter((item) => item.itemPaymentStatus !== "refunded")
+      .reduce((sum, item) => {
+        const offerTotal = item.offers && item.offers.length > 0
+          ? item.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0)
+          : 0;
+        return sum + (item.price * item.quantity - offerTotal);
+      }, 0);
 
     // Discount
-    const discount = currentOrder.discount ? currentOrder.discount.discountAmount || 0 : 0;
-    const proportionalDiscount = allItemsTotal > 0
-      ? (nonRefundedItemsTotal / allItemsTotal) * discount
+    const discount = currentOrder.discount
+      ? Math.abs(currentOrder.discount.discountAmount || 0)
       : 0;
+    const proportionalDiscount =
+      allItemsTotal > 0
+        ? (nonRefundedItemsTotal / allItemsTotal) * discount
+        : 0;
 
-    // Offers
-    let totalOffer = 0;
-    if (currentOrder.offers && currentOrder.offers.length > 0) {
-      totalOffer = currentOrder.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0);
-    }
-    const proportionalOffer = allItemsTotal > 0
-      ? (nonRefundedItemsTotal / allItemsTotal) * totalOffer
-      : 0;
+    // Offers (already included in above, so this can be 0 or omitted)
+    const proportionalOffer = 0;
 
     // Shipping
     const shipping = currentOrder.shipping || 0;
 
     // Final total
-    const adjustedTotal = Math.max(0, nonRefundedItemsTotal - proportionalDiscount - proportionalOffer + shipping);
+    const adjustedTotal = Math.max(
+      0,
+      nonRefundedItemsTotal -
+        proportionalDiscount +
+        shipping
+    );
+
+    console.log("Final Total: ", adjustedTotal);
+    console.log("nonRefundedItemsTotal: ", nonRefundedItemsTotal);
+    console.log("proportionalDiscount: ", proportionalDiscount);
+    console.log("shipping: ", shipping);
 
     return { adjustedTotal, proportionalDiscount, proportionalOffer };
   };
@@ -325,10 +410,15 @@ const OrderConfirmation = () => {
                   </svg>
                 </div>
                 <h1 className="h4 fw-bold mb-2">Payment Failed</h1>
-                <p className="text-muted mb-4">Your payment was not successful. You can retry the payment or view your order details.</p>
+                <p className="text-muted mb-4">
+                  Your payment was not successful. You can retry the payment or
+                  view your order details.
+                </p>
                 <div className="d-flex flex-column flex-md-row gap-3 justify-content-center mt-4">
                   <button
-                    onClick={() => navigate(`/checkout?retryOrderId=${currentOrder._id}`)}
+                    onClick={() =>
+                      navigate(`/checkout?retryOrderId=${currentOrder._id}`)
+                    }
                     className="btn btn-danger btn-lg px-4 fw-semibold shadow-sm"
                   >
                     Retry Payment
@@ -383,10 +473,12 @@ const OrderConfirmation = () => {
                       />
                     </svg>
                   </div>
-                  <h1 className="h3 fw-bold mb-2">Order Placed Successfully!</h1>
+                  <h1 className="h3 fw-bold mb-2">
+                    Order Placed Successfully!
+                  </h1>
                   <p className="text-muted mb-2">
-                    Thank you for your purchase. Your order is confirmed and being
-                    processed.
+                    Thank you for your purchase. Your order is confirmed and
+                    being processed.
                   </p>
                   <div className="d-flex flex-wrap justify-content-center gap-2 mt-2">
                     <span className="badge bg-success bg-opacity-25 text-success fs-6">
@@ -400,7 +492,7 @@ const OrderConfirmation = () => {
                   </div>
                 </div>
               )}
-              
+
               {!isFreshOrder && (
                 <div className="text-center mb-4">
                   <h1 className="h3 fw-bold mb-2">Order Details</h1>
@@ -483,94 +575,162 @@ const OrderConfirmation = () => {
                 </div>
               </div>
 
-              <div className="mb-4"> 
-                <h5 className="fw-semibold mb-3">Order Items</h5> 
-                <div className="card border-0 shadow-sm"> 
-                  <div className="card-header bg-light py-3"> 
-                    <div className="row align-items-center text-muted small fw-semibold"> 
-                      <div className="col-md-6">Product</div> 
-                      <div className="col-md-2 text-center">Quantity</div> 
-                      <div className="col-md-2 text-center">Price</div> 
-                      <div className="col-md-2 text-center">Status</div> 
-                    </div> 
-                  </div> 
-                  <ul className="list-group list-group-flush"> 
-                    {currentOrder.items.map((item, index) => ( 
-                      <li 
-                        key={index} 
-                        className="list-group-item px-3 py-3" 
-                      > 
-                        <div className="row align-items-center"> 
-                          <div className="col-md-6"> 
-                            <Link 
-                              to={`/products/${item.productVariantId.product?._id}`} 
-                              className="d-flex align-items-center text-decoration-none" 
-                              style={{ color: "inherit" }} 
-                            > 
-                              <div className="order-item-img me-3 flex-shrink-0"> 
-                                {item.productVariantId?.imageUrls?.[0] ? ( 
-                                  <img 
-                                    src={item.productVariantId.imageUrls[0]} 
-                                    alt={item.productVariantId.product?.name} 
-                                    className="img-fluid rounded-3" 
-                                    style={{ 
-                                      width: "60px", 
-                                      height: "60px", 
-                                      objectFit: "cover", 
-                                    }} 
-                                  /> 
-                                ) : ( 
-                                  <div 
-                                    className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center" 
-                                    style={{ width: "60px", height: "60px" }} 
-                                  ></div> 
-                                )} 
-                              </div> 
-                              <div> 
-                                <div className="fw-semibold text-dark mb-1"> 
-                                  {item.productVariantId?.product?.name || 
-                                    "Product Name"} 
-                                </div> 
-                                <div className="text-muted small"> 
-                                  {item.productVariantId?.colour}{" "} 
-                                  {item.productVariantId?.capacity && `- ${item.productVariantId.capacity}`} 
-                                </div> 
-                              </div> 
-                            </Link> 
-                          </div> 
-                          <div className="col-md-2 text-center"> 
-                            <span className="badge bg-light text-dark border">{item.quantity}</span> 
-                          </div> 
-                          <div className="col-md-2 text-center"> 
-                            <div className="fw-semibold text-dark mb-1"> 
-                              INR {(item.price * item.quantity).toFixed(2)} 
-                            </div> 
-                            <div className="text-muted small"> 
-                              @ INR {item.price.toFixed(2)} 
-                            </div> 
-                          </div> 
-                          <div className="col-md-2 text-center"> 
-                            <div className="mb-1"> 
-                              <span className={`badge ${item.itemStatus === 'delivered' ? 'bg-success' : 
-                                item.itemStatus === 'shipped' ? 'bg-info' : 
-                                item.itemStatus === 'processing' ? 'bg-warning' : 
-                                item.itemStatus === 'cancelled' ? 'bg-danger' : 'bg-secondary'}`}> 
-                                {item.itemStatus ? item.itemStatus.charAt(0).toUpperCase() + item.itemStatus.slice(1).replace('_', ' ') : 'Status Unknown'} 
-                              </span> 
-                            </div> 
-                            <div> 
-                              <span className={`badge ${item.itemPaymentStatus === 'paid' ? 'bg-success bg-opacity-10 text-success' : 
-                                item.itemPaymentStatus === 'refunded' ? 'bg-info bg-opacity-10 text-info' : 
-                                'bg-warning bg-opacity-10 text-warning'}`}> 
-                                {item.itemPaymentStatus ? item.itemPaymentStatus.charAt(0).toUpperCase() + item.itemPaymentStatus.slice(1) : 'Pending'} 
-                              </span> 
-                            </div> 
-                          </div> 
-                        </div> 
-                      </li> 
-                    ))} 
-                  </ul> 
-                </div> 
+              <div className="mb-4">
+                <h5 className="fw-semibold mb-3">Order Items</h5>
+                <div className="card border-0 shadow-sm">
+                  <div className="card-header bg-light py-3">
+                    <div className="row align-items-center text-muted small fw-semibold">
+                      <div className="col-md-6">Product</div>
+                      <div className="col-md-2 text-center">Quantity</div>
+                      <div className="col-md-2 text-center">Price (INR)</div>
+                      <div className="col-md-2 text-center">Status</div>
+                    </div>
+                  </div>
+                  <ul className="list-group list-group-flush">
+                    {currentOrder.items.map((item, index) => (
+                      <li key={index} className="list-group-item px-3 py-3">
+                        <div className="row align-items-center">
+                          <div className="col-md-6">
+                            <Link
+                              to={`/products/${item.productVariantId.product?._id}`}
+                              className="d-flex align-items-center text-decoration-none"
+                              style={{ color: "inherit" }}
+                            >
+                              <div className="order-item-img me-3 flex-shrink-0">
+                                {item.productVariantId?.imageUrls?.[0] ? (
+                                  <img
+                                    src={item.productVariantId.imageUrls[0]}
+                                    alt={item.productVariantId.product?.name}
+                                    className="img-fluid rounded-3"
+                                    style={{
+                                      width: "60px",
+                                      height: "60px",
+                                      objectFit: "cover",
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="bg-secondary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
+                                    style={{ width: "60px", height: "60px" }}
+                                  ></div>
+                                )}
+                              </div>
+                              <div>
+                                <div className="fw-semibold text-dark mb-1">
+                                  {item.productVariantId?.product?.name ||
+                                    "Product Name"}
+                                </div>
+                                <div className="text-muted small">
+                                  {item.productVariantId?.colour}{" "}
+                                  {item.productVariantId?.capacity &&
+                                    `- ${item.productVariantId.capacity}`}
+                                </div>
+                                {/* Show offer(s) for this item if present */}
+                                {item.offers && item.offers.length > 0 && (
+                                  <div className="text-success small mt-1">
+                                    {item.offers.map((offer, idx) => (
+                                      <div key={idx}>
+                                        Offer:{" "}
+                                        <span className="fw-semibold">
+                                          {offer.offerName}
+                                        </span>{" "}
+                                        -
+                                        <span>
+                                          {" "}
+                                          -INR{" "}
+                                          {offer.offerAmount?.toFixed(2) || 0}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </Link>
+                          </div>
+                          <div className="col-md-2 text-center">
+                            <span className="badge bg-light text-dark border">
+                              {item.quantity}
+                            </span>
+                          </div>
+                          <div className="col-md-2 text-center">
+                            {/* Show base price and final price after offer */}
+                            <div className="fw-semibold text-dark mb-1">
+                              {item.offers && item.offers.length > 0 ? (
+                                <>
+                                  <span>
+                                    {(
+                                      (item.price -
+                                        item.offers.reduce(
+                                          (sum, offer) =>
+                                            sum +
+                                            (offer.offerAmount || 0) /
+                                              item.quantity,
+                                          0
+                                        )) *
+                                      item.quantity
+                                    ).toFixed(2)}
+                                  </span>
+                                  <br />
+                                  <span
+                                    style={{
+                                      textDecoration: "line-through",
+                                      color: "#888",
+                                      fontSize: "0.9em",
+                                    }}
+                                  >
+                                    {(item.price * item.quantity).toFixed(2)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>{(item.price * item.quantity).toFixed(2)}</>
+                              )}
+                            </div>
+                          </div>
+                          <div className="col-md-2 text-center">
+                            <div className="mb-1">
+                              <span
+                                className={`badge ${
+                                  item.itemStatus === "delivered"
+                                    ? "bg-success"
+                                    : item.itemStatus === "shipped"
+                                    ? "bg-info"
+                                    : item.itemStatus === "processing"
+                                    ? "bg-warning"
+                                    : item.itemStatus === "cancelled"
+                                    ? "bg-danger"
+                                    : "bg-secondary"
+                                }`}
+                              >
+                                {item.itemStatus
+                                  ? item.itemStatus.charAt(0).toUpperCase() +
+                                    item.itemStatus.slice(1).replace("_", " ")
+                                  : "Status Unknown"}
+                              </span>
+                            </div>
+                            <div>
+                              <span
+                                className={`badge ${
+                                  item.itemPaymentStatus === "paid"
+                                    ? "bg-success bg-opacity-10 text-success"
+                                    : item.itemPaymentStatus === "refunded"
+                                    ? "bg-info bg-opacity-10 text-info"
+                                    : "bg-warning bg-opacity-10 text-warning"
+                                }`}
+                              >
+                                {item.itemPaymentStatus
+                                  ? item.itemPaymentStatus
+                                      .charAt(0)
+                                      .toUpperCase() +
+                                    item.itemPaymentStatus.slice(1)
+                                  : "Pending"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
 
               <div className="mb-4">
@@ -578,42 +738,45 @@ const OrderConfirmation = () => {
                 <ul className="list-unstyled small mb-0">
                   <li className="d-flex justify-content-between mb-1">
                     <span>Subtotal:</span>
-                    <span>INR {currentOrder.items
-                      .filter((item) => item.itemPaymentStatus !== 'refunded')
-                      .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                      .toFixed(2)}</span>
+                    <span>
+                      INR{" "}
+                      {currentOrder.items
+                        .filter((item) => item.itemPaymentStatus !== "refunded")
+                        .reduce((sum, item) => {
+                          const offerTotal =
+                            item.offers && item.offers.length > 0
+                              ? item.offers.reduce(
+                                  (sum, offer) =>
+                                    sum + (offer.offerAmount || 0),
+                                  0
+                                )
+                              : 0;
+                          return (
+                            sum + (item.price * item.quantity - offerTotal)
+                          );
+                        }, 0)
+                        .toFixed(2)}
+                    </span>
                   </li>
                   <li className="d-flex justify-content-between mb-1">
                     <span>Discount (Proportional):</span>
                     <span className="text-success">
-                      -INR {getAdjustedTotalAndDiscount().proportionalDiscount.toFixed(2)}
+                      -INR{" "}
+                      {getAdjustedTotalAndDiscount().proportionalDiscount.toFixed(
+                        2
+                      )}
                     </span>
                   </li>
                   {currentOrder.discount && (
                     <li className="mb-1 text-muted">
                       <span>
-                        Discount Availed: {" "}
+                        Discount Availed:{" "}
                         <span className="fw-semibold text-dark">
-                          {currentOrder.discount.discountName || currentOrder.discount.code || 'Discount'}
+                          {currentOrder.discount.discountName ||
+                            currentOrder.discount.code ||
+                            "Discount"}
                         </span>
                       </span>
-                    </li>
-                  )}
-                  {currentOrder.offers && currentOrder.offers.length > 0 ? (
-                    <>
-                      {currentOrder.offers.map((offer, index) => (
-                        <li key={index} className="d-flex justify-content-between mb-1">
-                          <span>Offer ({offer.offerName}):</span>
-                          <span className="text-success">
-                            -INR {offer.offerAmount.toFixed(2)}
-                          </span>
-                        </li>
-                      ))}
-                    </>
-                  ) : (
-                    <li className="d-flex justify-content-between mb-1 text-muted">
-                      <span>Offers:</span>
-                      <span>No offers applied</span>
                     </li>
                   )}
                   <li className="d-flex justify-content-between mb-1">
@@ -626,12 +789,40 @@ const OrderConfirmation = () => {
                   </li>
                   <li className="d-flex justify-content-between border-top pt-2 mt-2 fw-bold text-dark">
                     <span>Total (Excludes Refunded Items):</span>
-                    <span>INR {getAdjustedTotalAndDiscount().adjustedTotal.toFixed(2)}</span>
+                    <span>
+                      INR{" "}
+                      {(
+                        currentOrder.items
+                          .filter(
+                            (item) => item.itemPaymentStatus !== "refunded"
+                          )
+                          .reduce((sum, item) => {
+                            const offerTotal =
+                              item.offers && item.offers.length > 0
+                                ? item.offers.reduce(
+                                    (sum, offer) =>
+                                      sum + (offer.offerAmount || 0),
+                                    0
+                                  )
+                                : 0;
+                            return (
+                              sum + (item.price * item.quantity - offerTotal)
+                            );
+                          }, 0) -
+                        getAdjustedTotalAndDiscount().proportionalDiscount +
+                        currentOrder.shipping
+                      ).toFixed(2)}
+                    </span>
                   </li>
-                  {currentOrder.items.some(item => item.itemPaymentStatus === 'refunded') && (
+                  {currentOrder.items.some(
+                    (item) => item.itemPaymentStatus === "refunded"
+                  ) && (
                     <li className="d-flex justify-content-between mb-1 text-danger small">
                       <span></span>
-                      <span>Note: Refunded items are excluded from the total and discount is applied proportionally.</span>
+                      <span>
+                        Note: Refunded items are excluded from the total and
+                        discount is applied proportionally.
+                      </span>
                     </li>
                   )}
                 </ul>
