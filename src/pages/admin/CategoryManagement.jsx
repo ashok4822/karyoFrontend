@@ -47,6 +47,7 @@ import {
   getCategories,
   restoreCategory,
   updateCategory,
+  deleteCategory
 } from "../../services/admin/adminCategoryService";
 
 // Memoized components to prevent unnecessary re-renders

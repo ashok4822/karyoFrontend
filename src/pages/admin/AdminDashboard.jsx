@@ -31,7 +31,10 @@ import {
   fetchDashboardFailure,
 } from "../../redux/reducers/dashboardSlice";
 import AdminLeftbar from "../../components/AdminLeftbar";
-import { getDashboardData, getLedgerBook } from "../../services/admin/adminDashboaredServices";
+import {
+  getDashboardData,
+  getLedgerBook,
+} from "../../services/admin/adminDashboaredServices";
 import { ChartContainer } from "../../components/ui/chart";
 import {
   LineChart,
@@ -58,7 +61,7 @@ const AdminDashboard = () => {
   const [ledgerFilters, setLedgerFilters] = useState({
     period: "monthly",
     dateFrom: "",
-    dateTo: ""
+    dateTo: "",
   });
 
   useEffect(() => {
@@ -133,6 +136,7 @@ const AdminDashboard = () => {
     setLedgerLoading(true);
     try {
       const result = await getLedgerBook(ledgerFilters);
+      console.log("ledger result: ", result);
       if (result.success) {
         setLedgerData(result.data); // This is the correct fix
         setShowLedger(true);
@@ -147,7 +151,7 @@ const AdminDashboard = () => {
   };
 
   const handleClearLedgerFilters = () => {
-    setLedgerFilters({ period: 'monthly', dateFrom: '', dateTo: '' });
+    setLedgerFilters({ period: "monthly", dateFrom: "", dateTo: "" });
     // Optionally reload the ledger with default filters
     handleGenerateLedger();
   };
@@ -197,7 +201,7 @@ const AdminDashboard = () => {
                 </select>
               </Col>
               <Col xs="auto" className="ms-auto">
-                <Button
+                {/*<Button
                   variant="outline-primary"
                   onClick={handleGenerateLedger}
                   disabled={ledgerLoading}
@@ -209,7 +213,7 @@ const AdminDashboard = () => {
                     <FaChartLine />
                   )}
                   Generate Ledger
-                </Button>
+                </Button>*/}
               </Col>
             </Row>
             <Row className="mb-4">
@@ -434,13 +438,16 @@ const AdminDashboard = () => {
                   <Card.Body>
                     {(stats.lowStockProducts || []).length > 0 ? (
                       (stats.lowStockProducts || []).map((product, index) => (
-                        <div key={product.variant || product._id || index} className="mb-3">
-                                                  <div className="d-flex justify-content-between align-items-center mb-1">
-                          <span className="fw-medium">{product.name}</span>
-                          <span className="text-muted small">
-                            {product.stock} units ({product.stock}%)
-                          </span>
-                        </div>
+                        <div
+                          key={product.variant || product._id || index}
+                          className="mb-3"
+                        >
+                          <div className="d-flex justify-content-between align-items-center mb-1">
+                            <span className="fw-medium">{product.name}</span>
+                            <span className="text-muted small">
+                              {product.stock} units ({product.stock}%)
+                            </span>
+                          </div>
                           <ProgressBar
                             now={product.stock}
                             variant={
@@ -549,18 +556,32 @@ const AdminDashboard = () => {
 
             {/* Ledger Book Modal */}
             {showLedger && (
-              <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center" style={{ zIndex: 1050 }}>
-                <div className="bg-white rounded p-4" style={{ width: "95%", maxWidth: "1200px", maxHeight: "90vh", overflow: "auto" }}>
+              <div
+                className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center"
+                style={{ zIndex: 1050 }}
+              >
+                <div
+                  className="bg-white rounded p-4"
+                  style={{
+                    width: "95%",
+                    maxWidth: "1200px",
+                    maxHeight: "90vh",
+                    overflow: "auto",
+                  }}
+                >
                   <div className="d-flex justify-content-between align-items-center mb-4">
                     <h4>Ledger Book</h4>
-                    <Button variant="outline-secondary" onClick={() => setShowLedger(false)}>
+                    <Button
+                      variant="outline-secondary"
+                      onClick={() => setShowLedger(false)}
+                    >
                       Close
                     </Button>
                   </div>
 
                   {ledgerData && (
                     <>
-                      {console.log('LEDGER DATA:', ledgerData)}
+                      {console.log("LEDGER DATA:", ledgerData)}
                       {/* Ledger Filters */}
                       <Row className="mb-4">
                         <Col md={3}>
@@ -568,7 +589,12 @@ const AdminDashboard = () => {
                           <select
                             className="form-select"
                             value={ledgerFilters.period}
-                            onChange={(e) => setLedgerFilters({ ...ledgerFilters, period: e.target.value })}
+                            onChange={(e) =>
+                              setLedgerFilters({
+                                ...ledgerFilters,
+                                period: e.target.value,
+                              })
+                            }
                           >
                             <option value="monthly">Monthly</option>
                             <option value="yearly">Yearly</option>
@@ -580,7 +606,12 @@ const AdminDashboard = () => {
                             type="date"
                             className="form-control"
                             value={ledgerFilters.dateFrom}
-                            onChange={(e) => setLedgerFilters({ ...ledgerFilters, dateFrom: e.target.value })}
+                            onChange={(e) =>
+                              setLedgerFilters({
+                                ...ledgerFilters,
+                                dateFrom: e.target.value,
+                              })
+                            }
                           />
                         </Col>
                         <Col md={3}>
@@ -589,14 +620,26 @@ const AdminDashboard = () => {
                             type="date"
                             className="form-control"
                             value={ledgerFilters.dateTo}
-                            onChange={(e) => setLedgerFilters({ ...ledgerFilters, dateTo: e.target.value })}
+                            onChange={(e) =>
+                              setLedgerFilters({
+                                ...ledgerFilters,
+                                dateTo: e.target.value,
+                              })
+                            }
                           />
                         </Col>
                         <Col md={3} className="d-flex align-items-end gap-2">
-                          <Button onClick={handleGenerateLedger} disabled={ledgerLoading}>
+                          <Button
+                            onClick={handleGenerateLedger}
+                            disabled={ledgerLoading}
+                          >
                             {ledgerLoading ? "Generating..." : "Update Ledger"}
                           </Button>
-                          <Button variant="outline-secondary" onClick={handleClearLedgerFilters} disabled={ledgerLoading}>
+                          <Button
+                            variant="outline-secondary"
+                            onClick={handleClearLedgerFilters}
+                            disabled={ledgerLoading}
+                          >
                             Clear Filters
                           </Button>
                         </Col>
@@ -608,7 +651,9 @@ const AdminDashboard = () => {
                           <Card className="text-center">
                             <Card.Body>
                               <h6>Total Orders</h6>
-                              <h4>{ledgerData?.data?.summary?.totalOrders ?? 0}</h4>
+                              <h4>
+                                {ledgerData?.data?.summary?.totalOrders ?? 0}
+                              </h4>
                             </Card.Body>
                           </Card>
                         </Col>
@@ -616,7 +661,11 @@ const AdminDashboard = () => {
                           <Card className="text-center">
                             <Card.Body>
                               <h6>Total Revenue</h6>
-                              <h4>₹{ledgerData?.data?.summary?.totalRevenue?.toLocaleString() ?? 0}</h4>
+                              <h4>
+                                ₹
+                                {ledgerData?.data?.summary?.totalRevenue?.toLocaleString() ??
+                                  0}
+                              </h4>
                             </Card.Body>
                           </Card>
                         </Col>
@@ -624,7 +673,11 @@ const AdminDashboard = () => {
                           <Card className="text-center">
                             <Card.Body>
                               <h6>Total Discounts</h6>
-                              <h4>₹{ledgerData?.data?.summary?.totalDiscounts?.toLocaleString() ?? 0}</h4>
+                              <h4>
+                                ₹
+                                {ledgerData?.data?.summary?.totalDiscounts?.toLocaleString() ??
+                                  0}
+                              </h4>
                             </Card.Body>
                           </Card>
                         </Col>
@@ -632,7 +685,11 @@ const AdminDashboard = () => {
                           <Card className="text-center">
                             <Card.Body>
                               <h6>Total Offers</h6>
-                              <h4>₹{ledgerData?.data?.summary?.totalOffers?.toLocaleString() ?? 0}</h4>
+                              <h4>
+                                ₹
+                                {ledgerData?.data?.summary?.totalOffers?.toLocaleString() ??
+                                  0}
+                              </h4>
                             </Card.Body>
                           </Card>
                         </Col>
@@ -640,7 +697,11 @@ const AdminDashboard = () => {
                           <Card className="text-center">
                             <Card.Body>
                               <h6>Total Shipping</h6>
-                              <h4>₹{ledgerData?.data?.summary?.totalShipping?.toLocaleString() ?? 0}</h4>
+                              <h4>
+                                ₹
+                                {ledgerData?.data?.summary?.totalShipping?.toLocaleString() ??
+                                  0}
+                              </h4>
                             </Card.Body>
                           </Card>
                         </Col>
@@ -648,7 +709,11 @@ const AdminDashboard = () => {
                           <Card className="text-center">
                             <Card.Body>
                               <h6>Total Refunds</h6>
-                              <h4>₹{ledgerData?.data?.summary?.totalRefunds?.toLocaleString() ?? 0}</h4>
+                              <h4>
+                                ₹
+                                {ledgerData?.data?.summary?.totalRefunds?.toLocaleString() ??
+                                  0}
+                              </h4>
                             </Card.Body>
                           </Card>
                         </Col>
@@ -673,46 +738,100 @@ const AdminDashboard = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {(ledgerData?.data?.ledgerEntries || []).length === 0 ? (
+                            {(ledgerData?.data?.ledgerEntries || []).length ===
+                            0 ? (
                               <tr>
-                                <td colSpan={11} className="text-center text-muted">No ledger entries found.</td>
+                                <td
+                                  colSpan={11}
+                                  className="text-center text-muted"
+                                >
+                                  No ledger entries found.
+                                </td>
                               </tr>
                             ) : (
-                              (ledgerData?.data?.ledgerEntries || []).map((entry, idx) => (
-                                <tr key={idx}>
-                                  <td>{new Date(entry.date).toLocaleDateString()}</td>
-                                  <td>{entry.type === "refund" ? "Refund" : entry.orderNumber}</td>
-                                  <td>{entry.type === "refund" ? "N/A" : entry.customer}</td>
-                                  <td>
-                                    {entry.type === "refund"
-                                      ? entry.description
-                                      : (entry.items || []).map((item, i) => (
-                                          <div key={i}>
-                                            {item.productName} ({item.quantity}x ₹{item.price})
-                                          </div>
-                                        ))}
-                                  </td>
-                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.subtotal ?? 0).toLocaleString()}`}</td>
-                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.discount ?? 0).toLocaleString()}`}</td>
-                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.offers ?? 0).toLocaleString()}`}</td>
-                                  <td>{entry.type === "refund" ? "N/A" : `₹${(entry.shipping ?? 0).toLocaleString()}`}</td>
-                                  <td>
-                                    {entry.type === "refund"
-                                      ? <span className="text-danger">-₹{(entry.amount ?? 0).toLocaleString()}</span>
-                                      : `₹${(entry.total ?? 0).toLocaleString()}`}
-                                  </td>
-                                  <td>
-                                    {entry.type === "refund"
-                                      ? "N/A"
-                                      : (entry.paymentMethod || "").toUpperCase()}
-                                  </td>
-                                  <td>
-                                    {entry.type === "refund"
-                                      ? "Refunded"
-                                      : entry.orderStatus}
-                                  </td>
-                                </tr>
-                              ))
+                              (ledgerData?.data?.ledgerEntries || []).map(
+                                (entry, idx) => (
+                                  <tr key={idx}>
+                                    <td>
+                                      {new Date(
+                                        entry.date
+                                      ).toLocaleDateString()}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "Refund"
+                                        : entry.orderNumber}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "N/A"
+                                        : entry.customer}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? entry.description
+                                        : (entry.items || []).map((item, i) => (
+                                            <div key={i}>
+                                              {item.productName} (
+                                              {item.quantity}x ₹{item.price})
+                                            </div>
+                                          ))}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "N/A"
+                                        : `₹${(
+                                            entry.subtotal ?? 0
+                                          ).toLocaleString()}`}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "N/A"
+                                        : `₹${(
+                                            entry.discount ?? 0
+                                          ).toLocaleString()}`}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "N/A"
+                                        : `₹${(
+                                            entry.offers ?? 0
+                                          ).toLocaleString()}`}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "N/A"
+                                        : `₹${(
+                                            entry.shipping ?? 0
+                                          ).toLocaleString()}`}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund" ? (
+                                        <span className="text-danger">
+                                          -₹
+                                          {(entry.amount ?? 0).toLocaleString()}
+                                        </span>
+                                      ) : (
+                                        `₹${(
+                                          entry.total ?? 0
+                                        ).toLocaleString()}`
+                                      )}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "N/A"
+                                        : (
+                                            entry.paymentMethod || ""
+                                          ).toUpperCase()}
+                                    </td>
+                                    <td>
+                                      {entry.type === "refund"
+                                        ? "Refunded"
+                                        : entry.orderStatus}
+                                    </td>
+                                  </tr>
+                                )
+                              )
                             )}
                           </tbody>
                         </Table>

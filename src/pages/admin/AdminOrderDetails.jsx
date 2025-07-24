@@ -207,12 +207,25 @@ const AdminOrderDetails = () => {
   // Helper to calculate adjusted total (excluding refunded items, with proportional discount)
   const getAdjustedTotalAndDiscount = () => {
     const allItemsTotal = order.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
+      (sum, item) =>
+        sum +
+        (item.price * item.quantity -
+          (item.offers
+            ? item.offers.reduce((s, offer) => s + (offer.offerAmount || 0), 0)
+            : 0)),
       0
     );
     const nonRefundedItemsTotal = order.items
       .filter((item) => item.itemPaymentStatus !== "refunded")
-      .reduce((sum, item) => sum + item.price * item.quantity, 0);
+      .reduce(
+        (sum, item) =>
+          sum +
+          (item.price * item.quantity -
+            (item.offers
+              ? item.offers.reduce((s, offer) => s + (offer.offerAmount || 0), 0)
+              : 0)),
+        0
+      );
     const discount = getDiscountAmount();
     const proportionalDiscount =
       allItemsTotal > 0
@@ -388,6 +401,7 @@ const AdminOrderDetails = () => {
                   <thead>
                     <tr>
                       <th>Product</th>
+                      <th>Offer</th> {/* NEW COLUMN */}
                       <th>Price</th>
                       <th>Quantity</th>
                       <th className="text-end">Total</th>
@@ -406,13 +420,24 @@ const AdminOrderDetails = () => {
                       const itemStatus = item.itemStatus || "pending";
                       const itemPaymentStatus =
                         item.itemPaymentStatus || "pending";
+                      // Calculate total offer amount for this item
+                      const offerAmount = item.offers && item.offers.length > 0
+                        ? item.offers.reduce((sum, offer) => sum + (offer.offerAmount || 0), 0)
+                        : 0;
+                      // Calculate final price per unit after offer
+                      const finalUnitPrice = item.price && item.quantity
+                        ? (item.price * item.quantity - offerAmount) / item.quantity
+                        : item.price;
+                      // Calculate final total after offer
+                      const finalTotal = item.price && item.quantity
+                        ? (item.price * item.quantity - offerAmount)
+                        : 0;
                       return (
                         <tr
                           key={item._id || variant._id || idx}
                           style={
                             isCancelled &&
-                            (order.paymentMethod !== "online" ||
-                              itemPaymentStatus === "refunded")
+                            (order.paymentMethod !== "online" || itemPaymentStatus === "refunded")
                               ? { opacity: 0.5, textDecoration: "line-through" }
                               : {}
                           }
@@ -434,13 +459,38 @@ const AdminOrderDetails = () => {
                               </div>
                             </div>
                           </td>
-                          <td>₹{item.price ?? "-"}</td>
+                          {/* Offer column */}
+                          <td>
+                            {item.offers && item.offers.length > 0 ? (
+                              item.offers.map((offer, idx) => (
+                                <div key={idx}>
+                                  <span className="text-success small">
+                                    {offer.offerName}: -₹{offer.offerAmount?.toFixed(2) || 0}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                          {/* Price column */}
+                          <td>
+                            {item.offers && item.offers.length > 0 ? (
+                              <>
+                                ₹{finalUnitPrice.toFixed(2)}
+                                <br />
+                                <span style={{ textDecoration: "line-through", color: "#888", fontSize: "0.9em" }}>
+                                  ₹{item.price}
+                                </span>
+                              </>
+                            ) : (
+                              <>₹{item.price}</>
+                            )}
+                          </td>
                           <td>{item.quantity ?? "-"}</td>
+                          {/* Total column */}
                           <td className="text-end">
-                            ₹
-                            {item.price && item.quantity
-                              ? (item.price * item.quantity).toFixed(2)
-                              : "-"}
+                            ₹{finalTotal.toFixed(2)}
                           </td>
                           <td>
                             {isCancelled ? (
@@ -639,7 +689,12 @@ const AdminOrderDetails = () => {
                               item.itemPaymentStatus !== "refunded"
                           )
                           .reduce(
-                            (sum, item) => sum + item.price * item.quantity,
+                            (sum, item) =>
+                              sum +
+                              (item.price * item.quantity -
+                                (item.offers
+                                  ? item.offers.reduce((s, offer) => s + (offer.offerAmount || 0), 0)
+                                  : 0)),
                             0
                           )
                           .toFixed(2)}

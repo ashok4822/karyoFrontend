@@ -24,6 +24,7 @@ import {
   FaUndo,
 } from 'react-icons/fa';
 import { fetchCategories, createCategory, updateCategory, deleteCategory, restoreCategory } from '../../redux/reducers/categorySlice';
+import Swal from 'sweetalert2';
 
 const AdminCategories = () => {
   const dispatch = useDispatch();
@@ -89,9 +90,51 @@ const AdminCategories = () => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-      dispatch(deleteCategory(id));
-    }
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You won\'t be able to revert this!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      customClass: {
+        confirmButton: 'btn btn-danger',
+        cancelButton: 'btn btn-secondary',
+      },
+      buttonsStyling: false,
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Deleting...',
+          text: 'Please wait while we delete the category.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+        try {
+          await dispatch(deleteCategory(id)).unwrap();
+          Swal.fire({
+            title: 'Deleted!',
+            text: 'Category has been deleted successfully.',
+            icon: 'success',
+            confirmButtonColor: '#28a745',
+          });
+          // Refresh categories after delete
+          dispatch(fetchCategories({ status: statusFilter }));
+        } catch (err) {
+          Swal.fire({
+            title: 'Error!',
+            text: err || 'Failed to delete category. Please try again.',
+            icon: 'error',
+            confirmButtonColor: '#dc3545',
+          });
+        }
+      }
+    });
   };
 
   const handleRestore = (id) => {
@@ -119,12 +162,17 @@ const AdminCategories = () => {
 
   // Separate active/inactive and deleted categories
   const activeCategories = categories.filter(category => 
-    category.status !== 'deleted' && 
+    category.status === 'active' && category.isDeleted === false &&
+    category.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const inactiveCategories = categories.filter(category => 
+    category.status === 'inactive' && category.isDeleted === false &&
     category.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   const deletedCategories = categories.filter(category => 
-    category.status === 'deleted' && 
+    category.status === 'deleted' && category.isDeleted === true &&
     category.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -139,6 +187,7 @@ const AdminCategories = () => {
   };
 
   const sortedActiveCategories = sortCategories([...activeCategories]);
+  const sortedInactiveCategories = sortCategories([...inactiveCategories]);
   const sortedDeletedCategories = sortCategories([...deletedCategories]);
 
   if (loading) {
@@ -311,6 +360,7 @@ const AdminCategories = () => {
 
       {/* Active/Inactive Categories */}
       {renderCategoryTable(sortedActiveCategories, 'Active Categories')}
+      {renderCategoryTable(sortedInactiveCategories, 'Inactive Categories')}
 
       {/* Deleted Categories */}
       {sortedDeletedCategories.length > 0 && (
