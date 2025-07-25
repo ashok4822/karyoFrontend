@@ -159,7 +159,12 @@ const AdminOffers = () => {
   const fetchProducts = async () => {
     try {
       const data = await getAllProducts({ limit: 1000 });
-      setProducts(data.products || []);
+      // Support both { products } and { data: { products } }
+      const products = data.products || (data.data && data.data.products) || [];
+      setProducts(products);
+      if (!products.length) {
+        console.warn("No products found or response structure unexpected:", data);
+      }
     } catch (error) {
       console.error("Error fetching products:", error);
     }
@@ -168,7 +173,12 @@ const AdminOffers = () => {
   const fetchCategories = async () => {
     try {
       const data = await getAllCategories({ limit: 1000 });
-      setCategories(data.categories || []);
+      // Support both { categories } and { data: { categories } }
+      const categories = data.categories || (data.data && data.data.categories) || [];
+      setCategories(categories);
+      if (!categories.length) {
+        console.warn("No categories found or response structure unexpected:", data);
+      }
     } catch (error) {
       console.error("Error fetching categories:", error);
     }

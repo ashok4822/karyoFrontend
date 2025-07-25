@@ -98,7 +98,7 @@ const AdminDashboard = () => {
         ? `${order.user.firstName} ${order.user.lastName || ""}`.trim()
         : order.user.username || order.user.email
       : "Unknown",
-    amount: order.total,
+    amount: order.computedTotal !== undefined ? Number(order.computedTotal).toFixed(2) : Number(order.total).toFixed(2),
     status: order.status,
   }));
 

@@ -9,17 +9,21 @@ import ViewProductModal from "../../components/ViewProductModal";
 import EditVariantModal from "../../components/EditVariantModal";
 import ViewVariantModal from "../../components/ViewVariantModal";
 import AddVariantModal from "../../components/AddVariantModal";
-import { fetchProductsFromBackend } from "../../redux/reducers/productSlice";
-import Swal from "sweetalert2";
 import { getAllActiveCategories } from "../../services/admin/adminCategoryService";
-import { getVariantOptions, getBrandOptions, deleteProduct, deleteVariant } from "../../services/admin/adminProductService";
+import { getVariantOptions, getBrandOptions, deleteProduct, deleteVariant, getAllProducts } from "../../services/admin/adminProductService";
+import Swal from "sweetalert2";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { products, loading, error, pagination } = useSelector(
-    (state) => state.products
-  );
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalProducts: 0,
+    productsPerPage: 5,
+  });
   const [categories, setCategories] = useState([]);
   const [variantOptions, setVariantOptions] = useState({
     colours: [],
@@ -86,31 +90,38 @@ const ProductManagement = () => {
     fetchBrands();
   }, []);
 
-  // Fetch products from backend
+  // Fetch products from backend (admin)
   useEffect(() => {
-    const params = {
-      page: currentPage,
-      limit: 5,
-      search: searchQuery,
-      category: categoryFilter !== "all" ? categoryFilter : "",
-      status: statusFilter !== "all" ? statusFilter : "",
-      brand: brandFilter !== "all" ? brandFilter : "",
-      variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-      variantCapacity:
-        variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      const params = {
+        page: currentPage,
+        limit: 5,
+        search: searchQuery,
+        category: categoryFilter !== "all" ? categoryFilter : "",
+        status: statusFilter !== "all" ? statusFilter : "",
+        brand: brandFilter !== "all" ? brandFilter : "",
+        variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
+        variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+      };
+      const result = await getAllProducts(params);
+      if (result.success) {
+        setProducts(result.data.products);
+        setPagination({
+          currentPage: params.page,
+          totalPages: Math.ceil(result.data.total / params.limit),
+          totalProducts: result.data.total,
+          productsPerPage: params.limit,
+        });
+      } else {
+        setProducts([]);
+        setError(result.error || "Failed to fetch products");
+      }
+      setLoading(false);
     };
-
-    dispatch(fetchProductsFromBackend(params));
-  }, [
-    dispatch,
-    currentPage,
-    searchQuery,
-    categoryFilter,
-    statusFilter,
-    brandFilter,
-    variantColourFilter,
-    variantCapacityFilter,
-  ]);
+    fetchProducts();
+  }, [currentPage, searchQuery, categoryFilter, statusFilter, brandFilter, variantColourFilter, variantCapacityFilter]);
 
   const handleViewProduct = (product) => {
     setSelectedProduct(product);
@@ -132,33 +143,38 @@ const ProductManagement = () => {
       cancelButtonColor: "#d33",
       confirmButtonText: "Yes, delete it!",
     });
-
     if (!result.isConfirmed) return;
-
     const deleteResult = await deleteProduct(id);
-
     if (deleteResult.success) {
       Swal.fire("Deleted!", "Product has been deleted.", "success");
-
       // Go to previous page if current page has only 1 item left
       if (products.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
         // Refresh current page
-        dispatch(
-          fetchProductsFromBackend({
-            page: currentPage,
-            limit: 5,
-            search: searchQuery,
-            category: categoryFilter !== "all" ? categoryFilter : "",
-            status: statusFilter !== "all" ? statusFilter : "",
-            brand: brandFilter !== "all" ? brandFilter : "",
-            variantColour:
-              variantColourFilter !== "all" ? variantColourFilter : "",
-            variantCapacity:
-              variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-          })
-        );
+        const params = {
+          page: currentPage,
+          limit: 5,
+          search: searchQuery,
+          category: categoryFilter !== "all" ? categoryFilter : "",
+          status: statusFilter !== "all" ? statusFilter : "",
+          brand: brandFilter !== "all" ? brandFilter : "",
+          variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
+          variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+        };
+        const result = await getAllProducts(params);
+        if (result.success) {
+          setProducts(result.data.products);
+          setPagination({
+            currentPage: params.page,
+            totalPages: Math.ceil(result.data.total / params.limit),
+            totalProducts: result.data.total,
+            productsPerPage: params.limit,
+          });
+        } else {
+          setProducts([]);
+          setError(result.error || "Failed to fetch products");
+        }
       }
     } else {
       Swal.fire(
@@ -170,10 +186,9 @@ const ProductManagement = () => {
   };
 
   const handleProductAdded = () => {
-    // Refresh products after adding new product
     setCurrentPage(1); // Reset to first page
-    dispatch(
-      fetchProductsFromBackend({
+    const fetchProducts = async () => {
+      const params = {
         page: 1,
         limit: 5,
         search: searchQuery,
@@ -181,16 +196,29 @@ const ProductManagement = () => {
         status: statusFilter !== "all" ? statusFilter : "",
         brand: brandFilter !== "all" ? brandFilter : "",
         variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-        variantCapacity:
-          variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-      })
-    );
+        variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+      };
+      const result = await getAllProducts(params);
+      if (result.success) {
+        setProducts(result.data.products);
+        setPagination({
+          currentPage: params.page,
+          totalPages: Math.ceil(result.data.total / params.limit),
+          totalProducts: result.data.total,
+          productsPerPage: params.limit,
+        });
+      } else {
+        setProducts([]);
+        setError(result.error || "Failed to fetch products");
+      }
+    };
+    fetchProducts();
   };
 
   const handleProductUpdated = () => {
     setCurrentPage(1); // Reset to first page
-    dispatch(
-      fetchProductsFromBackend({
+    const fetchProducts = async () => {
+      const params = {
         page: 1,
         limit: 5,
         search: searchQuery,
@@ -198,27 +226,28 @@ const ProductManagement = () => {
         status: statusFilter !== "all" ? statusFilter : "",
         brand: brandFilter !== "all" ? brandFilter : "",
         variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-        variantCapacity:
-          variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-      })
-    );
+        variantCapacity: variantCapacityFilter !== "all" ? variantCapacityFilter : "",
+      };
+      const result = await getAllProducts(params);
+      if (result.success) {
+        setProducts(result.data.products);
+        setPagination({
+          currentPage: params.page,
+          totalPages: Math.ceil(result.data.total / params.limit),
+          totalProducts: result.data.total,
+          productsPerPage: params.limit,
+        });
+      } else {
+        setProducts([]);
+        setError(result.error || "Failed to fetch products");
+      }
+    };
+    fetchProducts();
   };
 
   const handleVariantUpdated = () => {
-    setCurrentPage(1); // Reset to first page
-    dispatch(
-      fetchProductsFromBackend({
-        page: 1,
-        limit: 5,
-        search: searchQuery,
-        category: categoryFilter !== "all" ? categoryFilter : "",
-        status: statusFilter !== "all" ? statusFilter : "",
-        brand: brandFilter !== "all" ? brandFilter : "",
-        variantColour: variantColourFilter !== "all" ? variantColourFilter : "",
-        variantCapacity:
-          variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-      })
-    );
+    // Similar to handleProductUpdated
+    handleProductUpdated();
   };
 
   const handleViewVariant = (product, variant) => {
@@ -262,20 +291,31 @@ const ProductManagement = () => {
       Swal.fire("Deleted!", "Variant has been deleted.", "success");
 
       // Refresh the product list
-      dispatch(
-        fetchProductsFromBackend({
-          page: currentPage,
-          limit: 5,
-          search: searchQuery,
-          category: categoryFilter !== "all" ? categoryFilter : "",
-          status: statusFilter !== "all" ? statusFilter : "",
-          brand: brandFilter !== "all" ? brandFilter : "",
-          variantColour:
+      const params = {
+        page: currentPage,
+        limit: 5,
+        search: searchQuery,
+        category: categoryFilter !== "all" ? categoryFilter : "",
+        status: statusFilter !== "all" ? statusFilter : "",
+        brand: brandFilter !== "all" ? brandFilter : "",
+        variantColour:
             variantColourFilter !== "all" ? variantColourFilter : "",
-          variantCapacity:
+        variantCapacity:
             variantCapacityFilter !== "all" ? variantCapacityFilter : "",
-        })
-      );
+      };
+      const result = await getAllProducts(params);
+      if (result.success) {
+        setProducts(result.data.products);
+        setPagination({
+          currentPage: params.page,
+          totalPages: Math.ceil(result.data.total / params.limit),
+          totalProducts: result.data.total,
+          productsPerPage: params.limit,
+        });
+      } else {
+        setProducts([]);
+        setError(result.error || "Failed to fetch products");
+      }
     } else {
       Swal.fire("Error!", result.error || "Failed to delete variant", "error");
     }

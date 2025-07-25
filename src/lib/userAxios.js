@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { store } from '../redux/store/store';
+import { logoutUser } from '../redux/reducers/authSlice';
 
 const userAxios = axios.create({
   baseURL: 'http://localhost:5000/',
@@ -49,13 +51,24 @@ userAxios.interceptors.response.use(
         console.log('userAxios: Refresh token request failed, logging out');
         localStorage.removeItem('userAccessToken');
         localStorage.removeItem('userRole');
+        store.dispatch(logoutUser());
         window.location.href = '/login';
         return Promise.reject(error);
       }
       
-      // Check if it's a user deleted error - let the component handle this
-      if (error.response.data?.message && error.response.data.message.includes('deleted')) {
-        console.log('userAxios: User deleted error, letting component handle');
+      // Check if it's a user deleted/blocked error - log out and redirect
+      if (
+        error.response.data?.message &&
+        (error.response.data.message.includes('deleted') ||
+         error.response.data.message.includes('blocked') ||
+         error.response.data.message.includes('User account has been deleted') ||
+         error.response.data.message.includes('Your account has been blocked'))
+      ) {
+        console.log('userAxios: User blocked/deleted error, logging out');
+        localStorage.removeItem('userAccessToken');
+        localStorage.removeItem('userRole');
+        store.dispatch(logoutUser());
+        window.location.href = '/login?blocked=1';
         return Promise.reject(error);
       }
       
@@ -91,7 +104,7 @@ userAxios.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem('userAccessToken');
         localStorage.removeItem('userRole');
-        
+        store.dispatch(logoutUser());
         // Handle rate limiting specifically
         if (refreshError.response?.status === 429) {
           console.log('userAxios: Rate limited on refresh token');

@@ -87,7 +87,6 @@ const AdminSalesReport = () => {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [quickRange, setQuickRange] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -101,7 +100,7 @@ const AdminSalesReport = () => {
   const fetchOrders = async (page = currentPage) => {
     setLoading(true);
     setError("");
-    let params = { page, limit: ORDERS_PER_PAGE, status: statusFilter || undefined };
+    let params = { page, limit: ORDERS_PER_PAGE };
     // Date range logic
     const { dateFrom, dateTo } = getDateRange(filterType, quickRange, customFrom, customTo);
     // Only apply custom if both dates are set
@@ -143,25 +142,24 @@ const AdminSalesReport = () => {
     setCustomFrom("");
     setCustomTo("");
     setQuickRange("");
-    setStatusFilter("");
     setCurrentPage(1); // Reset to first page when filters change
     setTimeout(fetchOrders, 0);
   };
 
   useEffect(() => {
     setCurrentPage(1); // Reset to first page when filters change
-  }, [filterType, customFrom, customTo, statusFilter, quickRange]);
+  }, [filterType, customFrom, customTo, quickRange]);
 
   useEffect(() => {
     fetchOrders(currentPage);
     // eslint-disable-next-line
-  }, [currentPage, filterType, customFrom, customTo, statusFilter, quickRange]);
+  }, [currentPage, filterType, customFrom, customTo, quickRange]);
 
   // Download Excel
   const handleDownloadExcel = () => {
     setDownloadLoading(true);
     const header = [
-      "Order Number,Date,Customer,Email,Status,Total,Discount,Coupon Code"
+      "Order Number,Date,Customer,Email,Total,Discount,Coupon Code"
     ];
     const rows = orders.map(order => {
       const customer = order.user ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim() : "-";
@@ -171,14 +169,13 @@ const AdminSalesReport = () => {
         discount = order.discount.toFixed(2);
       } else if (order.discount && typeof order.discount === "object" && order.discount.discountAmount) {
         discount = order.discount.discountAmount ? Number(order.discount.discountAmount).toFixed(2) : "-";
-        coupon = order.discount.code || order.discount.discountName || "-";
+        coupon = order.discount.code || order.discount.discountName || order.discount.name || "-";
       }
       return [
         `#${order.orderNumber}`,
         formatDate(order.createdAt || order.date),
         customer,
         order.user?.email || "",
-        order.status,
         order.total?.toFixed(2) ?? "-",
         discount,
         coupon
@@ -232,7 +229,6 @@ const AdminSalesReport = () => {
       "Date",
       "Customer",
       "Email",
-      "Status",
       "Total (INR)",
       "Discount (INR)",
       "Coupon Code"
@@ -246,14 +242,13 @@ const AdminSalesReport = () => {
         discount = `INR ${order.discount.toFixed(2)}`;
       } else if (order.discount && typeof order.discount === "object") {
         discount = order.discount.discountAmount ? `INR ${Number(order.discount.discountAmount).toFixed(2)}` : "-";
-        coupon = order.discount.code || order.discount.discountName || "-";
+        coupon = order.discount.code || order.discount.discountName || order.discount.name || "-";
       }
       return [
         `#${order.orderNumber}`,
         formatDate(order.createdAt || order.date),
         customer,
         order.user?.email || "",
-        order.status,
         total,
         discount,
         coupon
@@ -338,19 +333,6 @@ const AdminSalesReport = () => {
                     </Form.Group>
                   </Col>
                 )}
-                <Col md={3}>
-                  <Form.Group>
-                    <Form.Label>Status</Form.Label>
-                    <Form.Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                      <option value="">All</option>
-                      <option value="pending">Pending</option>
-                      <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
                 <Col md={3} className="d-flex align-items-end gap-2">
                   <Button variant="outline-secondary" className="w-100" onClick={handleClearFilters} disabled={loading}>
                     Clear Filters
@@ -411,7 +393,6 @@ const AdminSalesReport = () => {
                         <th>Date</th>
                         <th>Customer</th>
                         <th>Email</th>
-                        <th>Status</th>
                         <th>Total (INR)</th>
                         <th>Discount (INR)</th>
                         <th>Coupon Code</th>
@@ -420,7 +401,7 @@ const AdminSalesReport = () => {
                     <tbody>
                       {orders.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="text-center text-muted py-4">
+                          <td colSpan={7} className="text-center text-muted py-4">
                             No orders found.
                           </td>
                         </tr>
@@ -428,11 +409,23 @@ const AdminSalesReport = () => {
                         orders.map((order) => {
                           let discount = "-";
                           let coupon = "-";
-                          if (typeof order.discount === "number") {
+                          // Use computedProportionalDiscount if available
+                          if (order.computedProportionalDiscount !== undefined) {
+                            discount = Number(order.computedProportionalDiscount).toFixed(2);
+                          } else if (typeof order.discount === "number") {
                             discount = order.discount.toFixed(2);
                           } else if (order.discount && typeof order.discount === "object") {
                             discount = order.discount.discountAmount ? Number(order.discount.discountAmount).toFixed(2) : "-";
-                            coupon = order.discount.code || order.discount.discountName || "-";
+                            coupon = order.discount.code || order.discount.discountName || order.discount.name || "-";
+                          }
+                          // Use couponCode if present
+                          let couponCode = order.couponCode ?? "-";
+                          if (couponCode === "-" && order.discount && typeof order.discount === "object") {
+                            couponCode =
+                              order.discount.code ||
+                              order.discount.discountName ||
+                              order.discount.name ||
+                              "-";
                           }
                           return (
                             <tr key={order._id || order.id}>
@@ -444,10 +437,9 @@ const AdminSalesReport = () => {
                                   : "-"}
                               </td>
                               <td>{order.user?.email || ""}</td>
-                              <td>{order.status}</td>
-                              <td>{order.total?.toFixed(2) ?? "-"}</td>
+                              <td>{(order.computedTotal !== undefined ? order.computedTotal : order.total)?.toFixed(2) ?? "-"}</td>
                               <td>{discount}</td>
-                              <td>{coupon}</td>
+                              <td>{couponCode}</td>
                             </tr>
                           );
                         })

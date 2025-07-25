@@ -723,7 +723,7 @@ const Checkout = () => {
           
           if (offerAmount > 0) {
             offersData.push({
-              offerId: offer._id,
+              _id: offer._id, // <-- Use _id instead of offerId
               offerName: offer.name,
               offerAmount: offerAmount * item.quantity,
               offerType: offer.discountType,
