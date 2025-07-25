@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "../../hooks/use-toast";
-import { fetchCart, clearCart, clearCartState, removeFromCart } from "../../redux/reducers/cartSlice";
+import { fetchCart, clearCart, clearCartState, removeFromCart, getAvailableStock } from "../../redux/reducers/cartSlice";
 import { createOrder, fetchOrderById } from "../../redux/reducers/orderSlice";
 import {
   fetchShippingAddresses,
@@ -20,6 +20,7 @@ import {
   createRazorpayOrder,
   verifyRazorpayPayment,
   updateOnlinePaymentStatus,
+  checkOrderStock,
 } from "../../services/user/orderService";
 import CouponInput from "../../components/CouponInput";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
@@ -759,6 +760,17 @@ const Checkout = () => {
         total: calculateTotal(),
       };
 
+      // Check stock before payment for both online and COD
+      const stockCheckRes = await checkOrderStock(orderData.items);
+      if (!stockCheckRes.success) {
+        setLoading(false);
+        toast.error(
+          stockCheckRes.message || "Some items are out of stock. Please update your cart.",
+          { autoClose: 3000 }
+        );
+        return;
+      }
+
       if (paymentMethod === "online") {
         setLoading(true);
         orderCreatedRef.current = false; // Reset before starting payment
@@ -886,6 +898,21 @@ const Checkout = () => {
           error.message || "Failed to place order. Please try again.",
         variant: "destructive",
       });
+      // Clear available stock cache
+      dispatch(clearCartState());
+      // Refresh stock for all products in the order
+      if (orderData && orderData.items) {
+        const uniqueProductIds = [
+          ...new Set(
+            orderData.items
+              .map((item) => cart.items.find((ci) => ci.productVariantId._id === item.productVariantId)?.productVariantId?.product?._id)
+              .filter(Boolean)
+          ),
+        ];
+        uniqueProductIds.forEach((productId) => {
+          dispatch(getAvailableStock(productId));
+        });
+      }
     } finally {
       setLoading(false);
     }

@@ -48,6 +48,7 @@ import {
   fetchRelatedProductsByCategory,
 } from "../../services/user/productService";
 import { getBestOfferForProduct } from "../../services/user/offerService";
+import { setSelectedProduct } from "../../redux/reducers/productSlice";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -93,52 +94,22 @@ const ProductDetails = () => {
       setProductLoading(true);
       setProductError(null);
 
-      // Check Redux store first
-      const productFromStore = products.find((p) => p._id === id);
-      if (productFromStore) {
-        setProduct(productFromStore);
-        if (productFromStore.variants?.length) {
-          setSelectedVariant(productFromStore.variants[0]);
-        }
-
-        if (isProductUnavailable(productFromStore)) {
-          return navigate("/products");
-        }
-
-        fetchRelatedProducts(productFromStore);
-        if (user && userAccessToken) {
-          dispatch(getAvailableStock(productFromStore._id));
-        }
-        setProductLoading(false);
-        return;
-      }
-
-      // If not found in store, call API
+      // Always fetch from backend for latest data
       const result = await fetchProductById(id);
-
+      console.log("result : ", result);
       if (result.success && result.data) {
-        const productData = result.data;
-
-        if (isProductUnavailable(productData)) {
-          return navigate("/products");
+        setProduct(result.data);
+        dispatch(setSelectedProduct(result.data));
+        if (result.data.variants?.length) {
+          setSelectedVariant(result.data.variants[0]);
         }
-
-        setProduct(productData);
-
-        if (productData.variantDetails?.length) {
-          setSelectedVariant(productData.variantDetails[0]);
-        } else if (productData.variants?.length) {
-          setSelectedVariant(productData.variants[0]);
-        }
-
-        fetchRelatedProducts(productData);
+        fetchRelatedProducts(result.data);
         if (user && userAccessToken) {
-          dispatch(getAvailableStock(productData._id));
+          dispatch(getAvailableStock(result.data._id));
         }
       } else {
         setProductError("Failed to load product details");
-
-        // API failed – fallback to store again
+        // Fallback to Redux store if backend fails
         const fallback = products.find((p) => p._id === id);
         if (fallback) {
           setProduct(fallback);
@@ -152,10 +123,8 @@ const ProductDetails = () => {
           return navigate("/products");
         }
       }
-
       setProductLoading(false);
     };
-
     if (id) fetchProduct();
   }, [id, products, navigate, dispatch, user, userAccessToken]);
 
@@ -458,7 +427,7 @@ const ProductDetails = () => {
       const productAvailableStock = availableStock[product._id];
       if (productAvailableStock) {
         const variantStock = productAvailableStock.find(
-          (v) => v.variantId === selectedVariant._id
+          (v) => String(v.variantId) === String(selectedVariant._id)
         );
         if (variantStock) {
           return variantStock.availableStock;
@@ -495,7 +464,7 @@ const ProductDetails = () => {
     const productAvailableStock = availableStock[product._id];
     if (productAvailableStock) {
       const variantStock = productAvailableStock.find(
-        (v) => v.variantId === variant._id
+        (v) => String(v.variantId) === String(variant._id)
       );
       if (variantStock) {
         return variantStock.availableStock;

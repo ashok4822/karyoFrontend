@@ -53,3 +53,10 @@ export const updateOnlinePaymentStatus = (orderId, paymentStatus) => {
     userAxios.patch(`/orders/${orderId}/payment-status`, { paymentStatus })
   );
 };
+
+// Check stock for all items in an order before payment
+export const checkOrderStock = (items) => {
+  return apiHandler(
+    userAxios.post("/orders/check-stock", { items })
+  );
+};

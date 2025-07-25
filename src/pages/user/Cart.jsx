@@ -3,8 +3,9 @@ import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { fetchCart, updateCartItem, removeFromCart, clearCart, getAvailableStock } from "../../redux/reducers/cartSlice";
-import { useToast } from "../../hooks/use-toast";
 import { getBestOffersForProducts } from "../../services/user/offerService";
+import { checkOrderStock } from "../../services/user/orderService";
+import { toast } from "react-toastify";
 
 const Cart = () => {
   const cart = useSelector((state) => state.cart);
@@ -14,7 +15,6 @@ const Cart = () => {
   const [productOffers, setProductOffers] = useState({});
   const [offersLoading, setOffersLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (cart.items.length === 0 && !cart.loading && !cart.initialized) {
@@ -145,11 +145,7 @@ const Cart = () => {
     const item = cart.items.find(item => item.productVariantId._id === productVariantId);
     if (item && isItemDisabled(item)) {
       const statusMessage = getStatusMessage(item);
-      toast({
-        title: "Action not allowed",
-        description: statusMessage,
-        variant: "destructive",
-      });
+      toast.error(statusMessage);
       return; // Don't allow quantity changes for disabled items
     }
 
@@ -183,11 +179,7 @@ const Cart = () => {
   // Function to handle disabled item interactions
   const handleDisabledItemInteraction = (item) => {
     const statusMessage = getStatusMessage(item);
-    toast({
-      title: "Item unavailable",
-      description: statusMessage,
-      variant: "destructive",
-    });
+    toast.error(statusMessage);
   };
 
   const handleRemoveItem = async (productVariantId) => {
@@ -281,6 +273,22 @@ const Cart = () => {
   // Check if there are any disabled items
   const hasDisabledItems = cart.items.some(item => isItemDisabled(item));
   const disabledItemsCount = cart.items.filter(item => isItemDisabled(item)).length;
+
+  // Handler for Proceed to Checkout with stock check
+  const handleProceedToCheckout = async () => {
+    // Prepare items array for stock check
+    const items = cart.items.map((item) => ({
+      productVariantId: item.productVariantId._id,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+    const stockCheckRes = await checkOrderStock(items);
+    if (!stockCheckRes.success) {
+      toast.error(stockCheckRes.message || "Some items are out of stock. Please update your cart.");
+      return;
+    }
+    navigate("/checkout");
+  };
 
   if (cart.loading && !cart.initialized) {
     return (
@@ -718,7 +726,7 @@ const Cart = () => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ margin: 0 }}>Total: ₹{totalWithOffers.toFixed(2)}</h3>
                 <button
-                  onClick={() => navigate("/checkout")}
+                  onClick={handleProceedToCheckout}
                   disabled={hasDisabledItems}
                   style={{
                     padding: "12px 24px",
