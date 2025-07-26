@@ -155,13 +155,41 @@ const AdminSalesReport = () => {
     // eslint-disable-next-line
   }, [currentPage, filterType, customFrom, customTo, quickRange]);
 
+  // Filter orders to only include those with at least one delivered+paid item, and filter items accordingly
+  const filteredOrders = orders
+    .map(order => {
+      const deliveredPaidItems = (order.items || []).filter(
+        item => item.itemStatus === 'delivered' && item.itemPaymentStatus === 'paid'
+      );
+      return deliveredPaidItems.length > 0
+        ? { ...order, items: deliveredPaidItems }
+        : null;
+    })
+    .filter(Boolean);
+
+  // Adjust summary for filtered orders
+  const filteredSummary = {
+    salesCount: filteredOrders.length,
+    orderAmount: filteredOrders.reduce((sum, order) => sum + (order.computedTotal !== undefined ? order.computedTotal : order.total || 0), 0),
+    discount: filteredOrders.reduce((sum, order) => {
+      if (order.computedProportionalDiscount !== undefined) {
+        return sum + Number(order.computedProportionalDiscount);
+      } else if (typeof order.discount === 'number') {
+        return sum + order.discount;
+      } else if (order.discount && typeof order.discount === 'object') {
+        return sum + (Number(order.discount.discountAmount) || 0);
+      }
+      return sum;
+    }, 0),
+  };
+
   // Download Excel
   const handleDownloadExcel = () => {
     setDownloadLoading(true);
     const header = [
       "Order Number,Date,Customer,Email,Total,Discount,Coupon Code"
     ];
-    const rows = orders.map(order => {
+    const rows = filteredOrders.map(order => {
       const customer = order.user ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim() : "-";
       let discount = "-";
       let coupon = "-";
@@ -220,9 +248,9 @@ const AdminSalesReport = () => {
     doc.text(dateRangeText, 14, 36);
     // Summary
     doc.setFontSize(12);
-    doc.text(`Overall Sales Count: ${summary.salesCount}`, 14, 46);
-    doc.text(`Overall Order Amount: INR ${summary.orderAmount.toLocaleString()}`, 14, 54);
-    doc.text(`Overall Discount: INR ${summary.discount.toLocaleString()}`, 14, 62);
+    doc.text(`Overall Sales Count: ${filteredSummary.salesCount}`, 14, 46);
+    doc.text(`Overall Order Amount: INR ${filteredSummary.orderAmount.toLocaleString()}`, 14, 54);
+    doc.text(`Overall Discount: INR ${filteredSummary.discount.toLocaleString()}`, 14, 62);
     // Table
     const tableColumn = [
       "Order Number",
@@ -233,7 +261,7 @@ const AdminSalesReport = () => {
       "Discount (INR)",
       "Coupon Code"
     ];
-    const tableRows = orders.map(order => {
+    const tableRows = filteredOrders.map(order => {
       const customer = order.user ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim() : "-";
       let discount = "-";
       let coupon = "-";
@@ -348,7 +376,7 @@ const AdminSalesReport = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Body>
                   <div className="text-muted">Overall Sales Count</div>
-                  <div className="h4 mb-0">{summary.salesCount}</div>
+                  <div className="h4 mb-0">{filteredSummary.salesCount}</div>
                 </Card.Body>
               </Card>
             </Col>
@@ -356,7 +384,7 @@ const AdminSalesReport = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Body>
                   <div className="text-muted">Overall Order Amount</div>
-                  <div className="h4 mb-0">INR{summary.orderAmount.toLocaleString()}</div>
+                  <div className="h4 mb-0">INR{filteredSummary.orderAmount.toLocaleString()}</div>
                 </Card.Body>
               </Card>
             </Col>
@@ -364,7 +392,7 @@ const AdminSalesReport = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Body>
                   <div className="text-muted">Overall Discount</div>
-                  <div className="h4 mb-0">INR{summary.discount.toLocaleString()}</div>
+                  <div className="h4 mb-0">INR{filteredSummary.discount.toLocaleString()}</div>
                 </Card.Body>
               </Card>
             </Col>
@@ -399,14 +427,14 @@ const AdminSalesReport = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {orders.length === 0 ? (
+                      {filteredOrders.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="text-center text-muted py-4">
                             No orders found.
                           </td>
                         </tr>
                       ) : (
-                        orders.map((order) => {
+                        filteredOrders.map((order) => {
                           let discount = "-";
                           let coupon = "-";
                           // Use computedProportionalDiscount if available

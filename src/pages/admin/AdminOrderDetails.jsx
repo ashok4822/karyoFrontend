@@ -314,8 +314,6 @@ const AdminOrderDetails = () => {
                   ? "COD"
                   : order.paymentMethod === "online"
                   ? "Online"
-                  : order.paymentMethod === "wallet"
-                  ? "Wallet"
                   : "-"}
               </span>
             </Card.Header>
@@ -439,7 +437,7 @@ const AdminOrderDetails = () => {
                           key={item._id || variant._id || idx}
                           style={
                             isCancelled &&
-                            ((order.paymentMethod !== "online" && order.paymentMethod !== "wallet") || itemPaymentStatus === "refunded")
+                            (order.paymentMethod !== "online" || itemPaymentStatus === "refunded")
                               ? { opacity: 0.5, textDecoration: "line-through" }
                               : {}
                           }
@@ -617,7 +615,7 @@ const AdminOrderDetails = () => {
                               size="sm"
                               disabled={
                                 isCancelled &&
-                                ((order.paymentMethod !== "online" && order.paymentMethod !== "wallet") ||
+                                (order.paymentMethod !== "online" ||
                                   itemPaymentStatus === "refunded")
                               }
                             >
@@ -632,7 +630,7 @@ const AdminOrderDetails = () => {
                               className="mt-1"
                               disabled={
                                 (isCancelled &&
-                                  ((order.paymentMethod !== "online" && order.paymentMethod !== "wallet") ||
+                                  (order.paymentMethod !== "online" ||
                                     itemPaymentStatus === "refunded")) ||
                                 (itemPaymentStatusStates?.[item._id] ||
                                   itemPaymentStatus) === itemPaymentStatus
@@ -794,11 +792,11 @@ const AdminOrderDetails = () => {
                         <strong>Refund Processed:</strong> ₹
                         {order.total?.toFixed(2)} has been refunded to
                         customer's wallet.
-                        {(order.paymentMethod === "cod" || order.paymentMethod === "wallet") && (
+                        {order.paymentMethod === "cod" && (
                           <div className="mt-1 small">
                             <em>
                               This refund was provided as a goodwill gesture for
-                              the {order.paymentMethod === "cod" ? "COD" : "wallet"} order.
+                              the COD order.
                             </em>
                           </div>
                         )}
@@ -876,7 +874,7 @@ const AdminOrderDetails = () => {
         <Modal.Body>
           <div className="alert alert-info mb-3">
             <strong>Note:</strong> This option is only available for Cash on
-            Delivery (COD) orders. Online and wallet payments are pre-paid.
+            Delivery (COD) orders.
           </div>
           <Form.Group>
             <Form.Label>Payment Status</Form.Label>
