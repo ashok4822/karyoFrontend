@@ -79,8 +79,6 @@ const AdminOrders = () => {
 
       if (result.success) {
         const { orders = [], totalPages = 1, total = 0 } = result.data;
-        console.log('Orders received:', orders);
-        console.log('Total orders:', total);
         setOrders(orders);
         setTotalPages(totalPages);
         setTotal(total);
@@ -216,7 +214,7 @@ const AdminOrders = () => {
             <Card className="border-0 shadow-sm mb-4">
               <Card.Body>
                 <Row className="g-3 align-items-center">
-                  <Col md={4}>
+                  <Col md={6}>
                     <Form onSubmit={handleSearchSubmit}>
                       <InputGroup>
                         <InputGroup.Text>
@@ -224,12 +222,22 @@ const AdminOrders = () => {
                         </InputGroup.Text>
                         <Form.Control
                           type="text"
-                          placeholder="Search by order ID, customer name, email, or product name..."
+                          placeholder="Search by order number, customer name, email, or product name..."
                           value={searchInput}
                           onChange={handleSearchInputChange}
                         />
+                        {searchInput && (
+                          <Button 
+                            type="button" 
+                            variant="outline-secondary"
+                            onClick={handleClearSearch}
+                            title="Clear search"
+                          >
+                            ×
+                          </Button>
+                        )}
                         <Button type="submit" variant="outline-primary">
-                          <FaSearch />
+                          Search
                         </Button>
                       </InputGroup>
                     </Form>
@@ -468,6 +476,176 @@ const AdminOrders = () => {
                   </div>
                 </Card.Footer>
               )}
+            </Card>
+
+            {/* Returned Product Variants - Pending Verification */}
+            <Card className="mb-4">
+              <Card.Header className="bg-warning bg-opacity-10 fw-bold">Returned Products - Pending Verification</Card.Header>
+              <Card.Body className="p-0">
+                <Table hover responsive className="align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Product</th>
+                      <th>Variant</th>
+                      <th>Status</th>
+                      <th className="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.flatMap((order) =>
+                      (order.items || [])
+                        .filter(
+                          (item) => item.itemStatus === "returned"
+                        )
+                        .map((item, idx) => {
+                          const variant = item.productVariantId || {};
+                          const product = variant.product || {};
+                          return (
+                            <tr key={`returned-pending-${order._id || order.id}-${item._id || idx}`}>
+                              <td>#{order.orderNumber}</td>
+                              <td>{product.name || "Product Name"}</td>
+                              <td>
+                                {variant.colour && variant.capacity
+                                  ? `${variant.colour} - ${variant.capacity}`
+                                  : variant.colour || variant.capacity || "-"}
+                              </td>
+                              <td>
+                                <Badge bg="warning" text="dark">Pending Verification</Badge>
+                              </td>
+                              <td className="text-end">
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => navigate(`/admin/orders/${order._id || order.id}`)}
+                                >
+                                  <FaEye /> View Order
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                    )}
+                    {/* If no pending returned items */}
+                    {orders.flatMap((order) => order.items || []).filter(item => item.itemStatus === "returned").length === 0 && (
+                      <tr><td colSpan={5} className="text-center text-muted">No returned products pending verification</td></tr>
+                    )}
+                  </tbody>
+                </Table>
+              </Card.Body>
+            </Card>
+
+            {/* Returned Product Variants - Verified */}
+            <Card className="mb-4">
+              <Card.Header className="bg-success bg-opacity-10 fw-bold">Returned Products - Verified</Card.Header>
+              <Card.Body className="p-0">
+                <Table hover responsive className="align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Product</th>
+                      <th>Variant</th>
+                      <th>Status</th>
+                      <th className="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.flatMap((order) =>
+                      (order.items || [])
+                        .filter(
+                          (item) => item.itemStatus === "return_verified"
+                        )
+                        .map((item, idx) => {
+                          const variant = item.productVariantId || {};
+                          const product = variant.product || {};
+                          return (
+                            <tr key={`returned-verified-${order._id || order.id}-${item._id || idx}`}>
+                              <td>#{order.orderNumber}</td>
+                              <td>{product.name || "Product Name"}</td>
+                              <td>
+                                {variant.colour && variant.capacity
+                                  ? `${variant.colour} - ${variant.capacity}`
+                                  : variant.colour || variant.capacity || "-"}
+                              </td>
+                              <td>
+                                <Badge bg="success">Verified</Badge>
+                              </td>
+                              <td className="text-end">
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => navigate(`/admin/orders/${order._id || order.id}`)}
+                                >
+                                  <FaEye /> View Order
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                    )}
+                    {/* If no verified returned items */}
+                    {orders.flatMap((order) => order.items || []).filter(item => item.itemStatus === "return_verified").length === 0 && (
+                      <tr><td colSpan={5} className="text-center text-muted">No verified returned products found</td></tr>
+                    )}
+                  </tbody>
+                </Table>
+              </Card.Body>
+            </Card>
+
+            {/* Cancelled Product Variants Table */}
+            <Card className="mb-4">
+              <Card.Header className="bg-danger bg-opacity-10 fw-bold">Cancelled Product Variants</Card.Header>
+              <Card.Body className="p-0">
+                <Table hover responsive className="align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Product</th>
+                      <th>Variant</th>
+                      <th>Status</th>
+                      <th className="text-end">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.flatMap((order) =>
+                      (order.items || [])
+                        .filter(
+                          (item) =>
+                            item.itemStatus === "cancelled" || item.cancelled === true
+                        )
+                        .map((item, idx) => {
+                          const variant = item.productVariantId || {};
+                          const product = variant.product || {};
+                          return (
+                            <tr key={`cancelled-${order._id || order.id}-${item._id || idx}`}>
+                              <td>#{order.orderNumber}</td>
+                              <td>{product.name || "Product Name"}</td>
+                              <td>
+                                {variant.colour && variant.capacity
+                                  ? `${variant.colour} - ${variant.capacity}`
+                                  : variant.colour || variant.capacity || "-"}
+                              </td>
+                              <td>{item.itemStatus || "cancelled"}</td>
+                              <td className="text-end">
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => navigate(`/admin/orders/${order._id || order.id}`)}
+                                >
+                                  <FaEye /> View Order
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                    )}
+                    {/* If no cancelled items */}
+                    {orders.flatMap((order) => order.items || []).filter(item => item.itemStatus === "cancelled" || item.cancelled === true).length === 0 && (
+                      <tr><td colSpan={5} className="text-center text-muted">No cancelled product variants found</td></tr>
+                    )}
+                  </tbody>
+                </Table>
+              </Card.Body>
             </Card>
 
             {/* Delete Confirmation Modal */}

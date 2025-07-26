@@ -879,6 +879,7 @@ const Checkout = () => {
         return;
       }
 
+      // For COD and wallet (and fallback)
       const result = await dispatch(createOrder(orderData)).unwrap();
       const orderId = result.order?._id;
       // dispatch(clearCart());
@@ -892,27 +893,12 @@ const Checkout = () => {
       // Redirect to order confirmation page with orderId and fresh parameter
       navigate(`/order-confirmation/${orderId}?fresh=true`);
     } catch (error) {
+      console.error("Order creation failed:", error);
       toast({
         title: "Order failed",
-        description:
-          error.message || "Failed to place order. Please try again.",
+        description: error?.message || error || "Could not place order. Please try again.",
         variant: "destructive",
       });
-      // Clear available stock cache
-      dispatch(clearCartState());
-      // Refresh stock for all products in the order
-      if (orderData && orderData.items) {
-        const uniqueProductIds = [
-          ...new Set(
-            orderData.items
-              .map((item) => cart.items.find((ci) => ci.productVariantId._id === item.productVariantId)?.productVariantId?.product?._id)
-              .filter(Boolean)
-          ),
-        ];
-        uniqueProductIds.forEach((productId) => {
-          dispatch(getAvailableStock(productId));
-        });
-      }
     } finally {
       setLoading(false);
     }
@@ -1953,6 +1939,7 @@ const Checkout = () => {
                     gap: "1rem",
                   }}
                 >
+                  {/* COD Option */}
                   <label
                     style={{
                       display: "flex",
@@ -2035,7 +2022,7 @@ const Checkout = () => {
                       )}
                     </div>
                   </label>
-
+                  {/* Online Payment Option */}
                   <label
                     style={{
                       display: "flex",
@@ -2090,6 +2077,63 @@ const Checkout = () => {
                         }}
                       >
                         ✓ Instant confirmation
+                      </div>
+                    </div>
+                  </label>
+                  {/* Wallet Payment Option */}
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "0.75rem",
+                      cursor: "pointer",
+                      padding: "1rem",
+                      borderRadius: "8px",
+                      border:
+                        paymentMethod === "wallet"
+                          ? "2px solid #f59e42"
+                          : "1px solid #ddd",
+                      backgroundColor:
+                        paymentMethod === "wallet" ? "#fff7ed" : "#fff",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="wallet"
+                      checked={paymentMethod === "wallet"}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      style={{ margin: 0, marginTop: "0.25rem" }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontWeight: "600",
+                          fontSize: "1rem",
+                          color: "#f59e42",
+                        }}
+                      >
+                        Wallet
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.875rem",
+                          color: "#666",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Pay instantly using your wallet balance.
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#f59e42",
+                          marginTop: "0.5rem",
+                          fontWeight: "500",
+                        }}
+                      >
+                        ✓ Fast and secure
                       </div>
                     </div>
                   </label>
@@ -2205,16 +2249,35 @@ const Checkout = () => {
                     fontSize: "0.875rem",
                     fontWeight: "600",
                     backgroundColor:
-                      paymentMethod === "cod" ? "#f0fdf4" : "#f8f9ff",
-                    color: paymentMethod === "cod" ? "#10b981" : "#4f46e5",
+                      paymentMethod === "cod"
+                        ? "#f0fdf4"
+                        : paymentMethod === "wallet"
+                        ? "#fff7ed"
+                        : "#f8f9ff",
+                    color:
+                      paymentMethod === "cod"
+                        ? "#10b981"
+                        : paymentMethod === "wallet"
+                        ? "#f59e42"
+                        : "#4f46e5",
                     border: `1px solid ${
-                      paymentMethod === "cod" ? "#bbf7d0" : "#e0e7ff"
+                      paymentMethod === "cod"
+                        ? "#bbf7d0"
+                        : paymentMethod === "wallet"
+                        ? "#fdba74"
+                        : "#e0e7ff"
                     }`,
                   }}
                 >
-                  {paymentMethod === "cod" ? "💰" : "💳"}
+                  {paymentMethod === "cod"
+                    ? "💰"
+                    : paymentMethod === "wallet"
+                    ? "👛"
+                    : "💳"}
                   {paymentMethod === "cod"
                     ? "Cash on Delivery"
+                    : paymentMethod === "wallet"
+                    ? "Wallet"
                     : "Online Payment"}
                 </div>
               </div>

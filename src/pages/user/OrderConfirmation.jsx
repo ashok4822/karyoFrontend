@@ -89,6 +89,8 @@ const OrderConfirmation = () => {
     //   `Payment Method: ${
     //     currentOrder.paymentMethod === "cod"
     //       ? "Cash on Delivery"
+    //       : currentOrder.paymentMethod === "wallet"
+    //       ? "Wallet Payment"
     //       : "Online Payment"
     //   }`,
     //   14,
@@ -487,6 +489,8 @@ const OrderConfirmation = () => {
                     <span className="badge bg-primary bg-opacity-25 text-primary fs-6">
                       {currentOrder.paymentMethod === "cod"
                         ? "Cash on Delivery"
+                        : currentOrder.paymentMethod === "wallet"
+                        ? "Wallet Payment"
                         : "Online Payment"}
                     </span>
                   </div>
@@ -503,6 +507,8 @@ const OrderConfirmation = () => {
                     <span className="badge bg-primary bg-opacity-25 text-primary fs-6">
                       {currentOrder.paymentMethod === "cod"
                         ? "Cash on Delivery"
+                        : currentOrder.paymentMethod === "wallet"
+                        ? "Wallet Payment"
                         : "Online Payment"}
                     </span>
                   </div>
@@ -547,6 +553,8 @@ const OrderConfirmation = () => {
                       <span className="fw-semibold text-dark">
                         {currentOrder.paymentMethod === "cod"
                           ? "Cash on Delivery"
+                          : currentOrder.paymentMethod === "wallet"
+                          ? "Wallet Payment"
                           : "Online Payment"}
                       </span>
                     </li>
