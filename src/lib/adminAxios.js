@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const adminAxios = axios.create({
-  baseURL: "http://localhost:5000/admin",
+  baseURL: process.env.ADMIN_BACKEND_URL,
   withCredentials: true,
 });
 
