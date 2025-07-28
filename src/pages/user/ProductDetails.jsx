@@ -553,7 +553,7 @@ const ProductDetails = () => {
       if (imageUrl.startsWith("http")) return imageUrl;
       // If the image is a relative path, prepend backend URL
       return `${
-        import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+        import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000"
       }${imageUrl}`;
     };
 
@@ -612,7 +612,7 @@ const ProductDetails = () => {
 
     if (imageUrl.startsWith("http")) return imageUrl;
     return `${
-      import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+      import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000"
     }${imageUrl}`;
   };
 
@@ -631,7 +631,7 @@ const ProductDetails = () => {
         .map((imageUrl) => {
           if (imageUrl.startsWith("http")) return imageUrl;
           return `${
-            import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+            import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000"
           }${imageUrl}`;
         })
         .filter(Boolean);
@@ -772,7 +772,7 @@ const ProductDetails = () => {
                       variant.imageUrls[0].startsWith("http")
                         ? variant.imageUrls[0]
                         : `${
-                            import.meta.env.VITE_BACKEND_URL ||
+                            import.meta.env.VITE_USER_BACKEND_URL ||
                             "http://localhost:5000"
                           }${variant.imageUrls[0]}`
                     }
@@ -1426,7 +1426,7 @@ const ProductDetails = () => {
               }
               if (relImage && !relImage.startsWith("http")) {
                 relImage = `${
-                  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+                  import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000"
                 }${relImage}`;
               }
               if (!relImage) {

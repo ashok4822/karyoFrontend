@@ -143,9 +143,9 @@ const UserSignup = () => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     if (ref) {
-      window.location.href = `http://localhost:5000/auth/google?ref=${ref}`;
+      window.location.href = `${import.meta.env.VITE_USER_BACKEND_URL}/auth/google?ref=${ref}`;
     } else {
-      window.location.href = `http://localhost:5000/auth/google`;
+      window.location.href = `${import.meta.env.VITE_USER_BACKEND_URL}/auth/google`;
     }
   };
 

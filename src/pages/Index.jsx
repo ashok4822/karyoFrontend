@@ -195,7 +195,7 @@ const Index = () => {
     if (!finalImg) return "https://via.placeholder.com/300x300?text=No+Image";
     if (finalImg.startsWith("http")) return finalImg;
     return `${
-      import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"
+      import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000"
     }${finalImg}`;
   };
 

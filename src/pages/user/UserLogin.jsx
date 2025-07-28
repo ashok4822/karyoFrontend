@@ -110,7 +110,7 @@ const UserLogin = () => {
                 variant="outline-danger"
                 className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
                 onClick={() =>
-                  (window.location.href = "http://localhost:5000/auth/google")
+                  (window.location.href = `${import.meta.env.VITE_USER_BACKEND_URL}/auth/google`)
                 }
               >
                 <FaGoogle /> Sign in with Google

@@ -98,7 +98,7 @@ const ProductListing = () => {
     if (!finalImg) return FALLBACK_IMAGE;
     if (finalImg.startsWith("http")) return finalImg;
     // If the image is a relative path (e.g., /uploads/...), prepend backend URL
-    return `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5000"}${finalImg}`;
+    return `${import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000"}${finalImg}`;
   };
 
   // Helper function to build filter parameters
