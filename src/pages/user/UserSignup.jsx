@@ -24,6 +24,8 @@ import api, { OTP_EXPIRY_SECONDS } from "../../lib/utils";
 import { fetchCart } from "../../redux/reducers/cartSlice";
 import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
+const apiBaseUrl = import.meta.env.VITE_USER_BACKEND_UR || "http://localhost:5000";
+
 const UserSignup = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -143,9 +145,9 @@ const UserSignup = () => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
     if (ref) {
-      window.location.href = `http://localhost:5000/auth/google?ref=${ref}`;
+      window.location.href = `${apiBaseUrl}/auth/google?ref=${ref}`;
     } else {
-      window.location.href = `http://localhost:5000/auth/google`;
+      window.location.href = `${apiBaseUrl}/auth/google`;
     }
   };
 
