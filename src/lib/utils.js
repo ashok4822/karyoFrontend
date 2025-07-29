@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge";
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_USER_BACKEND_URL, // Trailing slash
+  baseURL: import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000", // Trailing slash
   withCredentials: true,
 });
 

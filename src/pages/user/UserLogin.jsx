@@ -17,6 +17,9 @@ import { loginUser } from "../../services/user/authService";
 import { fetchCart } from "../../redux/reducers/cartSlice";
 import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
+const apiBaseUrl =
+  import.meta.env.VITE_USER_BACKEND_UR || "http://localhost:5000";
+
 const UserLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -110,7 +113,7 @@ const UserLogin = () => {
                 variant="outline-danger"
                 className="w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
                 onClick={() =>
-                  (window.location.href = `${import.meta.env.VITE_USER_BACKEND_URL}/auth/google`)
+                  (window.location.href = `${apiBaseUrl}/auth/google`)
                 }
               >
                 <FaGoogle /> Sign in with Google

@@ -3,7 +3,7 @@ import { store } from "../redux/store/store";
 import { logoutUser } from "../redux/reducers/authSlice";
 
 const userAxios = axios.create({
-  baseURL: import.meta.env.VITE_USER_BACKEND_URL,
+  baseURL: import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000",
   withCredentials: true,
 });
 
@@ -112,7 +112,7 @@ userAxios.interceptors.response.use(
 
       try {
         const res = await axios.post(
-          `${import.meta.env.VITE_USER_BACKEND_URL}/auth/refresh-token`,
+          `${import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000"}/auth/refresh-token`,
           {},
           { withCredentials: true }
         );

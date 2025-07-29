@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const adminAxios = axios.create({
-  baseURL: import.meta.env.VITE_ADMIN_BACKEND_URL,
+  baseURL: import.meta.env.VITE_ADMIN_BACKEND_URL || "http://localhost:5000/admin",
   withCredentials: true,
 });
 
@@ -50,7 +50,7 @@ adminAxios.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
       try {
-        const res = await axios.post(`${import.meta.env.VITE_ADMIN_BACKEND_URL}/refresh-token`, {}, { withCredentials: true });
+        await axios.post(`${import.meta.env.VITE_ADMIN_BACKEND_URL}/refresh-token`, {}, { withCredentials: true });
         const newToken = res.data.token;
         localStorage.setItem('adminAccessToken', newToken);
         adminAxios.defaults.headers['Authorization'] = 'Bearer ' + newToken;
