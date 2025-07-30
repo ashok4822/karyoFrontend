@@ -14,8 +14,11 @@ import {
   addFunds,
   deductFunds,
   getWallet,
+  createWalletRazorpayOrder,
+  verifyWalletPayment,
 } from "../../services/user/walletService";
 import { getWalletTransactions } from "../../services/user/transactionService";
+import { useSelector } from "react-redux";
 
 const Wallet = () => {
   const [wallet, setWallet] = useState(null);
@@ -28,6 +31,7 @@ const Wallet = () => {
   const [toastMsg, setToastMsg] = useState("");
   const [toastVariant, setToastVariant] = useState("success");
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     fetchWallet();
@@ -72,31 +76,141 @@ const Wallet = () => {
       return;
     }
 
-    setLoading(true);
-    const payload = { amount: numAmount, description };
-
-    const response =
-      type === "add" ? await addFunds(payload) : await deductFunds(payload);
-
-    if (response.success) {
-      setToastMsg(
-        type === "add"
-          ? "Funds added successfully"
-          : "Funds deducted successfully"
-      );
-      setToastVariant("success");
-      setAmount("");
-      setDescription("");
-      setModalType(null);
-      fetchWallet();
-      fetchTransactions();
-    } else {
-      setToastMsg(response.error || `Failed to ${type} funds`);
+    if (type === "add" && numAmount < 1) {
+      setToastMsg("Minimum amount for wallet recharge is ₹1");
       setToastVariant("danger");
+      setShowToast(true);
+      return;
     }
 
-    setShowToast(true);
-    setLoading(false);
+    if (type === "add" && numAmount > 5000) {
+      setToastMsg("Maximum amount you can add at a time is ₹5,000");
+      setToastVariant("danger");
+      setShowToast(true);
+      return;
+    }
+
+    if (type === "add" && wallet?.balance + numAmount > 10000) {
+      setToastMsg("Wallet balance cannot exceed ₹10,000. Please enter a lower amount.");
+      setToastVariant("danger");
+      setShowToast(true);
+      return;
+    }
+
+    if (type === "add") {
+      // Handle Razorpay payment for adding funds
+      await handleRazorpayPayment(numAmount);
+    } else {
+      // Handle direct deduction (existing logic)
+      setLoading(true);
+      const payload = { amount: numAmount, description };
+      const response = await deductFunds(payload);
+
+      if (response.success) {
+        setToastMsg("Funds deducted successfully");
+        setToastVariant("success");
+        setAmount("");
+        setDescription("");
+        setModalType(null);
+        fetchWallet();
+        fetchTransactions();
+      } else {
+        setToastMsg(response.error || "Failed to deduct funds");
+        setToastVariant("danger");
+      }
+
+      setShowToast(true);
+      setLoading(false);
+    }
+  };
+
+  const handleRazorpayPayment = async (amount) => {
+    try {
+      setLoading(true);
+      
+      // Create Razorpay order
+      const orderResponse = await createWalletRazorpayOrder({
+        amount,
+        description: description || "Wallet recharge"
+      });
+
+      if (!orderResponse.success) {
+        setToastMsg(orderResponse.error || "Failed to create payment order");
+        setToastVariant("danger");
+        setShowToast(true);
+        setLoading(false);
+        return;
+      }
+
+      const { order, key_id } = orderResponse.data;
+
+      // Configure Razorpay options
+      const options = {
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "Caryo",
+        description: description || "Wallet Recharge",
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            // Verify payment on backend
+            const verifyResponse = await verifyWalletPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              amount,
+              description: description || "Wallet recharge"
+            });
+
+            if (verifyResponse.success) {
+              setToastMsg("Payment successful! Funds added to wallet");
+              setToastVariant("success");
+              setAmount("");
+              setDescription("");
+              setModalType(null);
+              fetchWallet();
+              fetchTransactions();
+            } else {
+              setToastMsg(verifyResponse.error || "Payment verification failed");
+              setToastVariant("danger");
+            }
+            setShowToast(true);
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            setToastMsg("Payment verification failed");
+            setToastVariant("danger");
+            setShowToast(true);
+          }
+        },
+        prefill: {
+          name: user?.username || "User",
+          email: user?.email || "user@example.com",
+        },
+        theme: {
+          color: "#0d6efd",
+        },
+        modal: {
+          ondismiss: function () {
+            setLoading(false);
+            setToastMsg("Payment was cancelled or failed. No funds were added.");
+            setToastVariant("danger");
+            setShowToast(true);
+          },
+        },
+      };
+
+      // Initialize Razorpay
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+    } catch (error) {
+      console.error("Razorpay payment error:", error);
+      setToastMsg("Failed to initiate payment");
+      setToastVariant("danger");
+      setShowToast(true);
+      setLoading(false);
+    }
   };
 
   const formatDate = (date) => {
@@ -145,8 +259,10 @@ const Wallet = () => {
             <Button
               variant="success"
               className="d-flex align-items-center gap-2"
-              onClick={() => setModalType("add")}
-              disabled={loading}
+              onClick={() => {
+                if (wallet?.balance < 10000) setModalType("add");
+              }}
+              disabled={loading || wallet?.balance >= 10000}
             >
               <FaPlusCircle /> Add Funds
             </Button>
@@ -221,7 +337,7 @@ const Wallet = () => {
           <Modal.Title>
             {modalType === "add" ? (
               <span className="text-success">
-                <FaPlusCircle /> Add Funds
+                <FaPlusCircle /> Add Funds via Payment
               </span>
             ) : (
               <span className="text-danger">
@@ -231,6 +347,11 @@ const Wallet = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {modalType === "add" && wallet?.balance >= 10000 && (
+            <div className="alert alert-warning text-center">
+              Your wallet balance is already at the maximum limit (₹10,000). You cannot add more funds.
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -246,6 +367,7 @@ const Wallet = () => {
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Enter amount"
                 min={1}
+                max={5000}
                 required
               />
             </div>
@@ -266,7 +388,7 @@ const Wallet = () => {
                 disabled={loading}
               >
                 {loading && <Spinner size="sm" className="me-2" />}{" "}
-                {modalType === "add" ? "Add" : "Deduct"}
+                {modalType === "add" ? "Pay Now" : "Deduct"}
               </Button>
             </div>
           </form>

@@ -21,3 +21,17 @@ export const deductFunds = async ({ amount, description }) => {
     userAxios.post("/users/wallet/deduct", { amount, description })
   );
 };
+
+// Create Razorpay order for wallet add funds
+export const createWalletRazorpayOrder = async ({ amount, description }) => {
+  return await apiHandler(
+    userAxios.post("/users/wallet/razorpay/order", { amount, description })
+  );
+};
+
+// Verify Razorpay payment and add funds to wallet
+export const verifyWalletPayment = async (paymentData) => {
+  return await apiHandler(
+    userAxios.post("/users/wallet/razorpay/verify", paymentData)
+  );
+};

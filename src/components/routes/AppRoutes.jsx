@@ -42,6 +42,7 @@ import Offers from "../../pages/user/Offers";
 import OrderSuccess from "../../pages/user/OrderSuccess";
 import OrderFailure from "../../pages/user/OrderFailure";
 import AdminSalesReport from "../../pages/admin/AdminSalesReport";
+import AdminNotFound from "../../pages/admin/AdminNotFound";
 
 const AppRoutes = () => {
   const [isSessionRestored, setIsSessionRestored] = useState(false);
@@ -184,12 +185,12 @@ const AppRoutes = () => {
               </AdminProtectedRoute>
             }
           />
-          {/* Catch-all admin route - redirect to admin dashboard */}
+          {/* Catch-all admin route - show admin 404 */}
           <Route
             path="/admin/*"
             element={
               <AdminProtectedRoute>
-                <Navigate to="/admin" replace />
+                <AdminNotFound />
               </AdminProtectedRoute>
             }
           />

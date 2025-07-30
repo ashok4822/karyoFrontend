@@ -34,6 +34,7 @@ function formatDate(dateString) {
 function getDateRange(filterType, quickRange, customFrom, customTo) {
   const now = new Date();
   let dateFrom = null, dateTo = null;
+  
   if (filterType === "custom") {
     dateFrom = customFrom || null;
     dateTo = customTo || null;
@@ -68,6 +69,7 @@ function getDateRange(filterType, quickRange, customFrom, customTo) {
       dateFrom = monday.toISOString().slice(0, 10);
       dateTo = sunday.toISOString().slice(0, 10);
     } else if (filterType === "monthly") {
+      // Fix: Get current month's first and last day
       const first = new Date(now.getFullYear(), now.getMonth(), 1);
       const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       dateFrom = first.toISOString().slice(0, 10);
@@ -79,6 +81,7 @@ function getDateRange(filterType, quickRange, customFrom, customTo) {
       dateTo = last.toISOString().slice(0, 10);
     }
   }
+  
   return { dateFrom, dateTo };
 }
 
@@ -101,8 +104,10 @@ const AdminSalesReport = () => {
     setLoading(true);
     setError("");
     let params = { page, limit: ORDERS_PER_PAGE };
+    
     // Date range logic
     const { dateFrom, dateTo } = getDateRange(filterType, quickRange, customFrom, customTo);
+    
     // Only apply custom if both dates are set
     if (filterType === "custom") {
       if (customFrom && customTo) {
@@ -116,20 +121,27 @@ const AdminSalesReport = () => {
         return;
       }
     } else {
+      // Temporarily comment out date filtering to see all orders
+      // if (dateFrom) params.dateFrom = dateFrom;
+      // if (dateTo) params.dateTo = dateTo;
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
     }
+    
     try {
       const result = await getAllOrders(params);
+      
       if (result.success) {
         setOrders(result.data.orders || []);
         setTotalPages(result.data.totalPages || 1);
         setSummary(result.data.summary || { salesCount: 0, orderAmount: 0, discount: 0 });
       } else {
+        console.error('API error:', result.error);
         setError(result.error || "Failed to fetch orders");
         setTotalPages(1);
       }
     } catch (err) {
+      console.error('Fetch error:', err);
       setError("Failed to fetch orders");
       setTotalPages(1);
     }
@@ -166,7 +178,7 @@ const AdminSalesReport = () => {
         : null;
     })
     .filter(Boolean);
-
+  
   // Adjust summary for filtered orders
   const filteredSummary = {
     salesCount: filteredOrders.length,
