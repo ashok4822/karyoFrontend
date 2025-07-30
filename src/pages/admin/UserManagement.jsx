@@ -220,19 +220,22 @@ const UserManagement = () => {
                             </td>
                             <td>{formatDateTime(user.createdAt)}</td>
                             <td>
-                              <Button
-                                variant={user.isDeleted ? "success" : "danger"}
-                                size="sm"
-                                className="me-2"
-                                onClick={() => handleBlockUnblock(user)}
-                              >
-                                {user.isDeleted ? (
-                                  <FaUserCheck />
-                                ) : (
-                                  <FaUserTimes />
-                                )}
-                                {user.isDeleted ? " Unblock" : " Block"}
-                              </Button>
+                              {/* Only show block/unblock button for non-admin users */}
+                              {user.role !== "admin" && (
+                                <Button
+                                  variant={user.isDeleted ? "success" : "danger"}
+                                  size="sm"
+                                  className="me-2"
+                                  onClick={() => handleBlockUnblock(user)}
+                                >
+                                  {user.isDeleted ? (
+                                    <FaUserCheck />
+                                  ) : (
+                                    <FaUserTimes />
+                                  )}
+                                  {user.isDeleted ? " Unblock" : " Block"}
+                                </Button>
+                              )}
                             </td>
                           </tr>
                         ))

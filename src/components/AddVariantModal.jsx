@@ -58,23 +58,26 @@ const AddVariantModal = ({ show, onHide, onVariantAdded, product }) => {
   };
 
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
+    const newFiles = Array.from(e.target.files);
     
-    if (files.length < 3) {
+    // Combine existing images with new ones
+    const combinedImages = [...images, ...newFiles];
+    
+    if (combinedImages.length < 3) {
       setError("Please select at least 3 images");
       return;
     }
 
-    if (files.length > 10) {
+    if (combinedImages.length > 10) {
       setError("Maximum 10 images allowed");
       return;
     }
 
     setError("");
-    setImages(files);
+    setImages(combinedImages);
 
-    // Create preview URLs
-    const previews = files.map(file => createPreviewUrl(file));
+    // Create preview URLs for all images
+    const previews = combinedImages.map(file => createPreviewUrl(file));
     setImagePreview(previews);
   };
 

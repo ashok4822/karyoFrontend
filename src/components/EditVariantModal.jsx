@@ -21,6 +21,7 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
   const [capacityError, setCapacityError] = useState("");
   const [selectedImages, setSelectedImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [removedOldImages, setRemovedOldImages] = useState([]); // Track removed old images
   const fileInputRef = useRef();
   const [showCropper, setShowCropper] = useState(false);
   const [currentImageFile, setCurrentImageFile] = useState(null);
@@ -39,6 +40,7 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
       });
       setImagePreviews(variant.imageUrls || []);
       setSelectedImages([]);
+      setRemovedOldImages([]); // Reset removed images when modal opens
     }
   }, [show]); // Only depend on show
 
@@ -61,23 +63,75 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
     setSuccess("");
     setSelectedImages([]);
     setImagePreviews([]);
+    setRemovedOldImages([]);
     if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
   // Handle image selection
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedImages(files);
-    // Generate previews
-    const previews = files.map(file => createPreviewUrl(file));
+    const newFiles = Array.from(e.target.files);
+    
+    // Combine existing images with new ones
+    const combinedImages = [...selectedImages, ...newFiles];
+    
+    // Calculate total images (old images minus removed ones plus new images)
+    const oldImages = variant.imageUrls || [];
+    const remainingOldImages = oldImages.length - removedOldImages.length;
+    const totalImages = remainingOldImages + combinedImages.length;
+    
+    // Validate total number of images
+    if (totalImages < 3) {
+      setError("Minimum 3 images required");
+      return;
+    }
+    
+    if (totalImages > 10) {
+      setError("Maximum 10 images allowed");
+      return;
+    }
+    
+    setError("");
+    setSelectedImages(combinedImages);
+    
+    // Generate previews for all new images
+    const previews = combinedImages.map(file => createPreviewUrl(file));
     setImagePreviews(previews);
   };
 
   const removeImage = (index) => {
     const newImages = selectedImages.filter((_, i) => i !== index);
     const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    
+    // Calculate total images (old images minus removed ones plus new images)
+    const oldImages = variant.imageUrls || [];
+    const remainingOldImages = oldImages.length - removedOldImages.length;
+    const totalImages = remainingOldImages + newImages.length;
+    
+    // Validate minimum images requirement
+    if (totalImages < 3) {
+      setError("Minimum 3 images required");
+    } else {
+      setError("");
+    }
+    
     setSelectedImages(newImages);
     setImagePreviews(newPreviews);
+  };
+
+  const removeOldImage = (index) => {
+    const oldImages = variant.imageUrls || [];
+    const newRemovedOldImages = [...removedOldImages, index];
+    setRemovedOldImages(newRemovedOldImages);
+    
+    // Check if we still have enough images (old images minus removed ones plus new images)
+    const remainingOldImages = oldImages.length - newRemovedOldImages.length;
+    const totalImages = remainingOldImages + selectedImages.length;
+    
+    if (totalImages < 3) {
+      setError("Minimum 3 images required");
+    } else {
+      setError("");
+    }
   };
 
   const handleImageCrop = (index) => {
@@ -164,9 +218,21 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
       form.append("price", parseFloat(formData.price));
       form.append("stock", parseInt(formData.stock));
       form.append("status", formData.status);
+      
+      // Add new images
       selectedImages.forEach((file) => {
         form.append("images", file);
       });
+      
+      // Add information about removed old images
+      if (removedOldImages.length > 0) {
+        form.append("removedOldImages", JSON.stringify(removedOldImages));
+        console.log("Removed old images indices:", removedOldImages);
+      }
+      
+      console.log("Selected images count:", selectedImages.length);
+      console.log("Removed old images count:", removedOldImages.length);
+      
       const response = await updateVariant(product._id, variant._id, form);
 
       setSuccess("Variant updated successfully!");
@@ -196,8 +262,8 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
           <div className="mb-3">
             <h6>Product: {product?.name}</h6>
             <p className="text-muted">Editing variant: {variant?.colour} {variant?.capacity}</p>
-            <div className="alert alert-warning mt-2">
-              Uploading new images will <b>replace</b> the old images for this variant.
+            <div className="alert alert-info mt-2">
+              You can remove individual old images using the X button, or upload new images to replace all existing ones.
             </div>
           </div>
           
@@ -299,56 +365,85 @@ const EditVariantModal = ({ show, onHide, onVariantUpdated, variant, product }) 
                   ref={fileInputRef}
                 />
                 <div className="d-flex flex-wrap mt-2 gap-2">
-                  {/* Show old images (from variant.imageUrls) as static previews, no icons */}
-                  {variant && variant.imageUrls && variant.imageUrls.length > 0 && selectedImages.length === 0 && variant.imageUrls.map((src, idx) => (
-                    <div key={idx} className="position-relative">
-                      <img
-                        src={src}
-                        alt={`Old Preview ${idx + 1}`}
-                        style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
-                      />
-                      {idx === 0 && (
-                        <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
-                          <small>Main</small>
+                  {/* Show old images (from variant.imageUrls) with remove icons */}
+                  {variant && variant.imageUrls && variant.imageUrls.length > 0 && 
+                    variant.imageUrls.map((src, idx) => {
+                      // Skip if this image was removed
+                      if (removedOldImages.includes(idx)) return null;
+                      
+                      // Check if this is the first visible old image (should be marked as main)
+                      const visibleOldImages = variant.imageUrls.filter((_, index) => !removedOldImages.includes(index));
+                      const isFirstVisibleOldImage = visibleOldImages.indexOf(src) === 0;
+                      
+                      return (
+                        <div key={`old-${idx}`} className="position-relative">
+                          <img
+                            src={src}
+                            alt={`Old Preview ${idx + 1}`}
+                            style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
+                          />
+                          <div className="position-absolute top-0 end-0 d-flex gap-1" style={{ transform: "translate(50%, -50%)" }}>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => removeOldImage(idx)}
+                              title="Remove Image"
+                            >
+                              <X size={12} />
+                            </Button>
+                          </div>
+                          {isFirstVisibleOldImage && (
+                            <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
+                              <small>Main</small>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      );
+                    })
+                  }
                   {/* Show new images (selected in this session) with crop/remove icons */}
-                  {selectedImages.length > 0 && imagePreviews.map((src, idx) => (
-                    <div key={idx} className="position-relative">
-                      <img
-                        src={src}
-                        alt={`Preview ${idx + 1}`}
-                        style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
-                      />
-                      <div className="position-absolute top-0 end-0 d-flex gap-1" style={{ transform: "translate(50%, -50%)" }}>
-                        <Button
-                          type="button"
-                          variant="warning"
-                          size="sm"
-                          onClick={() => handleImageCrop(idx)}
-                          title="Crop Image"
-                        >
-                          <Crop size={12} />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="danger"
-                          size="sm"
-                          onClick={() => removeImage(idx)}
-                          title="Remove Image"
-                        >
-                          <X size={12} />
-                        </Button>
-                      </div>
-                      {idx === 0 && (
-                        <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
-                          <small>Main</small>
+                  {selectedImages.length > 0 && imagePreviews.map((src, idx) => {
+                    // Check if there are any visible old images - if so, new images shouldn't be marked as main
+                    const hasVisibleOldImages = variant && variant.imageUrls && 
+                      variant.imageUrls.some((_, index) => !removedOldImages.includes(index));
+                    
+                    return (
+                      <div key={`new-${idx}`} className="position-relative">
+                        <img
+                          src={src}
+                          alt={`Preview ${idx + 1}`}
+                          style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 4, border: "1px solid #ccc" }}
+                        />
+                        <div className="position-absolute top-0 end-0 d-flex gap-1" style={{ transform: "translate(50%, -50%)" }}>
+                          <Button
+                            type="button"
+                            variant="warning"
+                            size="sm"
+                            onClick={() => handleImageCrop(idx)}
+                            title="Crop Image"
+                          >
+                            <Crop size={12} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            onClick={() => removeImage(idx)}
+                            title="Remove Image"
+                          >
+                            <X size={12} />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {/* Only show "Main" on first new image if there are no visible old images */}
+                        {idx === 0 && !hasVisibleOldImages && (
+                          <div className="position-absolute bottom-0 start-0 bg-primary text-white px-1 rounded">
+                            <small>Main</small>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </Form.Group>
             </Col>

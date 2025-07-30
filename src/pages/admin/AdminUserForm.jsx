@@ -54,10 +54,19 @@ const AdminUserForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const newFormData = {
+        ...prev,
+        [name]: value,
+      };
+      
+      // If role is changed to admin, automatically set status to active
+      if (name === 'role' && value === 'admin') {
+        newFormData.status = 'active';
+      }
+      
+      return newFormData;
+    });
     // Clear error when field is edited
     if (errors[name]) {
       setErrors((prev) => ({
@@ -79,6 +88,11 @@ const AdminUserForm = () => {
     if (formData.password && formData.password.length < 6)
       newErrors.password = 'Password must be at least 6 characters';
 
+    // Ensure admin users are always active
+    if (formData.role === 'admin' && formData.status === 'blocked') {
+      newErrors.status = 'Admin users cannot be blocked';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -88,13 +102,19 @@ const AdminUserForm = () => {
     if (!validateForm()) return;
 
     try {
+      // Ensure admin users are always active
+      const userData = {
+        ...formData,
+        status: formData.role === 'admin' ? 'active' : formData.status
+      };
+
       if (id) {
         await dispatch({
           type: 'UPDATE_USER',
-          payload: { id, ...formData },
+          payload: { id, ...userData },
         });
       } else {
-        await dispatch({ type: 'CREATE_USER', payload: formData });
+        await dispatch({ type: 'CREATE_USER', payload: userData });
       }
       navigate('/admin/users');
     } catch (error) {
@@ -271,10 +291,16 @@ const AdminUserForm = () => {
                     name="status"
                     value={formData.status}
                     onChange={handleChange}
+                    disabled={formData.role === 'admin'}
                   >
                     <option value="active">Active</option>
                     <option value="blocked">Blocked</option>
                   </Form.Select>
+                  {formData.role === 'admin' && (
+                    <Form.Text className="text-muted">
+                      Admin users cannot be blocked
+                    </Form.Text>
+                  )}
                 </Form.Group>
               </Col>
             </Row>

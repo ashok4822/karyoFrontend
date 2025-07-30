@@ -328,29 +328,32 @@ const AdminUsers = () => {
                       >
                         <FaEdit /> Edit
                       </Button>
-                      <Button
-                        variant={
-                          user.status === 'active'
-                            ? 'outline-danger'
-                            : 'outline-success'
-                        }
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowStatusModal(true);
-                        }}
-                        className="d-flex align-items-center gap-1"
-                      >
-                        {user.status === 'active' ? (
-                          <>
-                            <FaUserTimes /> Block
-                          </>
-                        ) : (
-                          <>
-                            <FaUserCheck /> Activate
-                          </>
-                        )}
-                      </Button>
+                      {/* Only show block/activate button for non-admin users */}
+                      {user.role !== 'admin' && (
+                        <Button
+                          variant={
+                            user.status === 'active'
+                              ? 'outline-danger'
+                              : 'outline-success'
+                          }
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowStatusModal(true);
+                          }}
+                          className="d-flex align-items-center gap-1"
+                        >
+                          {user.status === 'active' ? (
+                            <>
+                              <FaUserTimes /> Block
+                            </>
+                          ) : (
+                            <>
+                              <FaUserCheck /> Activate
+                            </>
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="outline-danger"
                         size="sm"

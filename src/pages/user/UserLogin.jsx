@@ -35,10 +35,17 @@ const UserLogin = () => {
     const urlParams = new URLSearchParams(location.search);
     const errorParam = urlParams.get("error");
 
-    if (errorParam === "rate_limit") {
-      setServerError(
-        "Too many authentication attempts. Please wait a while before trying again."
-      );
+    if (errorParam) {
+      if (errorParam === "rate_limit") {
+        setServerError(
+          "Too many authentication attempts. Please wait a while before trying again."
+        );
+      } else {
+        // Handle general error messages (including from Google OAuth)
+        setServerError(decodeURIComponent(errorParam));
+      }
+      // Clear the error from URL to prevent showing again on refresh
+      navigate(location.pathname, { replace: true });
     } else if (location.state?.message) {
       setServerError(location.state.message);
     }
