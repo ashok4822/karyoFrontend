@@ -24,7 +24,7 @@ import api, { OTP_EXPIRY_SECONDS } from "../../lib/utils";
 import { fetchCart } from "../../redux/reducers/cartSlice";
 import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
-const apiBaseUrl = import.meta.env.VITE_USER_BACKEND_UR || "http://localhost:5000";
+const apiBaseUrl = import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000";
 
 const UserSignup = () => {
   const navigate = useNavigate();

@@ -18,7 +18,7 @@ import { fetchCart } from "../../redux/reducers/cartSlice";
 import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
 const apiBaseUrl =
-  import.meta.env.VITE_USER_BACKEND_UR || "http://localhost:5000";
+  import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000";
 
 const UserLogin = () => {
   const navigate = useNavigate();
