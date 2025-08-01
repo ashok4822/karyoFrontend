@@ -24,7 +24,8 @@ import api, { OTP_EXPIRY_SECONDS } from "../../lib/utils";
 import { fetchCart } from "../../redux/reducers/cartSlice";
 import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
 
-const apiBaseUrl = import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000";
+const apiBaseUrl =
+  import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000";
 
 const UserSignup = () => {
   const navigate = useNavigate();
@@ -57,7 +58,11 @@ const UserSignup = () => {
     const params = new URLSearchParams(location.search);
     const ref = params.get("ref");
     if (ref) {
-      setFormData((prev) => ({ ...prev, referralCode: ref, referralToken: ref }));
+      setFormData((prev) => ({
+        ...prev,
+        referralCode: ref,
+        referralToken: ref,
+      }));
     }
   }, [location.search]);
 
@@ -130,7 +135,10 @@ const UserSignup = () => {
       // Do NOT save access token and user in Redux/localStorage after signup
       // Do NOT fetch cart and wishlist after signup
       // Redirect to login page after successful signup
-      navigate("/login", { replace: true, state: { successMsg: "Signup successful! Please log in." } });
+      navigate("/login", {
+        replace: true,
+        state: { successMsg: "Signup successful! Please log in." },
+      });
     } catch (error) {
       setServerError(
         error.response?.data?.message || "OTP verification failed"
@@ -143,7 +151,7 @@ const UserSignup = () => {
   const handleGoogleSignIn = () => {
     // Get the referral token from the URL (if present)
     const params = new URLSearchParams(window.location.search);
-    const ref = params.get('ref');
+    const ref = params.get("ref");
     if (ref) {
       window.location.href = `${apiBaseUrl}/auth/google?ref=${ref}`;
     } else {
@@ -263,7 +271,8 @@ const UserSignup = () => {
                         />
                       </InputGroup>
                       <Form.Text className="text-muted">
-                        Have a referral code? Enter it here to get rewards for both you and your referrer!
+                        Have a referral code? Enter it here to get rewards for
+                        both you and your referrer!
                       </Form.Text>
                     </Form.Group>
                     <Button

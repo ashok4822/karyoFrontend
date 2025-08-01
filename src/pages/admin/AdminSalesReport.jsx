@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from "react";
 import AdminLeftbar from "../../components/AdminLeftbar";
-import { Container, Row, Col, Card, Button, Form, InputGroup, Spinner, Alert } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Button,
+  Form,
+  InputGroup,
+  Spinner,
+  Alert,
+} from "react-bootstrap";
 import { getAllOrders } from "../../services/admin/adminOrderService";
 import { FaDownload } from "react-icons/fa";
 import jsPDF from "jspdf";
 // REMOVE: import "jspdf-autotable";
-import Pagination from 'react-bootstrap/Pagination';
-import './AdminSalesReport.css';
+import Pagination from "react-bootstrap/Pagination";
+import "./AdminSalesReport.css";
 
 const FILTER_TYPES = [
   { label: "Daily", value: "daily" },
@@ -33,8 +43,9 @@ function formatDate(dateString) {
 
 function getDateRange(filterType, quickRange, customFrom, customTo) {
   const now = new Date();
-  let dateFrom = null, dateTo = null;
-  
+  let dateFrom = null,
+    dateTo = null;
+
   if (filterType === "custom") {
     dateFrom = customFrom || null;
     dateTo = customTo || null;
@@ -81,7 +92,7 @@ function getDateRange(filterType, quickRange, customFrom, customTo) {
       dateTo = last.toISOString().slice(0, 10);
     }
   }
-  
+
   return { dateFrom, dateTo };
 }
 
@@ -93,7 +104,11 @@ const AdminSalesReport = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [summary, setSummary] = useState({ salesCount: 0, orderAmount: 0, discount: 0 });
+  const [summary, setSummary] = useState({
+    salesCount: 0,
+    orderAmount: 0,
+    discount: 0,
+  });
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -104,10 +119,15 @@ const AdminSalesReport = () => {
     setLoading(true);
     setError("");
     let params = { page, limit: ORDERS_PER_PAGE };
-    
+
     // Date range logic
-    const { dateFrom, dateTo } = getDateRange(filterType, quickRange, customFrom, customTo);
-    
+    const { dateFrom, dateTo } = getDateRange(
+      filterType,
+      quickRange,
+      customFrom,
+      customTo
+    );
+
     // Only apply custom if both dates are set
     if (filterType === "custom") {
       if (customFrom && customTo) {
@@ -127,21 +147,23 @@ const AdminSalesReport = () => {
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
     }
-    
+
     try {
       const result = await getAllOrders(params);
-      
+
       if (result.success) {
         setOrders(result.data.orders || []);
         setTotalPages(result.data.totalPages || 1);
-        setSummary(result.data.summary || { salesCount: 0, orderAmount: 0, discount: 0 });
+        setSummary(
+          result.data.summary || { salesCount: 0, orderAmount: 0, discount: 0 }
+        );
       } else {
-        console.error('API error:', result.error);
+        console.error("API error:", result.error);
         setError(result.error || "Failed to fetch orders");
         setTotalPages(1);
       }
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error("Fetch error:", err);
       setError("Failed to fetch orders");
       setTotalPages(1);
     }
@@ -169,26 +191,34 @@ const AdminSalesReport = () => {
 
   // Filter orders to only include those with at least one delivered+paid item, and filter items accordingly
   const filteredOrders = orders
-    .map(order => {
+    .map((order) => {
       const deliveredPaidItems = (order.items || []).filter(
-        item => item.itemStatus === 'delivered' && item.itemPaymentStatus === 'paid'
+        (item) =>
+          item.itemStatus === "delivered" && item.itemPaymentStatus === "paid"
       );
       return deliveredPaidItems.length > 0
         ? { ...order, items: deliveredPaidItems }
         : null;
     })
     .filter(Boolean);
-  
+
   // Adjust summary for filtered orders
   const filteredSummary = {
     salesCount: filteredOrders.length,
-    orderAmount: filteredOrders.reduce((sum, order) => sum + (order.computedTotal !== undefined ? order.computedTotal : order.total || 0), 0),
+    orderAmount: filteredOrders.reduce(
+      (sum, order) =>
+        sum +
+        (order.computedTotal !== undefined
+          ? order.computedTotal
+          : order.total || 0),
+      0
+    ),
     discount: filteredOrders.reduce((sum, order) => {
       if (order.computedProportionalDiscount !== undefined) {
         return sum + Number(order.computedProportionalDiscount);
-      } else if (typeof order.discount === 'number') {
+      } else if (typeof order.discount === "number") {
         return sum + order.discount;
-      } else if (order.discount && typeof order.discount === 'object') {
+      } else if (order.discount && typeof order.discount === "object") {
         return sum + (Number(order.discount.discountAmount) || 0);
       }
       return sum;
@@ -199,17 +229,29 @@ const AdminSalesReport = () => {
   const handleDownloadExcel = () => {
     setDownloadLoading(true);
     const header = [
-      "Order Number,Date,Customer,Email,Total,Discount,Coupon Code"
+      "Order Number,Date,Customer,Email,Total,Discount,Coupon Code",
     ];
-    const rows = filteredOrders.map(order => {
-      const customer = order.user ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim() : "-";
+    const rows = filteredOrders.map((order) => {
+      const customer = order.user
+        ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
+        : "-";
       let discount = "-";
       let coupon = "-";
       if (typeof order.discount === "number") {
         discount = order.discount.toFixed(2);
-      } else if (order.discount && typeof order.discount === "object" && order.discount.discountAmount) {
-        discount = order.discount.discountAmount ? Number(order.discount.discountAmount).toFixed(2) : "-";
-        coupon = order.discount.code || order.discount.discountName || order.discount.name || "-";
+      } else if (
+        order.discount &&
+        typeof order.discount === "object" &&
+        order.discount.discountAmount
+      ) {
+        discount = order.discount.discountAmount
+          ? Number(order.discount.discountAmount).toFixed(2)
+          : "-";
+        coupon =
+          order.discount.code ||
+          order.discount.discountName ||
+          order.discount.name ||
+          "-";
       }
       return [
         `#${order.orderNumber}`,
@@ -218,7 +260,7 @@ const AdminSalesReport = () => {
         order.user?.email || "",
         order.total?.toFixed(2) ?? "-",
         discount,
-        coupon
+        coupon,
       ].join(",");
     });
     const csvContent = header.concat(rows).join("\n");
@@ -247,10 +289,17 @@ const AdminSalesReport = () => {
     doc.setTextColor(0, 0, 0);
     doc.text("Sales Report", 14, 28);
     // Date range
-    const { dateFrom, dateTo } = getDateRange(filterType, quickRange, customFrom, customTo);
+    const { dateFrom, dateTo } = getDateRange(
+      filterType,
+      quickRange,
+      customFrom,
+      customTo
+    );
     let dateRangeText = "";
     if (dateFrom && dateTo) {
-      dateRangeText = `Date Range: ${formatDate(dateFrom)} - ${formatDate(dateTo)}`;
+      dateRangeText = `Date Range: ${formatDate(dateFrom)} - ${formatDate(
+        dateTo
+      )}`;
     } else if (dateFrom) {
       dateRangeText = `From: ${formatDate(dateFrom)}`;
     } else if (dateTo) {
@@ -261,8 +310,16 @@ const AdminSalesReport = () => {
     // Summary
     doc.setFontSize(12);
     doc.text(`Overall Sales Count: ${filteredSummary.salesCount}`, 14, 46);
-    doc.text(`Overall Order Amount: INR ${filteredSummary.orderAmount.toLocaleString()}`, 14, 54);
-    doc.text(`Overall Discount: INR ${filteredSummary.discount.toLocaleString()}`, 14, 62);
+    doc.text(
+      `Overall Order Amount: INR ${filteredSummary.orderAmount.toLocaleString()}`,
+      14,
+      54
+    );
+    doc.text(
+      `Overall Discount: INR ${filteredSummary.discount.toLocaleString()}`,
+      14,
+      62
+    );
     // Table
     const tableColumn = [
       "Order Number",
@@ -271,18 +328,27 @@ const AdminSalesReport = () => {
       "Email",
       "Total (INR)",
       "Discount (INR)",
-      "Coupon Code"
+      "Coupon Code",
     ];
-    const tableRows = filteredOrders.map(order => {
-      const customer = order.user ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim() : "-";
+    const tableRows = filteredOrders.map((order) => {
+      const customer = order.user
+        ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
+        : "-";
       let discount = "-";
       let coupon = "-";
-      let total = order.total != null ? `INR ${Number(order.total).toFixed(2)}` : "-";
+      let total =
+        order.total != null ? `INR ${Number(order.total).toFixed(2)}` : "-";
       if (typeof order.discount === "number") {
         discount = `INR ${order.discount.toFixed(2)}`;
       } else if (order.discount && typeof order.discount === "object") {
-        discount = order.discount.discountAmount ? `INR ${Number(order.discount.discountAmount).toFixed(2)}` : "-";
-        coupon = order.discount.code || order.discount.discountName || order.discount.name || "-";
+        discount = order.discount.discountAmount
+          ? `INR ${Number(order.discount.discountAmount).toFixed(2)}`
+          : "-";
+        coupon =
+          order.discount.code ||
+          order.discount.discountName ||
+          order.discount.name ||
+          "-";
       }
       return [
         `#${order.orderNumber}`,
@@ -291,7 +357,7 @@ const AdminSalesReport = () => {
         order.user?.email || "",
         total,
         discount,
-        coupon
+        coupon,
       ];
     });
     autoTable(doc, {
@@ -301,7 +367,7 @@ const AdminSalesReport = () => {
       styles: { fontSize: 9 },
       headStyles: { fillColor: [41, 128, 185] },
       margin: { left: 14, right: 14 },
-      theme: "grid"
+      theme: "grid",
     });
     doc.save(`sales_report_${Date.now()}.pdf`);
     setTimeout(() => setDownloadLoading(false), 1000);
@@ -325,10 +391,15 @@ const AdminSalesReport = () => {
                     <Form.Label>Report Type</Form.Label>
                     <Form.Select
                       value={filterType}
-                      onChange={e => { setFilterType(e.target.value); setQuickRange(""); }}
+                      onChange={(e) => {
+                        setFilterType(e.target.value);
+                        setQuickRange("");
+                      }}
                     >
-                      {FILTER_TYPES.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      {FILTER_TYPES.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
                       ))}
                     </Form.Select>
                   </Form.Group>
@@ -341,7 +412,7 @@ const AdminSalesReport = () => {
                         <Form.Control
                           type="date"
                           value={customFrom}
-                          onChange={e => setCustomFrom(e.target.value)}
+                          onChange={(e) => setCustomFrom(e.target.value)}
                         />
                       </Form.Group>
                     </Col>
@@ -351,13 +422,13 @@ const AdminSalesReport = () => {
                         <Form.Control
                           type="date"
                           value={customTo}
-                          onChange={e => setCustomTo(e.target.value)}
+                          onChange={(e) => setCustomTo(e.target.value)}
                         />
                       </Form.Group>
                     </Col>
                   </>
                 )}
-                {filterType !== "custom" && (
+                {/*{filterType !== "custom" && (
                   <Col md={3}>
                     <Form.Group>
                       <Form.Label>Quick Range</Form.Label>
@@ -372,9 +443,14 @@ const AdminSalesReport = () => {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-                )}
+                )}*/}
                 <Col md={3} className="d-flex align-items-end gap-2">
-                  <Button variant="outline-secondary" className="w-100" onClick={handleClearFilters} disabled={loading}>
+                  <Button
+                    variant="outline-secondary"
+                    className="w-100"
+                    onClick={handleClearFilters}
+                    disabled={loading}
+                  >
                     Clear Filters
                   </Button>
                 </Col>
@@ -396,7 +472,9 @@ const AdminSalesReport = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Body>
                   <div className="text-muted">Overall Order Amount</div>
-                  <div className="h4 mb-0">INR{filteredSummary.orderAmount.toLocaleString()}</div>
+                  <div className="h4 mb-0">
+                    INR{filteredSummary.orderAmount.toLocaleString()}
+                  </div>
                 </Card.Body>
               </Card>
             </Col>
@@ -404,7 +482,9 @@ const AdminSalesReport = () => {
               <Card className="border-0 shadow-sm">
                 <Card.Body>
                   <div className="text-muted">Overall Discount</div>
-                  <div className="h4 mb-0">INR{filteredSummary.discount.toLocaleString()}</div>
+                  <div className="h4 mb-0">
+                    INR{filteredSummary.discount.toLocaleString()}
+                  </div>
                 </Card.Body>
               </Card>
             </Col>
@@ -412,10 +492,18 @@ const AdminSalesReport = () => {
 
           {/* Download Buttons */}
           <div className="mb-3 d-flex gap-2">
-            <Button variant="success" onClick={handleDownloadExcel} disabled={downloadLoading}>
+            <Button
+              variant="success"
+              onClick={handleDownloadExcel}
+              disabled={downloadLoading}
+            >
               <FaDownload className="me-2" /> Download Excel
             </Button>
-            <Button variant="secondary" onClick={handleDownloadPDF} disabled={downloadLoading}>
+            <Button
+              variant="secondary"
+              onClick={handleDownloadPDF}
+              disabled={downloadLoading}
+            >
               <FaDownload className="me-2" /> Download PDF
             </Button>
           </div>
@@ -424,7 +512,10 @@ const AdminSalesReport = () => {
           <Card className="border-0 shadow-sm mb-4">
             <Card.Body>
               {error && <Alert variant="danger">{error}</Alert>}
-              <div className="table-container-relative" style={{ position: 'relative' }}>
+              <div
+                className="table-container-relative"
+                style={{ position: "relative" }}
+              >
                 <div className="table-responsive">
                   <table className="table table-hover align-middle">
                     <thead>
@@ -441,7 +532,10 @@ const AdminSalesReport = () => {
                     <tbody>
                       {filteredOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="text-center text-muted py-4">
+                          <td
+                            colSpan={7}
+                            className="text-center text-muted py-4"
+                          >
                             No orders found.
                           </td>
                         </tr>
@@ -450,17 +544,34 @@ const AdminSalesReport = () => {
                           let discount = "-";
                           let coupon = "-";
                           // Use computedProportionalDiscount if available
-                          if (order.computedProportionalDiscount !== undefined) {
-                            discount = Number(order.computedProportionalDiscount).toFixed(2);
+                          if (
+                            order.computedProportionalDiscount !== undefined
+                          ) {
+                            discount = Number(
+                              order.computedProportionalDiscount
+                            ).toFixed(2);
                           } else if (typeof order.discount === "number") {
                             discount = order.discount.toFixed(2);
-                          } else if (order.discount && typeof order.discount === "object") {
-                            discount = order.discount.discountAmount ? Number(order.discount.discountAmount).toFixed(2) : "-";
-                            coupon = order.discount.code || order.discount.discountName || order.discount.name || "-";
+                          } else if (
+                            order.discount &&
+                            typeof order.discount === "object"
+                          ) {
+                            discount = order.discount.discountAmount
+                              ? Number(order.discount.discountAmount).toFixed(2)
+                              : "-";
+                            coupon =
+                              order.discount.code ||
+                              order.discount.discountName ||
+                              order.discount.name ||
+                              "-";
                           }
                           // Use couponCode if present
                           let couponCode = order.couponCode ?? "-";
-                          if (couponCode === "-" && order.discount && typeof order.discount === "object") {
+                          if (
+                            couponCode === "-" &&
+                            order.discount &&
+                            typeof order.discount === "object"
+                          ) {
                             couponCode =
                               order.discount.code ||
                               order.discount.discountName ||
@@ -470,14 +581,23 @@ const AdminSalesReport = () => {
                           return (
                             <tr key={order._id || order.id}>
                               <td>#{order.orderNumber}</td>
-                              <td>{formatDate(order.createdAt || order.date)}</td>
+                              <td>
+                                {formatDate(order.createdAt || order.date)}
+                              </td>
                               <td>
                                 {order.user
-                                  ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim()
+                                  ? `${order.user.firstName || ""} ${
+                                      order.user.lastName || ""
+                                    }`.trim()
                                   : "-"}
                               </td>
                               <td>{order.user?.email || ""}</td>
-                              <td>{(order.computedTotal !== undefined ? order.computedTotal : order.total)?.toFixed(2) ?? "-"}</td>
+                              <td>
+                                {(order.computedTotal !== undefined
+                                  ? order.computedTotal
+                                  : order.total
+                                )?.toFixed(2) ?? "-"}
+                              </td>
                               <td>{discount}</td>
                               <td>{couponCode}</td>
                             </tr>
@@ -498,7 +618,9 @@ const AdminSalesReport = () => {
                 <div className="d-flex justify-content-center mt-4">
                   <Pagination>
                     <Pagination.Prev
-                      onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                      onClick={() =>
+                        currentPage > 1 && setCurrentPage(currentPage - 1)
+                      }
                       disabled={currentPage === 1}
                     />
                     {Array.from({ length: totalPages }).map((_, idx) => (
@@ -511,7 +633,10 @@ const AdminSalesReport = () => {
                       </Pagination.Item>
                     ))}
                     <Pagination.Next
-                      onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                      onClick={() =>
+                        currentPage < totalPages &&
+                        setCurrentPage(currentPage + 1)
+                      }
                       disabled={currentPage === totalPages}
                     />
                   </Pagination>
@@ -525,4 +650,4 @@ const AdminSalesReport = () => {
   );
 };
 
-export default AdminSalesReport; 
+export default AdminSalesReport;
