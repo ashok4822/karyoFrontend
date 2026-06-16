@@ -13,7 +13,7 @@ const OrderSuccess = () => {
         Your order was placed successfully. You will receive a confirmation email soon.
       </p>
       <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
-        <Button onClick={() => navigate(`/orders/${orderId}`)}>View Order Details</Button>
+        <Button onClick={() => navigate(`/order-confirmation/${orderId}`)}>View Order Details</Button>
         <Button variant="outline" onClick={() => navigate("/")}>Continue Shopping</Button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Container,
   Row,
@@ -819,8 +819,8 @@ const UserProfile = () => {
                 ₹{walletBalance?.toFixed(2) || "0.00"}
               </div>
             )}
-            <a
-              href="/wallet"
+            <Link
+              to="/wallet"
               style={{
                 fontSize: 13,
                 color: "#0d6efd",
@@ -830,7 +830,7 @@ const UserProfile = () => {
               }}
             >
               View Wallet
-            </a>
+            </Link>
           </div>
         </div>
         {/* Profile Image and Info */}
@@ -2014,12 +2014,12 @@ const UserProfile = () => {
                         </td>
                         <td>
                           <div className="d-flex gap-2">
-                            <a
-                              href={`/order-confirmation/${order._id}`}
+                            <Link
+                              to={`/order-confirmation/${order._id}`}
                               className="btn btn-sm btn-outline-primary"
                             >
                               View Order
-                            </a>
+                            </Link>
                             {itemStatus === "delivered" &&
                               !item.cancelled &&
                               !item.returned &&

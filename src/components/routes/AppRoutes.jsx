@@ -223,8 +223,16 @@ const AppRoutes = () => {
                 <Offers />
               </UserProtectedRoute>
             } />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/cart" element={<Cart />} />
+            <Route path="/wishlist" element={
+              <UserProtectedRoute>
+                <Wishlist />
+              </UserProtectedRoute>
+            } />
+            <Route path="/cart" element={
+              <UserProtectedRoute>
+                <Cart />
+              </UserProtectedRoute>
+            } />
             <Route path="/checkout" element={
               <UserProtectedRoute>
                 <Checkout />
@@ -241,7 +249,11 @@ const AppRoutes = () => {
                 <OrderFailure />
               </UserProtectedRoute>
             } />
-            <Route path="/wallet" element={<Wallet />} />
+            <Route path="/wallet" element={
+              <UserProtectedRoute>
+                <Wallet />
+              </UserProtectedRoute>
+            } />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
             <Route path="*" element={<NotFound />} />

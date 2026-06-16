@@ -15,7 +15,7 @@ const OrderFailure = () => {
       </p>
       <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
         <Button onClick={() => navigate(-1)}>Retry Payment</Button>
-        {orderId && <Button variant="outline" onClick={() => navigate(`/orders/${orderId}`)}>View Order Details</Button>}
+        {orderId && <Button variant="outline" onClick={() => navigate(`/order-confirmation/${orderId}`)}>View Order Details</Button>}
       </div>
     </div>
   );
