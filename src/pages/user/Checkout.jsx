@@ -25,6 +25,7 @@ import {
 import CouponInput from "../../components/CouponInput";
 import { Modal, Button, Form, Alert } from "react-bootstrap";
 import { getBestOffersForProducts } from "../../services/user/offerService";
+import { MESSAGES } from "../../constants/messages";
 
 const Checkout = () => {
   const location = useLocation();
@@ -465,16 +466,16 @@ const Checkout = () => {
     const newErrors = {};
 
     if (!formData.recipientName.trim())
-      newErrors.recipientName = "Recipient name is required";
+      newErrors.recipientName = MESSAGES.SHIPPING.RECIPIENT_REQUIRED;
     if (!formData.addressLine1.trim())
-      newErrors.addressLine1 = "Address line 1 is required";
-    if (!formData.city.trim()) newErrors.city = "City is required";
-    if (!formData.state.trim()) newErrors.state = "State is required";
+      newErrors.addressLine1 = MESSAGES.SHIPPING.ADDRESS_LINE1_REQUIRED_SHORT;
+    if (!formData.city.trim()) newErrors.city = MESSAGES.SHIPPING.CITY_REQUIRED;
+    if (!formData.state.trim()) newErrors.state = MESSAGES.SHIPPING.STATE_REQUIRED;
     if (!formData.postalCode.trim())
-      newErrors.postalCode = "Postal code is required";
-    if (!formData.country.trim()) newErrors.country = "Country is required";
+      newErrors.postalCode = MESSAGES.SHIPPING.POSTAL_REQUIRED;
+    if (!formData.country.trim()) newErrors.country = MESSAGES.SHIPPING.COUNTRY_REQUIRED;
     if (!formData.phoneNumber.trim())
-      newErrors.phoneNumber = "Phone number is required";
+      newErrors.phoneNumber = MESSAGES.SHIPPING.PHONE_REQUIRED;
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -484,16 +485,16 @@ const Checkout = () => {
     const newErrors = {};
 
     if (!editFormData.recipientName.trim())
-      newErrors.recipientName = "Recipient name is required";
+      newErrors.recipientName = MESSAGES.SHIPPING.RECIPIENT_REQUIRED;
     if (!editFormData.addressLine1.trim())
-      newErrors.addressLine1 = "Address line 1 is required";
-    if (!editFormData.city.trim()) newErrors.city = "City is required";
-    if (!editFormData.state.trim()) newErrors.state = "State is required";
+      newErrors.addressLine1 = MESSAGES.SHIPPING.ADDRESS_LINE1_REQUIRED_SHORT;
+    if (!editFormData.city.trim()) newErrors.city = MESSAGES.SHIPPING.CITY_REQUIRED;
+    if (!editFormData.state.trim()) newErrors.state = MESSAGES.SHIPPING.STATE_REQUIRED;
     if (!editFormData.postalCode.trim())
-      newErrors.postalCode = "Postal code is required";
-    if (!editFormData.country.trim()) newErrors.country = "Country is required";
+      newErrors.postalCode = MESSAGES.SHIPPING.POSTAL_REQUIRED;
+    if (!editFormData.country.trim()) newErrors.country = MESSAGES.SHIPPING.COUNTRY_REQUIRED;
     if (!editFormData.phoneNumber.trim())
-      newErrors.phoneNumber = "Phone number is required";
+      newErrors.phoneNumber = MESSAGES.SHIPPING.PHONE_REQUIRED;
 
     setEditErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -501,11 +502,11 @@ const Checkout = () => {
 
   const handleSaveNewAddress = async () => {
     if (!validateForm()) {
-      setErrorMessage("Please fill in all required fields correctly");
+      setErrorMessage(MESSAGES.SHIPPING.FILL_REQUIRED_FIELDS);
       setSuccessMessage("");
       toast({
-        title: "Please fix the errors",
-        description: "Please fill in all required fields correctly",
+        title: MESSAGES.SHIPPING.FIX_ERRORS,
+        description: MESSAGES.SHIPPING.FILL_REQUIRED_FIELDS,
         variant: "destructive",
       });
       return;
@@ -524,7 +525,7 @@ const Checkout = () => {
       };
 
       await dispatch(createShippingAddress(addressData)).unwrap();
-      setSuccessMessage("Address added successfully");
+      setSuccessMessage(MESSAGES.SHIPPING.ADDRESS_ADDED);
       setErrorMessage("");
       setTimeout(() => {
         setShowAddressModal(false);
@@ -547,11 +548,11 @@ const Checkout = () => {
       const fieldErrors = error?.errors || error?.response?.data?.errors;
       if (fieldErrors && typeof fieldErrors === "object") {
         setErrors(fieldErrors);
-        setErrorMessage("Please fix the highlighted fields.");
+        setErrorMessage(MESSAGES.SHIPPING.VALIDATION_FAILED);
         setSuccessMessage("");
         toast({
           title: "Validation Error",
-          description: "Please fix the highlighted fields.",
+          description: MESSAGES.SHIPPING.VALIDATION_FAILED,
           variant: "destructive",
         });
       } else {
@@ -571,8 +572,8 @@ const Checkout = () => {
   const handleUpdateAddress = async () => {
     if (!validateEditForm()) {
       toast({
-        title: "Please fix the errors",
-        description: "Please fill in all required fields correctly",
+        title: MESSAGES.SHIPPING.FIX_ERRORS,
+        description: MESSAGES.SHIPPING.FILL_REQUIRED_FIELDS,
         variant: "destructive",
       });
       return;
@@ -588,7 +589,7 @@ const Checkout = () => {
       ).unwrap();
 
       toast({
-        title: "Address updated successfully",
+        title: MESSAGES.SHIPPING.ADDRESS_UPDATED,
         description: "Your shipping address has been updated",
         variant: "default",
       });

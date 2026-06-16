@@ -18,6 +18,8 @@ import {
   FaComments,
   FaPaperPlane,
 } from "react-icons/fa";
+import { MESSAGES } from "../../constants/messages";
+import { submitContactForm } from "../../services/user/contactService";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -35,27 +37,27 @@ const Contact = () => {
     const newErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
+      newErrors.name = MESSAGES.VALIDATION.NAME_REQUIRED;
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
+      newErrors.name = MESSAGES.VALIDATION.NAME_MIN_LENGTH;
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
+      newErrors.email = MESSAGES.VALIDATION.EMAIL_REQUIRED;
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email";
+      newErrors.email = MESSAGES.VALIDATION.INVALID_EMAIL;
     }
 
     if (!formData.subject.trim()) {
-      newErrors.subject = "Subject is required";
+      newErrors.subject = MESSAGES.VALIDATION.SUBJECT_REQUIRED;
     } else if (formData.subject.trim().length < 5) {
-      newErrors.subject = "Subject must be at least 5 characters";
+      newErrors.subject = MESSAGES.VALIDATION.SUBJECT_MIN_LENGTH;
     }
 
     if (!formData.message.trim()) {
-      newErrors.message = "Message is required";
+      newErrors.message = MESSAGES.VALIDATION.MESSAGE_REQUIRED;
     } else if (formData.message.trim().length < 10) {
-      newErrors.message = "Message must be at least 10 characters";
+      newErrors.message = MESSAGES.VALIDATION.MESSAGE_MIN_LENGTH;
     }
 
     setErrors(newErrors);
@@ -91,7 +93,7 @@ const Contact = () => {
     if (result.success) {
       setSuccessMsg(
         result.data.message ||
-          "Thank you for your message! We'll get back to you soon."
+          MESSAGES.CONTACT.SUCCESS_SEND
       );
       setFormData({
         name: "",
@@ -101,7 +103,7 @@ const Contact = () => {
       });
     } else {
       setServerError(
-        result.error || "Failed to send message. Please try again."
+        result.error || MESSAGES.CONTACT.FAILED_SEND
       );
     }
 

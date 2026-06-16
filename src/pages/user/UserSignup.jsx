@@ -23,6 +23,7 @@ import {
 import api, { OTP_EXPIRY_SECONDS } from "../../lib/utils";
 import { fetchCart } from "../../redux/reducers/cartSlice";
 import { fetchWishlist } from "../../redux/reducers/wishlistSlice";
+import { MESSAGES } from "../../constants/messages";
 
 const apiBaseUrl =
   import.meta.env.VITE_USER_BACKEND_URL || "http://localhost:5000";
@@ -80,14 +81,14 @@ const UserSignup = () => {
   };
 
   const validateForm = () => {
-    if (!formData.username.trim()) return "Username is required";
-    if (!formData.email.trim()) return "Email is required";
-    if (!/\S+@\S+\.\S+/.test(formData.email)) return "Email is invalid";
-    if (!formData.password) return "Password is required";
+    if (!formData.username.trim()) return MESSAGES.VALIDATION.USERNAME_REQUIRED;
+    if (!formData.email.trim()) return MESSAGES.VALIDATION.EMAIL_REQUIRED;
+    if (!/\S+@\S+\.\S+/.test(formData.email)) return MESSAGES.VALIDATION.INVALID_EMAIL_FORMAT;
+    if (!formData.password) return MESSAGES.VALIDATION.PASSWORD_FIELD_REQUIRED;
     if (formData.password.length < 8)
-      return "Password must be at least 8 characters";
+      return MESSAGES.VALIDATION.PASSWORD_MIN_LENGTH;
     if (formData.password !== formData.confirmPassword)
-      return "Passwords do not match";
+      return MESSAGES.VALIDATION.PASSWORDS_NO_MATCH;
     return null;
   };
 
@@ -105,11 +106,11 @@ const UserSignup = () => {
       });
       setStep(2);
       setSuccessMsg(
-        isResend ? "OTP resent to your email." : "OTP sent to your email."
+        isResend ? MESSAGES.AUTH.OTP_RESENT : MESSAGES.AUTH.OTP_SENT
       );
       setTimer(OTP_EXPIRY_SECONDS);
     } catch (error) {
-      setServerError(error.response?.data?.message || "Failed to send OTP");
+      setServerError(error.response?.data?.message || MESSAGES.AUTH.OTP_SEND_FAILED);
     } finally {
       setLoading(false);
     }
@@ -117,7 +118,7 @@ const UserSignup = () => {
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (!otp) return setServerError("Please enter the OTP");
+    if (!otp) return setServerError(MESSAGES.VALIDATION.OTP_REQUIRED);
     setLoading(true);
     try {
       const payload = {
@@ -137,11 +138,11 @@ const UserSignup = () => {
       // Redirect to login page after successful signup
       navigate("/login", {
         replace: true,
-        state: { successMsg: "Signup successful! Please log in." },
+        state: { successMsg: MESSAGES.AUTH.SIGNUP_SUCCESS },
       });
     } catch (error) {
       setServerError(
-        error.response?.data?.message || "OTP verification failed"
+        error.response?.data?.message || MESSAGES.AUTH.OTP_VERIFY_FAILED
       );
     } finally {
       setLoading(false);

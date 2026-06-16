@@ -19,6 +19,7 @@ import {
 } from "../../services/user/walletService";
 import { getWalletTransactions } from "../../services/user/transactionService";
 import { useSelector } from "react-redux";
+import { MESSAGES } from "../../constants/messages";
 
 const Wallet = () => {
   const [wallet, setWallet] = useState(null);
@@ -45,7 +46,7 @@ const Wallet = () => {
     if (success) {
       setWallet(data);
     } else {
-      setToastMsg("Failed to fetch wallet");
+      setToastMsg(MESSAGES.WALLET.ERROR_FETCH);
       setToastVariant("danger");
       setShowToast(true);
       console.error("Wallet fetch error:", error);
@@ -60,7 +61,7 @@ const Wallet = () => {
     if (success) {
       setTransactions(data.reverse());
     } else {
-      setToastMsg("Failed to fetch transactions");
+      setToastMsg(MESSAGES.WALLET.ERROR_TRANSACTIONS);
       setToastVariant("danger");
       setShowToast(true);
       console.error("Transaction fetch error:", error);
@@ -70,28 +71,28 @@ const Wallet = () => {
   const handleFunds = async (type) => {
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0) {
-      setToastMsg("Amount must be positive");
+      setToastMsg(MESSAGES.WALLET.AMOUNT_POSITIVE);
       setToastVariant("danger");
       setShowToast(true);
       return;
     }
 
     if (type === "add" && numAmount < 1) {
-      setToastMsg("Minimum amount for wallet recharge is ₹1");
+      setToastMsg(MESSAGES.WALLET.MIN_RECHARGE);
       setToastVariant("danger");
       setShowToast(true);
       return;
     }
 
     if (type === "add" && numAmount > 5000) {
-      setToastMsg("Maximum amount you can add at a time is ₹5,000");
+      setToastMsg(MESSAGES.WALLET.MAX_PER_TRANSACTION);
       setToastVariant("danger");
       setShowToast(true);
       return;
     }
 
     if (type === "add" && wallet?.balance + numAmount > 10000) {
-      setToastMsg("Wallet balance cannot exceed ₹10,000. Please enter a lower amount.");
+      setToastMsg(MESSAGES.WALLET.MAX_BALANCE);
       setToastVariant("danger");
       setShowToast(true);
       return;
@@ -107,7 +108,7 @@ const Wallet = () => {
       const response = await deductFunds(payload);
 
       if (response.success) {
-        setToastMsg("Funds deducted successfully");
+        setToastMsg(MESSAGES.WALLET.FUNDS_DEDUCTED);
         setToastVariant("success");
         setAmount("");
         setDescription("");
@@ -115,7 +116,7 @@ const Wallet = () => {
         fetchWallet();
         fetchTransactions();
       } else {
-        setToastMsg(response.error || "Failed to deduct funds");
+        setToastMsg(response.error || MESSAGES.WALLET.DEDUCT_FAILED);
         setToastVariant("danger");
       }
 
@@ -135,7 +136,7 @@ const Wallet = () => {
       });
 
       if (!orderResponse.success) {
-        setToastMsg(orderResponse.error || "Failed to create payment order");
+        setToastMsg(orderResponse.error || MESSAGES.WALLET.PAYMENT_ORDER_FAILED);
         setToastVariant("danger");
         setShowToast(true);
         setLoading(false);
@@ -164,7 +165,7 @@ const Wallet = () => {
             });
 
             if (verifyResponse.success) {
-              setToastMsg("Payment successful! Funds added to wallet");
+              setToastMsg(MESSAGES.WALLET.PAYMENT_SUCCESS);
               setToastVariant("success");
               setAmount("");
               setDescription("");
@@ -172,13 +173,13 @@ const Wallet = () => {
               fetchWallet();
               fetchTransactions();
             } else {
-              setToastMsg(verifyResponse.error || "Payment verification failed");
+              setToastMsg(verifyResponse.error || MESSAGES.WALLET.PAYMENT_VERIFY_FAILED);
               setToastVariant("danger");
             }
             setShowToast(true);
           } catch (error) {
             console.error("Payment verification error:", error);
-            setToastMsg("Payment verification failed");
+            setToastMsg(MESSAGES.WALLET.PAYMENT_VERIFY_FAILED);
             setToastVariant("danger");
             setShowToast(true);
           }
@@ -193,7 +194,7 @@ const Wallet = () => {
         modal: {
           ondismiss: function () {
             setLoading(false);
-            setToastMsg("Payment was cancelled or failed. No funds were added.");
+            setToastMsg(MESSAGES.WALLET.PAYMENT_CANCELLED);
             setToastVariant("danger");
             setShowToast(true);
           },
@@ -206,7 +207,7 @@ const Wallet = () => {
 
     } catch (error) {
       console.error("Razorpay payment error:", error);
-      setToastMsg("Failed to initiate payment");
+      setToastMsg(MESSAGES.WALLET.PAYMENT_INIT_FAILED);
       setToastVariant("danger");
       setShowToast(true);
       setLoading(false);
