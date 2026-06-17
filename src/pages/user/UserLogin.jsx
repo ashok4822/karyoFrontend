@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { MESSAGES } from "../../constants/messages";
 import { loginSuccess } from "../../redux/reducers/authSlice";
 import {
   Container,
@@ -38,7 +39,7 @@ const UserLogin = () => {
     if (errorParam) {
       if (errorParam === "rate_limit") {
         setServerError(
-          "Too many authentication attempts. Please wait a while before trying again."
+          MESSAGES.AUTH.RATE_LIMIT
         );
       } else {
         // Handle general error messages (including from Google OAuth)
@@ -64,12 +65,12 @@ const UserLogin = () => {
 
     // Basic validation
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setServerError("Please enter a valid email");
+      setServerError(MESSAGES.VALIDATION.INVALID_EMAIL);
       return;
     }
 
     if (!password) {
-      setServerError("Please enter your password");
+      setServerError(MESSAGES.VALIDATION.PASSWORD_REQUIRED);
       return;
     }
 
@@ -84,16 +85,15 @@ const UserLogin = () => {
           userAccessToken: result.data.token,
         })
       );
-      // Fetch cart and wishlist after login
       dispatch(fetchCart());
       dispatch(fetchWishlist());
-      setSuccessMsg("Login successful! Redirecting...");
+      setSuccessMsg(MESSAGES.AUTH.LOGIN_SUCCESS);
       setTimeout(() => navigate("/"), 1500);
     } else {
       // Remove any stale user data on login failure
       localStorage.removeItem("user");
       localStorage.removeItem("userAccessToken");
-      setServerError(result.error || "Login failed");
+      setServerError(result.error || MESSAGES.AUTH.LOGIN_FAILED);
     }
 
     setLoading(false);

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import {
   Container,
   Row,
@@ -43,6 +43,7 @@ import {
   setDefaultAddress,
   updateUserShippingAddress,
 } from "../../services/user/addressService";
+import { MESSAGES } from "../../constants/messages";
 import {
   requestPasswordResetOtp,
   resetPassword,
@@ -370,27 +371,27 @@ const UserProfile = () => {
   const validateEditForm = () => {
     const errors = {};
     if (!editForm.firstName.trim()) {
-      errors.firstName = "First name is required";
+      errors.firstName = MESSAGES.VALIDATION.FIRST_NAME_REQUIRED;
     } else if (!/^[A-Za-z]{2,30}$/.test(editForm.firstName.trim())) {
-      errors.firstName = "First name must be 2-30 letters";
+      errors.firstName = MESSAGES.VALIDATION.FIRST_NAME_FORMAT;
     }
     if (!editForm.lastName.trim()) {
-      errors.lastName = "Last name is required";
+      errors.lastName = MESSAGES.VALIDATION.LAST_NAME_REQUIRED;
     } else if (!/^[A-Za-z]{2,30}$/.test(editForm.lastName.trim())) {
-      errors.lastName = "Last name must be 2-30 letters";
+      errors.lastName = MESSAGES.VALIDATION.LAST_NAME_FORMAT;
     }
     if (!editForm.mobileNo.trim()) {
-      errors.mobileNo = "Mobile number is required";
+      errors.mobileNo = MESSAGES.VALIDATION.MOBILE_REQUIRED;
     } else if (!/^\d{10}$/.test(editForm.mobileNo.trim())) {
-      errors.mobileNo = "Mobile number must be 10 digits";
+      errors.mobileNo = MESSAGES.VALIDATION.MOBILE_FORMAT;
     }
     if (!editForm.address.trim()) {
-      errors.address = "Address is required";
+      errors.address = MESSAGES.VALIDATION.ADDRESS_REQUIRED;
     } else if (
       editForm.address.trim().length < 5 ||
       editForm.address.trim().length > 100
     ) {
-      errors.address = "Address must be 5-100 characters";
+      errors.address = MESSAGES.VALIDATION.ADDRESS_LENGTH;
     }
     return errors;
   };
@@ -411,7 +412,7 @@ const UserProfile = () => {
 
     if (result.success && result.data?.user) {
       dispatch(loginSuccess({ user: result.data.user, userAccessToken }));
-      setEditSuccess("Profile updated successfully");
+      setEditSuccess(MESSAGES.AUTH.PROFILE_UPDATED);
     } else {
       setEditError(result.error || "Failed to update profile");
     }
@@ -453,29 +454,29 @@ const UserProfile = () => {
   const validateAddAddressForm = () => {
     const errors = {};
     if (!newAddress.recipientName.trim()) {
-      errors.recipientName = "Recipient name is required";
+      errors.recipientName = MESSAGES.SHIPPING.RECIPIENT_REQUIRED;
     }
     if (!newAddress.addressLine1.trim()) {
-      errors.addressLine1 = "Address Line 1 is required";
+      errors.addressLine1 = MESSAGES.SHIPPING.ADDRESS_LINE1_REQUIRED;
     }
     if (!newAddress.city.trim()) {
-      errors.city = "City is required";
+      errors.city = MESSAGES.SHIPPING.CITY_REQUIRED;
     }
     if (!newAddress.state.trim()) {
-      errors.state = "State is required";
+      errors.state = MESSAGES.SHIPPING.STATE_REQUIRED;
     }
     if (!newAddress.postalCode.trim()) {
-      errors.postalCode = "Postal code is required";
+      errors.postalCode = MESSAGES.SHIPPING.POSTAL_REQUIRED;
     } else if (!/^\d{4,10}$/.test(newAddress.postalCode.trim())) {
-      errors.postalCode = "Postal code must be 4-10 digits";
+      errors.postalCode = MESSAGES.SHIPPING.POSTAL_FORMAT;
     }
     if (!newAddress.country.trim()) {
-      errors.country = "Country is required";
+      errors.country = MESSAGES.SHIPPING.COUNTRY_REQUIRED;
     }
     if (!newAddress.phoneNumber.trim()) {
-      errors.phoneNumber = "Phone number is required";
+      errors.phoneNumber = MESSAGES.SHIPPING.PHONE_REQUIRED;
     } else if (!/^\d{10,15}$/.test(newAddress.phoneNumber.trim())) {
-      errors.phoneNumber = "Phone number must be 10-15 digits";
+      errors.phoneNumber = MESSAGES.SHIPPING.PHONE_FORMAT;
     }
     return errors;
   };
@@ -498,7 +499,7 @@ const UserProfile = () => {
     if (result.success && result.data?.address) {
       const newAddr = result.data.address;
 
-      setAddSuccess("Address added successfully");
+      setAddSuccess(MESSAGES.SHIPPING.ADDRESS_ADDED);
       setShowAddressModal(false);
       setNewAddress({
         recipientName: "",
@@ -579,7 +580,7 @@ const UserProfile = () => {
     );
 
     if (result.success) {
-      setEditAddressSuccess("Address updated successfully");
+      setEditAddressSuccess(MESSAGES.SHIPPING.ADDRESS_UPDATED);
       setEditAddressModal(false);
 
       const refreshResult = await fetchUserShippingAddresses(userAccessToken);
@@ -818,8 +819,8 @@ const UserProfile = () => {
                 ₹{walletBalance?.toFixed(2) || "0.00"}
               </div>
             )}
-            <a
-              href="/wallet"
+            <Link
+              to="/wallet"
               style={{
                 fontSize: 13,
                 color: "#0d6efd",
@@ -829,7 +830,7 @@ const UserProfile = () => {
               }}
             >
               View Wallet
-            </a>
+            </Link>
           </div>
         </div>
         {/* Profile Image and Info */}
@@ -2013,12 +2014,12 @@ const UserProfile = () => {
                         </td>
                         <td>
                           <div className="d-flex gap-2">
-                            <a
-                              href={`/order-confirmation/${order._id}`}
+                            <Link
+                              to={`/order-confirmation/${order._id}`}
                               className="btn btn-sm btn-outline-primary"
                             >
                               View Order
-                            </a>
+                            </Link>
                             {itemStatus === "delivered" &&
                               !item.cancelled &&
                               !item.returned &&

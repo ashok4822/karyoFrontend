@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { OTP_EXPIRY_SECONDS } from "../../lib/utils";
+import { MESSAGES } from "../../constants/messages";
 import {
   Container,
   Row,
@@ -43,13 +44,13 @@ const ForgotPassword = () => {
     setServerError("");
     setSuccessMsg("");
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setServerError("Please enter a valid email");
+      setServerError(MESSAGES.VALIDATION.INVALID_EMAIL);
       return;
     }
     setLoading(true);
     try {
       const res = await api.post("auth/request-password-reset-otp", { email });
-      setSuccessMsg(isResend ? "OTP resent to your email." : "OTP sent to your email.");
+      setSuccessMsg(isResend ? MESSAGES.AUTH.OTP_RESENT : MESSAGES.AUTH.OTP_SENT);
       setStep(2);
       if (res.data && res.data.expiresAt) {
         const now = Date.now();
@@ -59,33 +60,32 @@ const ForgotPassword = () => {
         setTimer(OTP_EXPIRY_SECONDS);
       }
     } catch (error) {
-      setServerError(error.response?.data?.message || "Failed to send OTP");
+      setServerError(error.response?.data?.message || MESSAGES.AUTH.OTP_SEND_FAILED);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerifyOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setServerError("");
     setSuccessMsg("");
     if (!otp) {
-      setServerError("Please enter the OTP");
+      setServerError(MESSAGES.VALIDATION.OTP_REQUIRED);
       return;
     }
     setLoading(true);
     try {
-      const res = await api.post("auth/verify-password-reset-otp", { email, otp });
-      setSuccessMsg("OTP verified. Please enter your new password.");
-      setStep(3);
-      setTimer(0);
-      if (res.data && res.data.resetToken) {
-        setResetToken(res.data.resetToken);
+      const response = await api.post("auth/verify-password-reset-otp", { email, otp });
+      if (response.data.resetToken) {
+        setResetToken(response.data.resetToken);
+        setStep(3);
+        setSuccessMsg(MESSAGES.AUTH.OTP_VERIFIED);
       } else {
-        setServerError("Failed to get reset token. Please try again.");
+        setServerError(MESSAGES.AUTH.RESET_TOKEN_FETCH_FAILED);
       }
     } catch (error) {
-      setServerError(error.response?.data?.message || "OTP verification failed");
+      setServerError(error.response?.data?.message || MESSAGES.AUTH.OTP_VERIFY_FAILED);
     } finally {
       setLoading(false);
     }
@@ -96,24 +96,24 @@ const ForgotPassword = () => {
     setServerError("");
     setSuccessMsg("");
     if (!newPassword || newPassword.length < 8) {
-      setServerError("Password must be at least 8 characters");
+      setServerError(MESSAGES.VALIDATION.PASSWORD_MIN_LENGTH);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setServerError("Passwords do not match");
+      setServerError(MESSAGES.VALIDATION.PASSWORDS_NO_MATCH);
       return;
     }
     if (!resetToken) {
-      setServerError("Reset token missing. Please verify OTP again.");
+      setServerError(MESSAGES.AUTH.RESET_TOKEN_MISSING);
       return;
     }
     setLoading(true);
     try {
       await api.post("auth/reset-password", { email, newPassword, resetToken });
-      setSuccessMsg("Password reset successful! Redirecting to login...");
+      setSuccessMsg(MESSAGES.AUTH.RESET_SUCCESS);
       setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
-      setServerError(error.response?.data?.message || "Password reset failed");
+      setServerError(error.response?.data?.message || MESSAGES.AUTH.RESET_FAILED);
     } finally {
       setLoading(false);
     }
