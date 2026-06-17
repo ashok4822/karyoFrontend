@@ -821,15 +821,15 @@ const Checkout = () => {
                 description: "Your payment was successful.",
                 variant: "default",
               });
-              // Redirect to the same confirmation page as COD
-              navigate(`/order-confirmation/${orderId}?fresh=true`);
+              // Redirect to success page
+              navigate(`/order-success/${orderId}`);
             } else {
               toast({
                 title: "Payment verification failed",
                 description: verifyRes.message || "Payment could not be verified.",
                 variant: "destructive",
               });
-              // Create failed order and redirect to confirmation page
+              // Create failed order and redirect to failure page
               const failedOrderResult = await dispatch(createOrder({
                 ...orderData,
                 paymentStatus: "failed",
@@ -839,7 +839,7 @@ const Checkout = () => {
               const failedOrderId = failedOrderResult.order?._id;
               // dispatch(clearCart());
               orderJustPlacedRef.current = true;
-              navigate(`/order-confirmation/${failedOrderId}?fresh=true`);
+              navigate('/order-failure', { state: { orderId: failedOrderId } });
               setTimeout(() => { orderCreatedRef.current = false; }, 1000); // Reset after navigation
             }
             setTimeout(() => { orderCreatedRef.current = false; }, 1000); // Reset after navigation
@@ -861,7 +861,7 @@ const Checkout = () => {
             description: "Your payment was not successful.",
             variant: "destructive",
           });
-          // Create failed order and redirect to confirmation page
+          // Create failed order and redirect to failure page
           const failedOrderResult = await dispatch(createOrder({
             ...orderData,
             paymentStatus: "failed",
@@ -871,7 +871,7 @@ const Checkout = () => {
           const failedOrderId = failedOrderResult.order?._id;
           // dispatch(clearCart());
           orderJustPlacedRef.current = true;
-          navigate(`/order-confirmation/${failedOrderId}?fresh=true`);
+          navigate('/order-failure', { state: { orderId: failedOrderId } });
           setTimeout(() => { orderCreatedRef.current = false; }, 1000); // Reset after navigation
         });
         rzp.open();
@@ -971,13 +971,14 @@ const Checkout = () => {
                     description: "Your payment was successful.",
                     variant: "default",
                   });
-                  navigate(`/order-confirmation/${order._id}?fresh=true`);
+                  navigate(`/order-success/${order._id}`);
                 } else {
                   toast({
                     title: "Payment verification failed",
                     description: verifyRes.message || "Payment could not be verified.",
                     variant: "destructive",
                   });
+                  // Navigate to order-confirmation (not order-failure) to break the auto-retry loop
                   navigate(`/order-confirmation/${order._id}`);
                 }
                 setRetrying(false);
@@ -995,6 +996,7 @@ const Checkout = () => {
                 description: "Your payment was not successful.",
                 variant: "destructive",
               });
+              // Navigate to order-confirmation (not order-failure) to break the auto-retry loop
               navigate(`/order-confirmation/${order._id}`);
               setRetrying(false);
             });

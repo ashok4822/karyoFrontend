@@ -377,68 +377,7 @@ const OrderConfirmation = () => {
   }
 
   // Show failed status and retry payment if payment failed (but not cancelled)
-  if (isPaymentFailed) {
-    return (
-      <div className="order-confirmation-bg d-flex align-items-center justify-content-center min-vh-100 py-4">
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-6">
-              <div className="card shadow-lg rounded-4 border-0 p-4 text-center">
-                <div className="order-failed-icon mx-auto mb-3">
-                  <svg
-                    width="48"
-                    height="48"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="#dc3545"
-                      strokeWidth="3"
-                      fill="#f8d7da"
-                    />
-                    <path
-                      d="M6 18L18 6M6 6l12 12"
-                      stroke="#dc3545"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="none"
-                    />
-                  </svg>
-                </div>
-                <h1 className="h4 fw-bold mb-2">Payment Failed</h1>
-                <p className="text-muted mb-4">
-                  Your payment was not successful. You can retry the payment or
-                  view your order details.
-                </p>
-                <div className="d-flex flex-column flex-md-row gap-3 justify-content-center mt-4">
-                  <button
-                    onClick={() =>
-                      navigate(`/checkout?retryOrderId=${currentOrder._id}`)
-                    }
-                    className="btn btn-danger btn-lg px-4 fw-semibold shadow-sm"
-                  >
-                    Retry Payment
-                  </button>
-                  <button
-                    onClick={() => navigate(`/profile?tab=orders`)}
-                    className="btn btn-outline-secondary btn-lg px-4 fw-semibold shadow-sm"
-                  >
-                    View My Orders
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // (We now show this as a banner inside the main container to avoid locking the user out of the page)
 
   return (
     <div className="order-confirmation-bg d-flex align-items-center justify-content-center min-vh-100 py-4">
@@ -446,7 +385,53 @@ const OrderConfirmation = () => {
         <div className="row justify-content-center">
           <div className="col-lg-8">
             <div className="card shadow-lg rounded-4 border-0 p-4">
-              {isFreshOrder && (
+              {isPaymentFailed && (
+                <div className="alert alert-danger border-0 rounded-4 p-4 mb-4 text-center shadow-sm">
+                  <div className="order-failed-icon mx-auto mb-3" style={{ width: "48px", height: "48px" }}>
+                    <svg
+                      width="48"
+                      height="48"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="#dc3545"
+                        strokeWidth="3"
+                        fill="#f8d7da"
+                      />
+                      <path
+                        d="M6 18L18 6M6 6l12 12"
+                        stroke="#dc3545"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    </svg>
+                  </div>
+                  <h4 className="fw-bold mb-2 text-danger">Payment Failed</h4>
+                  <p className="text-muted mb-3 small">
+                    Your payment was not successful. You can retry the payment now to complete your order, or view the details below.
+                  </p>
+                  <div className="d-flex gap-2 justify-content-center">
+                    <button
+                      onClick={() =>
+                        navigate(`/checkout?retryOrderId=${currentOrder._id}`)
+                      }
+                      className="btn btn-danger px-4 fw-semibold shadow-sm"
+                    >
+                      Retry Payment
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isFreshOrder && !isPaymentFailed && (
                 <div className="text-center mb-4">
                   <div className="order-success-icon mx-auto mb-3">
                     <svg
@@ -497,7 +482,7 @@ const OrderConfirmation = () => {
                 </div>
               )}
 
-              {!isFreshOrder && (
+              {(!isFreshOrder || isPaymentFailed) && (
                 <div className="text-center mb-4">
                   <h1 className="h3 fw-bold mb-2">Order Details</h1>
                   <div className="d-flex flex-wrap justify-content-center gap-2 mt-2">

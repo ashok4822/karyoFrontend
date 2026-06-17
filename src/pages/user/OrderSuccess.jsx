@@ -1,10 +1,20 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { Button } from "../../components/ui/button";
+import { clearCart, clearCartState } from "../../redux/reducers/cartSlice";
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { orderId } = useParams();
+
+  // Clear the cart when landing on success page
+  useEffect(() => {
+    dispatch(clearCart());
+    dispatch(clearCartState());
+  }, [dispatch]);
+
   return (
     <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
       <img src="/success-illustration.svg" alt="Order Success" style={{ width: 180, marginBottom: 24 }} />
@@ -20,4 +30,4 @@ const OrderSuccess = () => {
   );
 };
 
-export default OrderSuccess; 
+export default OrderSuccess;

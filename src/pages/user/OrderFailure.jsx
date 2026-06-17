@@ -14,11 +14,19 @@ const OrderFailure = () => {
         Unfortunately, your payment could not be processed. Please try again or check your order details.
       </p>
       <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
-        <Button onClick={() => navigate(-1)}>Retry Payment</Button>
-        {orderId && <Button variant="outline" onClick={() => navigate(`/order-confirmation/${orderId}`)}>View Order Details</Button>}
+        {orderId ? (
+          <Button onClick={() => navigate(`/checkout?retryOrderId=${orderId}`)}>Retry Payment</Button>
+        ) : (
+          <Button onClick={() => navigate("/checkout")}>Go to Checkout</Button>
+        )}
+        {orderId && (
+          <Button variant="outline" onClick={() => navigate(`/order-confirmation/${orderId}`)}>
+            View Order Details
+          </Button>
+        )}
       </div>
     </div>
   );
 };
 
-export default OrderFailure; 
+export default OrderFailure;
